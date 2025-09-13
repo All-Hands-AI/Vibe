@@ -83,45 +83,63 @@ RUN echo 'server { \
 }' > /etc/nginx/sites-available/default
 
 # Create startup script
-RUN echo '#!/bin/bash \
-set -e \
-\
-echo "Starting OpenVibe application..." \
-\
-# Start backend server in background \
-echo "Starting backend server..." \
-cd /app/backend \
-node server.js > /var/log/backend.log 2>&1 & \
-BACKEND_PID=$! \
-\
-# Wait for backend to be ready \
-echo "Waiting for backend to be ready..." \
-for i in {1..30}; do \
-    if curl -f http://localhost:3001/health >/dev/null 2>&1; then \
-        echo "Backend is ready!" \
-        break \
-    fi \
-    if ! kill -0 $BACKEND_PID 2>/dev/null; then \
-        echo "Backend process died!" \
-        cat /var/log/backend.log \
-        exit 1 \
-    fi \
-    echo "Waiting for backend... ($i/30)" \
-    sleep 1 \
-done \
-\
-# Final check \
-if ! curl -f http://localhost:3001/health >/dev/null 2>&1; then \
-    echo "Backend failed to become ready!" \
-    cat /var/log/backend.log \
-    exit 1 \
-fi \
-\
-echo "Backend started successfully (PID: $BACKEND_PID)" \
-\
-# Start nginx in foreground \
-echo "Starting nginx..." \
-nginx -g "daemon off;"' > /start.sh && chmod +x /start.sh
+COPY <<EOF /start.sh
+#!/bin/bash
+set -e
+
+echo "=== Starting OpenVibe application ==="
+
+# Debug: Show what's in the container
+echo "=== Container contents ==="
+echo "Frontend files:"
+ls -la /usr/share/nginx/html/ || true
+echo "Backend files:"
+ls -la /app/backend/ || true
+echo "Node version:"
+node --version
+echo "NPM version:"
+npm --version
+
+# Test nginx configuration first
+echo "Testing nginx configuration..."
+nginx -t
+
+# Start backend server in background
+echo "Starting backend server..."
+cd /app/backend
+echo "Current directory: \$(pwd)"
+echo "Files in current directory:"
+ls -la
+node server.js &
+BACKEND_PID=\$!
+
+echo "Backend started with PID: \$BACKEND_PID"
+
+# Give backend a moment to start
+sleep 3
+
+# Check if backend process is still running
+if ! kill -0 \$BACKEND_PID 2>/dev/null; then
+    echo "Backend process died immediately!"
+    exit 1
+fi
+
+# Test backend directly
+echo "Testing backend health..."
+if curl -f http://localhost:3001/health; then
+    echo "Backend health check passed!"
+else
+    echo "Backend health check failed!"
+    ps aux | grep node || true
+    exit 1
+fi
+
+# Start nginx in foreground
+echo "Starting nginx..."
+exec nginx -g "daemon off;"
+EOF
+
+RUN chmod +x /start.sh
 
 # Expose port
 EXPOSE 80
