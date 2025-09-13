@@ -10,7 +10,7 @@ from routes.projects import projects_bp
 from routes.conversations import conversations_bp
 
 # No-op import to ensure agent-sdk loads properly
-import openhands.sdk  # noqa: F401
+# import openhands.sdk  # noqa: F401
 
 # Configure logging for Fly.io - stdout only with enhanced formatting
 logging.basicConfig(

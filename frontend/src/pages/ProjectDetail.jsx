@@ -87,7 +87,7 @@ function ProjectDetail() {
       const data = await response.json()
       console.log('📊 Received project data:', data)
       
-      setProject(data.project)
+      setProject(data)
       console.log('✅ Project loaded successfully')
     } catch (err) {
       console.error('❌ Error fetching project:', err)
