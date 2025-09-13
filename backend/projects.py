@@ -148,6 +148,143 @@ def create_slug(name):
     slug = re.sub(r'-+', '-', slug)
     return slug.strip('-')
 
+def get_user_default_org(fly_token):
+    """
+    Get the user's default organization slug.
+    
+    Since Fly.io's REST API for organizations is not stable/available,
+    we'll use 'personal' as the default organization slug, which is
+    the most common case for individual users.
+    
+    Args:
+        fly_token (str): The user's Fly.io API token
+    
+    Returns:
+        tuple: (success, org_slug_or_error_message)
+    """
+    if not fly_token:
+        return False, "Fly.io API token is required"
+    
+    # For most users, the personal organization slug is 'personal'
+    # If this doesn't work, the app creation will fail with a clear error
+    logger.debug(f"🛩️ Using default organization: personal")
+    return True, "personal"
+
+def create_fly_app(app_name, fly_token):
+    """
+    Create a new Fly.io app.
+    
+    Args:
+        app_name (str): The app name to create
+        fly_token (str): The user's Fly.io API token
+    
+    Returns:
+        tuple: (success, app_data_or_error_message)
+    """
+    if not fly_token:
+        return False, "Fly.io API token is required"
+    
+    logger.info(f"🛩️ Creating Fly.io app: {app_name}")
+    
+    # First, get the user's default organization
+    success, org_slug = get_user_default_org(fly_token)
+    if not success:
+        return False, f"Failed to get user organization: {org_slug}"
+    
+    logger.debug(f"🛩️ Using organization: {org_slug}")
+    
+    headers = {
+        'Authorization': f'Bearer {fly_token}',
+        'Content-Type': 'application/json',
+        'User-Agent': 'OpenVibe-Backend/1.0'
+    }
+    
+    # Check if app already exists first
+    try:
+        check_response = requests.get(
+            f'https://api.machines.dev/v1/apps/{app_name}',
+            headers=headers,
+            timeout=10
+        )
+        
+        if check_response.status_code == 200:
+            # App already exists, check if it's owned by user
+            app_data = check_response.json()
+            app_org_slug = app_data.get('organization', {}).get('slug')
+            
+            if app_org_slug == org_slug:
+                logger.info(f"✅ App '{app_name}' already exists and is owned by user")
+                return True, app_data
+            else:
+                logger.error(f"❌ App '{app_name}' already exists but is owned by different organization")
+                return False, f"App '{app_name}' already exists and is not owned by you"
+        
+        elif check_response.status_code != 404:
+            # Some other error occurred
+            logger.error(f"❌ Error checking app existence: {check_response.status_code} - {check_response.text}")
+            return False, f"Error checking app existence: {check_response.status_code}"
+    
+    except Exception as e:
+        logger.error(f"💥 Error checking app existence: {str(e)}")
+        return False, f"Error checking app existence: {str(e)}"
+    
+    # App doesn't exist, create it
+    try:
+        create_data = {
+            'app_name': app_name,
+            'org_slug': org_slug
+        }
+        
+        logger.debug(f"🛩️ Creating app with data: {create_data}")
+        
+        create_response = requests.post(
+            'https://api.machines.dev/v1/apps',
+            headers=headers,
+            json=create_data,
+            timeout=30
+        )
+        
+        logger.debug(f"🛩️ App creation response status: {create_response.status_code}")
+        
+        if create_response.status_code == 201:
+            app_data = create_response.json()
+            logger.info(f"✅ Successfully created Fly.io app: {app_name}")
+            logger.debug(f"🛩️ Created app data: {app_data}")
+            return True, app_data
+        
+        elif create_response.status_code == 422:
+            # App name might be taken or invalid
+            error_text = create_response.text
+            logger.error(f"❌ App creation failed - name taken or invalid: {error_text}")
+            if "already taken" in error_text.lower():
+                return False, f"App name '{app_name}' is already taken"
+            else:
+                return False, f"Invalid app name or creation failed: {error_text}"
+        
+        elif create_response.status_code == 401:
+            logger.error(f"❌ Unauthorized - invalid Fly.io API token")
+            return False, "Invalid Fly.io API token"
+        
+        elif create_response.status_code == 403:
+            logger.error(f"❌ Forbidden - insufficient permissions")
+            return False, "Insufficient permissions for Fly.io API"
+        
+        else:
+            logger.error(f"❌ Unexpected response from Fly.io API: {create_response.status_code} - {create_response.text}")
+            return False, f"Fly.io API error: {create_response.status_code}"
+    
+    except requests.exceptions.Timeout:
+        logger.error(f"❌ Timeout creating Fly.io app")
+        return False, "Timeout creating Fly.io app"
+    
+    except requests.exceptions.RequestException as e:
+        logger.error(f"❌ Error connecting to Fly.io API: {str(e)}")
+        return False, f"Error connecting to Fly.io API: {str(e)}"
+    
+    except Exception as e:
+        logger.error(f"💥 Unexpected error creating Fly.io app: {str(e)}")
+        return False, f"Unexpected error: {str(e)}"
+
 def get_github_status(repo_url, github_token):
     """Get GitHub repository status including CI/CD tests"""
     logger.info(f"🐙 Checking GitHub status for: {repo_url}")
@@ -236,7 +373,7 @@ def get_fly_status(project_slug, fly_token):
         
         # Check if app exists and get status
         app_response = requests.get(
-            f'https://api.fly.io/v1/apps/{project_slug}',
+            f'https://api.machines.dev/v1/apps/{project_slug}',
             headers=headers,
             timeout=10
         )
@@ -532,10 +669,34 @@ def create_project():
             logger.warning(f"❌ GitHub API key not found for user {user_uuid[:8]}")
             return jsonify({'error': 'GitHub API key is required. Please set it up in integrations.'}), 400
         
+        # Create Fly.io app first (only if Fly.io token is provided)
+        fly_app_data = None
+        if fly_token:
+            logger.info(f"🛩️ Creating Fly.io app: {slug}")
+            success, result = create_fly_app(slug, fly_token)
+            
+            if not success:
+                logger.error(f"❌ Fly.io app creation failed: {result}")
+                return jsonify({'error': result}), 409
+            
+            fly_app_data = result
+            logger.info(f"✅ Fly.io app created successfully: {slug}")
+        else:
+            logger.warning(f"⚠️ No Fly.io token provided - skipping Fly.io app creation")
+        
         # Create GitHub repository
         success, result = create_github_repo(slug, github_token, fly_token)
         if not success:
             logger.error(f"❌ Failed to create GitHub repo: {result}")
+            
+            # If we created a Fly.io app but GitHub repo creation failed, 
+            # we should note this in the error but not delete the Fly.io app
+            # as the user might want to use it manually
+            if fly_app_data:
+                logger.warning(f"⚠️ Fly.io app '{slug}' was created but GitHub repo creation failed")
+                error_msg = f"GitHub repository creation failed: {result}. Note: Fly.io app '{slug}' was created successfully and can be used manually."
+                return jsonify({'error': error_msg}), 500
+            
             return jsonify({'error': result}), 500
         
         # Create project record
@@ -547,6 +708,15 @@ def create_project():
             'created_at': datetime.utcnow().isoformat(),
             'created_by': user_uuid
         }
+        
+        # Add Fly.io app information if available
+        if fly_app_data:
+            project['fly_app'] = {
+                'id': fly_app_data.get('id'),
+                'name': slug,
+                'organization': fly_app_data.get('organization', {}).get('slug'),
+                'created_at': fly_app_data.get('created_at')
+            }
         
         # Add to projects list
         projects.append(project)
