@@ -74,8 +74,18 @@ def validate_github_key(api_key):
 def validate_fly_key(api_key):
     """Validate Fly.io API key by making a test request"""
     try:
+        # Determine the correct authorization format based on token type
+        # FlyV1 format for tokens created with 'fly tokens create'
+        # Bearer format for tokens from 'flyctl auth token'
+        if api_key.startswith('fo1_'):
+            # Org tokens created with 'fly tokens create org' use FlyV1 format
+            auth_header = f'FlyV1 {api_key}'
+        else:
+            # Personal auth tokens use Bearer format
+            auth_header = f'Bearer {api_key}'
+            
         headers = {
-            'Authorization': f'Bearer {api_key}',
+            'Authorization': auth_header,
             'Content-Type': 'application/json'
         }
         response = requests.get('https://api.fly.io/v1/apps', headers=headers, timeout=10)
