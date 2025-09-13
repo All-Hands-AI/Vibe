@@ -590,7 +590,50 @@ def reset_riff_llm(slug, riff_slug):
             logger.error(f"❌ Failed to reset LLM for riff: {error_message}")
             return jsonify({"error": error_message}), 500
 
-        logger.info(f"✅ LLM reset successfully for riff: {riff_slug}")
+        # Double-check that the LLM is actually ready before returning success
+        logger.info(
+            f"🔍 Verifying LLM readiness after reset for {user_uuid[:8]}:{slug}:{riff_slug}"
+        )
+        agent_loop = agent_loop_manager.get_agent_loop(user_uuid, slug, riff_slug)
+        if not agent_loop:
+            logger.error(
+                f"❌ LLM reset appeared successful but AgentLoop not found for {user_uuid[:8]}:{slug}:{riff_slug}"
+            )
+            return (
+                jsonify({"error": "LLM reset failed - could not verify readiness"}),
+                500,
+            )
+
+        # Test that the LLM can actually respond to a simple query
+        try:
+            logger.info(
+                f"🧪 Testing LLM functionality for {user_uuid[:8]}:{slug}:{riff_slug}"
+            )
+            test_response = agent_loop.send_message("Hello")
+            if test_response and len(test_response.strip()) > 0:
+                logger.info(
+                    f"✅ LLM test successful for {user_uuid[:8]}:{slug}:{riff_slug}"
+                )
+            else:
+                logger.error(
+                    f"❌ LLM test failed - empty response for {user_uuid[:8]}:{slug}:{riff_slug}"
+                )
+                return (
+                    jsonify(
+                        {"error": "LLM reset failed - LLM not responding properly"}
+                    ),
+                    500,
+                )
+        except Exception as e:
+            logger.error(
+                f"❌ LLM test failed with exception for {user_uuid[:8]}:{slug}:{riff_slug}: {e}"
+            )
+            return (
+                jsonify({"error": f"LLM reset failed - LLM test error: {str(e)}"}),
+                500,
+            )
+
+        logger.info(f"✅ LLM reset and verification successful for riff: {riff_slug}")
         log_api_response(
             logger, "POST", f"/api/apps/{slug}/riffs/{riff_slug}/reset", 200, user_uuid
         )

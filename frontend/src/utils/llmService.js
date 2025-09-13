@@ -72,19 +72,7 @@ export async function resetLLM(appSlug, riffSlug) {
     const data = await response.json()
     console.log('✅ LLM reset successfully:', data.message)
     
-    // Verify that the LLM is actually ready after reset
-    console.log('🔍 Verifying LLM readiness after reset...')
-    const isReady = await checkLLMReady(appSlug, riffSlug)
-    
-    if (!isReady) {
-      console.error('❌ LLM reset succeeded but LLM is still not ready')
-      return { 
-        success: false, 
-        error: 'Reset completed but LLM is still not ready. Please try again or check your API keys.' 
-      }
-    }
-    
-    console.log('✅ LLM reset and verification successful')
+    // Backend now handles verification, so we can trust the 200 response
     return { success: true }
   } catch (error) {
     console.error('❌ Error resetting LLM:', error)
