@@ -238,9 +238,13 @@ function AppDetail() {
       <div className="max-w-6xl mx-auto px-8 py-8">
         {/* Navigation */}
         <nav className="mb-8">
-          <Link to="/" className="inline-flex items-center text-cyber-muted hover:text-neon-green font-medium transition-colors duration-200 font-mono">
-            ← Back to Apps
-          </Link>
+          <div className="flex items-center space-x-2 text-sm">
+            <Link to="/" className="text-cyber-muted hover:text-neon-green transition-colors duration-200">
+              Apps
+            </Link>
+            <span className="text-gray-500">/</span>
+            <span className="text-cyber-muted">{app.name}</span>
+          </div>
         </nav>
 
         {/* App Header */}
@@ -256,14 +260,14 @@ function AppDetail() {
         </header>
 
         {/* Main Content Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
           {/* App Status */}
-          <div className="lg:col-span-1">
+          <div className="xl:col-span-1">
             <AppStatus app={app} />
           </div>
 
           {/* Riffs Section */}
-          <div className="lg:col-span-2">
+          <div className="xl:col-span-2">
             <section>
               {/* Create New Riff */}
               <div className="mb-12">

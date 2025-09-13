@@ -224,14 +224,14 @@ function RiffDetail() {
         </header>
 
         {/* Main Content Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
           {/* Branch Status */}
-          <div className="lg:col-span-1">
+          <div className="xl:col-span-1">
             <AppStatus app={app} />
           </div>
 
           {/* Chat Window */}
-          <div className="lg:col-span-2">
+          <div className="xl:col-span-2">
             <div className="h-[600px]">
               {userUUID ? (
                 <ChatWindow 
