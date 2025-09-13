@@ -11,9 +11,13 @@ function MessageInput({ onSendMessage, disabled = false, placeholder = 'Type a m
     if (message.trim() && !disabled) {
       onSendMessage(message, 'text')
       setMessage('')
-      // Reset textarea height
+      // Reset textarea height and maintain focus
       if (textareaRef.current) {
         textareaRef.current.style.height = 'auto'
+        // Keep focus on the textarea after sending
+        setTimeout(() => {
+          textareaRef.current?.focus()
+        }, 0)
       }
     }
   }
@@ -73,13 +77,13 @@ function MessageInput({ onSendMessage, disabled = false, placeholder = 'Type a m
         </div>
 
         {/* Action Buttons */}
-        <div className="flex space-x-2">
+        <div className="flex items-end space-x-2">
           {/* File Upload Button */}
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}
             disabled={disabled}
-            className="p-2 bg-gray-700 hover:bg-gray-600 border border-gray-600 rounded-lg text-cyber-muted hover:text-cyber-text transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="h-10 w-10 flex items-center justify-center bg-gray-700 hover:bg-gray-600 border border-gray-600 rounded-lg text-cyber-muted hover:text-cyber-text transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
             title="Upload file"
           >
             📎
@@ -89,7 +93,7 @@ function MessageInput({ onSendMessage, disabled = false, placeholder = 'Type a m
           <button
             type="submit"
             disabled={disabled || !message.trim()}
-            className="px-4 py-2 bg-neon-green/20 hover:bg-neon-green/30 border border-neon-green text-neon-green rounded-lg font-mono text-sm transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="h-10 px-4 flex items-center justify-center bg-neon-green/20 hover:bg-neon-green/30 border border-neon-green text-neon-green rounded-lg font-mono text-sm transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {disabled ? (
               <div className="flex items-center space-x-2">
