@@ -9,9 +9,10 @@ export default defineConfig({
     port: 12003,
     allowedHosts: true,
     cors: true,
+    strictPort: true,
     proxy: {
       '/api': {
-        target: 'http://localhost:8000',
+        target: 'http://localhost:12001',
         changeOrigin: true,
         secure: false
       }

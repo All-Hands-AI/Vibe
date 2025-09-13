@@ -1,6 +1,7 @@
 from flask import Blueprint, jsonify, request
 import logging
 import re
+import uuid
 from datetime import datetime, timezone
 from storage import get_riffs_storage, get_apps_storage
 
@@ -44,25 +45,6 @@ def user_app_exists(user_uuid, app_slug):
     """Check if app exists for user"""
     storage = get_apps_storage(user_uuid)
     return storage.app_exists(app_slug)
-
-
-# Legacy functions for backward compatibility during migration
-def load_apps():
-    """Load apps from legacy file - DEPRECATED"""
-    logger.warning("⚠️ Using deprecated load_apps() function in riffs.py")
-    return []
-
-
-def load_riffs(app_slug):
-    """Load riffs from legacy file - DEPRECATED"""
-    logger.warning("⚠️ Using deprecated load_riffs() function")
-    return []
-
-
-def save_riffs(app_slug, riffs):
-    """Save riffs to legacy file - DEPRECATED"""
-    logger.warning("⚠️ Using deprecated save_riffs() function")
-    return False
 
 
 def create_slug(name):
@@ -187,3 +169,175 @@ def create_riff(slug):
     except Exception as e:
         logger.error(f"💥 Error creating riff: {str(e)}")
         return jsonify({"error": "Failed to create riff"}), 500
+
+
+# Message utility functions using new storage pattern
+def load_user_messages(user_uuid, app_slug, riff_slug):
+    """Load messages for a specific riff using storage pattern"""
+    storage = get_riffs_storage(user_uuid)
+    return storage.load_messages(app_slug, riff_slug)
+
+
+def save_user_messages(user_uuid, app_slug, riff_slug, messages):
+    """Save messages for a specific riff using storage pattern"""
+    storage = get_riffs_storage(user_uuid)
+    return storage.save_messages(app_slug, riff_slug, messages)
+
+
+def add_user_message(user_uuid, app_slug, riff_slug, message):
+    """Add a single message to a riff using storage pattern"""
+    storage = get_riffs_storage(user_uuid)
+    return storage.add_message(app_slug, riff_slug, message)
+
+
+def update_riff_message_stats(
+    user_uuid, app_slug, riff_slug, message_count, last_message_at
+):
+    """Update riff statistics with message count and last message time"""
+    try:
+        # Load the riff data
+        riff_data = load_user_riff(user_uuid, app_slug, riff_slug)
+        if riff_data:
+            # Update stats
+            riff_data["message_count"] = message_count
+            riff_data["last_message_at"] = last_message_at
+
+            # Save updated riff data
+            success = save_user_riff(user_uuid, app_slug, riff_slug, riff_data)
+            if success:
+                logger.debug(
+                    f"📊 Updated riff stats: {message_count} messages, last at {last_message_at}"
+                )
+            return success
+    except Exception as e:
+        logger.error(f"❌ Failed to update riff stats: {e}")
+    return False
+
+
+@riffs_bp.route("/api/apps/<slug>/riffs/<riff_slug>/messages", methods=["GET"])
+def get_messages(slug, riff_slug):
+    """Get all messages for a specific riff"""
+    logger.info(
+        f"📋 GET /api/apps/{slug}/riffs/{riff_slug}/messages - Fetching messages"
+    )
+
+    try:
+        # Get UUID from headers
+        user_uuid = request.headers.get("X-User-UUID")
+        if not user_uuid:
+            logger.warning("❌ X-User-UUID header is required")
+            return jsonify({"error": "X-User-UUID header is required"}), 400
+
+        user_uuid = user_uuid.strip()
+        if not user_uuid:
+            logger.warning("❌ Empty UUID provided in header")
+            return jsonify({"error": "UUID cannot be empty"}), 400
+
+        # Verify app exists
+        if not user_app_exists(user_uuid, slug):
+            logger.warning(f"❌ App not found: {slug}")
+            return jsonify({"error": "App not found"}), 404
+
+        # Verify riff exists
+        if not user_riff_exists(user_uuid, slug, riff_slug):
+            logger.warning(f"❌ Riff not found: {riff_slug}")
+            return jsonify({"error": "Riff not found"}), 404
+
+        messages = load_user_messages(user_uuid, slug, riff_slug)
+        # Sort messages by creation time (oldest first for chat display)
+        messages.sort(key=lambda x: x.get("created_at", ""))
+
+        logger.info(f"📊 Returning {len(messages)} messages for riff {riff_slug}")
+        return jsonify(
+            {
+                "messages": messages,
+                "count": len(messages),
+                "app_slug": slug,
+                "riff_slug": riff_slug,
+            }
+        )
+    except Exception as e:
+        logger.error(f"💥 Error fetching messages: {str(e)}")
+        return jsonify({"error": "Failed to fetch messages"}), 500
+
+
+@riffs_bp.route("/api/apps/<slug>/riffs/messages", methods=["POST"])
+def create_message(slug):
+    """Create a new message for a specific riff"""
+    logger.info(f"🆕 POST /api/apps/{slug}/riffs/messages - Creating new message")
+
+    try:
+        # Get UUID from headers
+        user_uuid = request.headers.get("X-User-UUID")
+        if not user_uuid:
+            logger.warning("❌ X-User-UUID header is required")
+            return jsonify({"error": "X-User-UUID header is required"}), 400
+
+        user_uuid = user_uuid.strip()
+        if not user_uuid:
+            logger.warning("❌ Empty UUID provided in header")
+            return jsonify({"error": "UUID cannot be empty"}), 400
+
+        # Verify app exists
+        if not user_app_exists(user_uuid, slug):
+            logger.warning(f"❌ App not found: {slug}")
+            return jsonify({"error": "App not found"}), 404
+
+        # Get request data
+        data = request.get_json()
+        if not data:
+            logger.warning("❌ Request body is required")
+            return jsonify({"error": "Request body is required"}), 400
+
+        riff_slug = data.get("riff_slug", "").strip()
+        if not riff_slug:
+            logger.warning("❌ Riff slug is required")
+            return jsonify({"error": "Riff slug is required"}), 400
+
+        content = data.get("content", "").strip()
+        if not content:
+            logger.warning("❌ Message content is required")
+            return jsonify({"error": "Message content is required"}), 400
+
+        # Verify riff exists
+        if not user_riff_exists(user_uuid, slug, riff_slug):
+            logger.warning(f"❌ Riff not found: {riff_slug}")
+            return jsonify({"error": "Riff not found"}), 404
+
+        logger.info(f"🔄 Creating message for riff: {riff_slug}")
+
+        # Create message record
+        message_id = str(uuid.uuid4())
+        created_at = datetime.now(timezone.utc).isoformat()
+
+        message = {
+            "id": message_id,
+            "content": content,
+            "riff_slug": riff_slug,
+            "app_slug": slug,
+            "created_at": created_at,
+            "created_by": user_uuid,
+            "type": data.get("type", "text"),  # text, file, etc.
+            "metadata": data.get("metadata", {}),  # Additional data like file info
+        }
+
+        # Add message using storage pattern
+        if not add_user_message(user_uuid, slug, riff_slug, message):
+            logger.error("❌ Failed to save message to file")
+            return jsonify({"error": "Failed to save message"}), 500
+
+        # Get updated message count for stats
+        messages = load_user_messages(user_uuid, slug, riff_slug)
+
+        # Update riff statistics
+        update_riff_message_stats(user_uuid, slug, riff_slug, len(messages), created_at)
+
+        logger.info(f"✅ Message created successfully for riff: {riff_slug}")
+        return (
+            jsonify({"message": "Message created successfully", "data": message}),
+            201,
+        )
+
+    except Exception as e:
+        logger.error(f"💥 Error creating message: {str(e)}")
+        return jsonify({"error": "Failed to create message"}), 500
