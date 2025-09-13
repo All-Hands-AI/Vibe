@@ -158,7 +158,7 @@ function Projects() {
 
       {/* Create New Project Form */}
       <Card className="p-6 mb-8">
-        <h2 className="text-xl font-semibold text-text-primary mb-4">Create New Project</h2>
+        <h2 className="text-xl font-semibold text-white mb-4">Create New Project</h2>
         <form onSubmit={handleCreateProject} className="space-y-4">
           <Input
             label="Project Name"
@@ -171,7 +171,7 @@ function Projects() {
           />
           
           {newProjectName && (
-            <div className="text-sm text-text-secondary">
+            <div className="text-sm text-gray-400">
               Slug: <code className="bg-gray-700 px-2 py-1 rounded text-primary-300">{createSlug(newProjectName)}</code>
             </div>
           )}
@@ -195,7 +195,7 @@ function Projects() {
 
       {/* Projects List */}
       <div>
-        <h2 className="text-2xl font-semibold text-text-primary mb-6">Your Projects</h2>
+        <h2 className="text-2xl font-semibold text-white mb-6">Your Projects</h2>
         
         {loading ? (
           <div className="flex justify-center py-12">
@@ -203,7 +203,7 @@ function Projects() {
           </div>
         ) : projects.length === 0 ? (
           <Card className="p-8 text-center">
-            <p className="text-text-secondary text-lg">No projects yet. Create your first project above!</p>
+            <p className="text-gray-400 text-lg">No projects yet. Create your first project above!</p>
           </Card>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -215,14 +215,14 @@ function Projects() {
               >
                 <Card hover className="p-6 h-full">
                   <div className="mb-4">
-                    <h3 className="text-xl font-semibold text-text-primary mb-2">{project.name}</h3>
+                    <h3 className="text-xl font-semibold text-white mb-2">{project.name}</h3>
                     <span className="text-sm text-primary-300 bg-primary-300/10 px-2 py-1 rounded">
                       {project.slug}
                     </span>
                   </div>
                   
                   <div className="space-y-3">
-                    <p className="text-sm text-text-secondary">
+                    <p className="text-sm text-gray-400">
                       Created: {new Date(project.created_at).toLocaleDateString()}
                     </p>
                     

@@ -4,9 +4,9 @@ function Card({ children, className = '', variant = 'default', hover = false, ..
   const baseClasses = 'rounded-lg border transition-all duration-200'
   
   const variantClasses = {
-    default: 'bg-background-secondary border-gray-700',
-    primary: 'bg-background-secondary border-primary-300/20',
-    glass: 'bg-background-secondary/50 backdrop-blur-sm border-gray-700/50',
+    default: 'bg-gray-800 border-gray-700',
+    primary: 'bg-gray-800 border-primary-300/20',
+    glass: 'bg-gray-800/50 backdrop-blur-sm border-gray-700/50',
   }
 
   const hoverClasses = hover 

@@ -12,7 +12,7 @@ function LoadingSpinner({ size = 'md', className = '', text = '' }) {
     <div className={`flex flex-col items-center justify-center space-y-2 ${className}`}>
       <div className={`animate-spin rounded-full border-4 border-gray-600 border-t-primary-300 ${sizeClasses[size]}`}></div>
       {text && (
-        <p className="text-text-secondary text-sm">{text}</p>
+        <p className="text-gray-400 text-sm">{text}</p>
       )}
     </div>
   )

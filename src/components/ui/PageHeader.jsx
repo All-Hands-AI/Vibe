@@ -5,9 +5,9 @@ function PageHeader({ title, subtitle, children, className = '' }) {
     <div className={`mb-8 ${className}`}>
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-text-primary">{title}</h1>
+          <h1 className="text-3xl font-bold text-white">{title}</h1>
           {subtitle && (
-            <p className="mt-2 text-lg text-text-secondary">{subtitle}</p>
+            <p className="mt-2 text-lg text-gray-400">{subtitle}</p>
           )}
         </div>
         {children && (

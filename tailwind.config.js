@@ -19,7 +19,7 @@ export default {
           800: '#075985',
           900: '#0c4a6e',
         },
-        dark: {
+        gray: {
           50: '#f8fafc',
           100: '#f1f5f9',
           200: '#e2e8f0',
@@ -32,16 +32,6 @@ export default {
           900: '#0f172a',
           950: '#020617',
         },
-        background: {
-          primary: '#242424',
-          secondary: '#1a1a1a',
-          tertiary: '#2d2d2d',
-        },
-        text: {
-          primary: '#ffffff',
-          secondary: '#cccccc',
-          muted: '#666666',
-        }
       },
       fontFamily: {
         sans: ['Inter', 'system-ui', 'Avenir', 'Helvetica', 'Arial', 'sans-serif'],

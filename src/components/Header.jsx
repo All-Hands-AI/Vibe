@@ -11,7 +11,7 @@ function Header() {
   }
 
   return (
-    <header className="bg-background-secondary border-b border-gray-700 sticky top-0 z-40">
+    <header className="bg-gray-800 border-b border-gray-700 sticky top-0 z-40">
       <Container>
         <div className="flex justify-between items-center py-4">
           <Link to="/" className="text-primary-300 hover:text-primary-400 transition-colors">
@@ -23,7 +23,7 @@ function Header() {
               className={`px-3 py-2 rounded-md text-sm font-medium transition-all duration-200 ${
                 isActive('/') 
                   ? 'text-primary-300 bg-primary-300/10' 
-                  : 'text-text-primary hover:text-primary-300 hover:bg-gray-700/50'
+                  : 'text-white hover:text-primary-300 hover:bg-gray-700/50'
               }`}
             >
               Projects
@@ -33,7 +33,7 @@ function Header() {
               className={`px-3 py-2 rounded-md text-sm font-medium transition-all duration-200 ${
                 isActive('/home') 
                   ? 'text-primary-300 bg-primary-300/10' 
-                  : 'text-text-primary hover:text-primary-300 hover:bg-gray-700/50'
+                  : 'text-white hover:text-primary-300 hover:bg-gray-700/50'
               }`}
             >
               Home
@@ -43,7 +43,7 @@ function Header() {
               className={`px-3 py-2 rounded-md text-sm font-medium transition-all duration-200 ${
                 isActive('/about') 
                   ? 'text-primary-300 bg-primary-300/10' 
-                  : 'text-text-primary hover:text-primary-300 hover:bg-gray-700/50'
+                  : 'text-white hover:text-primary-300 hover:bg-gray-700/50'
               }`}
             >
               About
@@ -53,7 +53,7 @@ function Header() {
               className={`px-3 py-2 rounded-md text-sm font-medium transition-all duration-200 ${
                 isActive('/contact') 
                   ? 'text-primary-300 bg-primary-300/10' 
-                  : 'text-text-primary hover:text-primary-300 hover:bg-gray-700/50'
+                  : 'text-white hover:text-primary-300 hover:bg-gray-700/50'
               }`}
             >
               Contact

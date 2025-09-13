@@ -25,7 +25,7 @@ function AppContent() {
 
   if (isLoading) {
     return (
-      <div className="fixed inset-0 bg-background-primary flex items-center justify-center z-50">
+      <div className="fixed inset-0 bg-gray-900 flex items-center justify-center z-50">
         <LoadingSpinner size="lg" text="Loading OpenVibe..." />
       </div>
     )
@@ -33,7 +33,7 @@ function AppContent() {
 
   return (
     <Router>
-      <div className="min-h-screen flex flex-col bg-background-primary text-text-primary">
+      <div className="min-h-screen flex flex-col bg-gray-900 text-white">
         {!isSetupComplete && (
           <SetupWindow onSetupComplete={completeSetup} />
         )}

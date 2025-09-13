@@ -3,7 +3,7 @@ import { Container } from './ui'
 
 function Layout({ children, className = '', containerSize = 'default' }) {
   return (
-    <div className={`min-h-screen bg-background-primary ${className}`}>
+    <div className={`min-h-screen bg-gray-900 ${className}`}>
       <Container size={containerSize} className="py-8">
         {children}
       </Container>
