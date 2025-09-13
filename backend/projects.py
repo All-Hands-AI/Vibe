@@ -202,7 +202,7 @@ def create_fly_app(app_name, fly_token):
     # Check if app already exists first
     try:
         check_response = requests.get(
-            f'https://api.fly.io/v1/apps/{app_name}',
+            f'https://api.machines.dev/v1/apps/{app_name}',
             headers=headers,
             timeout=10
         )
@@ -238,7 +238,7 @@ def create_fly_app(app_name, fly_token):
         logger.debug(f"🛩️ Creating app with data: {create_data}")
         
         create_response = requests.post(
-            'https://api.fly.io/v1/apps',
+            'https://api.machines.dev/v1/apps',
             headers=headers,
             json=create_data,
             timeout=30
@@ -373,7 +373,7 @@ def get_fly_status(project_slug, fly_token):
         
         # Check if app exists and get status
         app_response = requests.get(
-            f'https://api.fly.io/v1/apps/{project_slug}',
+            f'https://api.machines.dev/v1/apps/{project_slug}',
             headers=headers,
             timeout=10
         )
