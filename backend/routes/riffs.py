@@ -190,7 +190,9 @@ def add_user_message(user_uuid, app_slug, riff_slug, message):
     return storage.add_message(app_slug, riff_slug, message)
 
 
-def update_riff_message_stats(user_uuid, app_slug, riff_slug, message_count, last_message_at):
+def update_riff_message_stats(
+    user_uuid, app_slug, riff_slug, message_count, last_message_at
+):
     """Update riff statistics with message count and last message time"""
     try:
         # Load the riff data
@@ -203,7 +205,9 @@ def update_riff_message_stats(user_uuid, app_slug, riff_slug, message_count, las
             # Save updated riff data
             success = save_user_riff(user_uuid, app_slug, riff_slug, riff_data)
             if success:
-                logger.debug(f"📊 Updated riff stats: {message_count} messages, last at {last_message_at}")
+                logger.debug(
+                    f"📊 Updated riff stats: {message_count} messages, last at {last_message_at}"
+                )
             return success
     except Exception as e:
         logger.error(f"❌ Failed to update riff stats: {e}")
@@ -213,7 +217,9 @@ def update_riff_message_stats(user_uuid, app_slug, riff_slug, message_count, las
 @riffs_bp.route("/api/apps/<slug>/riffs/<riff_slug>/messages", methods=["GET"])
 def get_messages(slug, riff_slug):
     """Get all messages for a specific riff"""
-    logger.info(f"📋 GET /api/apps/{slug}/riffs/{riff_slug}/messages - Fetching messages")
+    logger.info(
+        f"📋 GET /api/apps/{slug}/riffs/{riff_slug}/messages - Fetching messages"
+    )
 
     try:
         # Get UUID from headers
@@ -242,12 +248,14 @@ def get_messages(slug, riff_slug):
         messages.sort(key=lambda x: x.get("created_at", ""))
 
         logger.info(f"📊 Returning {len(messages)} messages for riff {riff_slug}")
-        return jsonify({
-            "messages": messages,
-            "count": len(messages),
-            "app_slug": slug,
-            "riff_slug": riff_slug
-        })
+        return jsonify(
+            {
+                "messages": messages,
+                "count": len(messages),
+                "app_slug": slug,
+                "riff_slug": riff_slug,
+            }
+        )
     except Exception as e:
         logger.error(f"💥 Error fetching messages: {str(e)}")
         return jsonify({"error": "Failed to fetch messages"}), 500
@@ -310,7 +318,7 @@ def create_message(slug):
             "created_at": created_at,
             "created_by": user_uuid,
             "type": data.get("type", "text"),  # text, file, etc.
-            "metadata": data.get("metadata", {})  # Additional data like file info
+            "metadata": data.get("metadata", {}),  # Additional data like file info
         }
 
         # Add message using storage pattern
@@ -325,10 +333,10 @@ def create_message(slug):
         update_riff_message_stats(user_uuid, slug, riff_slug, len(messages), created_at)
 
         logger.info(f"✅ Message created successfully for riff: {riff_slug}")
-        return jsonify({
-            "message": "Message created successfully",
-            "data": message
-        }), 201
+        return (
+            jsonify({"message": "Message created successfully", "data": message}),
+            201,
+        )
 
     except Exception as e:
         logger.error(f"💥 Error creating message: {str(e)}")

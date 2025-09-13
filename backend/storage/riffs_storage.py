@@ -120,7 +120,9 @@ class RiffsStorage(BaseStorage):
     # Message management methods
     def get_messages_file_path(self, app_slug: str, riff_slug: str) -> Path:
         """Get path to messages.json file"""
-        return self.get_riff_dir_path(app_slug, riff_slug) / "messages" / "messages.json"
+        return (
+            self.get_riff_dir_path(app_slug, riff_slug) / "messages" / "messages.json"
+        )
 
     def load_messages(self, app_slug: str, riff_slug: str) -> List[Dict[str, Any]]:
         """Load messages for a specific riff"""
@@ -132,17 +134,23 @@ class RiffsStorage(BaseStorage):
         data = self.read_json_file(messages_file)
 
         if data is None:
-            logger.debug(f"💬 Messages file doesn't exist for riff: {app_slug}/{riff_slug}")
+            logger.debug(
+                f"💬 Messages file doesn't exist for riff: {app_slug}/{riff_slug}"
+            )
             return []
 
         if not isinstance(data, list):
             logger.error(f"❌ Invalid messages data format for {app_slug}/{riff_slug}")
             return []
 
-        logger.info(f"💬 Successfully loaded {len(data)} messages for riff: {app_slug}/{riff_slug}")
+        logger.info(
+            f"💬 Successfully loaded {len(data)} messages for riff: {app_slug}/{riff_slug}"
+        )
         return data
 
-    def save_messages(self, app_slug: str, riff_slug: str, messages: List[Dict[str, Any]]) -> bool:
+    def save_messages(
+        self, app_slug: str, riff_slug: str, messages: List[Dict[str, Any]]
+    ) -> bool:
         """Save messages for a specific riff"""
         logger.info(
             f"💾 Saving {len(messages)} messages for riff: {app_slug}/{riff_slug} for user {self.user_uuid[:8]}..."
@@ -152,13 +160,17 @@ class RiffsStorage(BaseStorage):
         success = self.write_json_file(messages_file, messages)
 
         if success:
-            logger.info(f"✅ Messages saved successfully for riff: {app_slug}/{riff_slug}")
+            logger.info(
+                f"✅ Messages saved successfully for riff: {app_slug}/{riff_slug}"
+            )
         else:
             logger.error(f"❌ Failed to save messages for riff: {app_slug}/{riff_slug}")
 
         return success
 
-    def add_message(self, app_slug: str, riff_slug: str, message: Dict[str, Any]) -> bool:
+    def add_message(
+        self, app_slug: str, riff_slug: str, message: Dict[str, Any]
+    ) -> bool:
         """Add a single message to a riff"""
         logger.info(
             f"📝 Adding message to riff: {app_slug}/{riff_slug} for user {self.user_uuid[:8]}..."
