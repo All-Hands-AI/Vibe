@@ -15,16 +15,49 @@ function ChatWindow({ app, riff, userUuid }) {
 
   // Scroll to bottom of messages
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+    console.log('📜 scrollToBottom called')
+    console.log('📜 messagesEndRef.current:', messagesEndRef.current)
+    console.log('📜 scrollContainerRef.current:', scrollContainerRef.current)
+    
+    if (messagesEndRef.current) {
+      console.log('📜 Attempting to scroll to bottom using scrollIntoView')
+      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' })
+      
+      // Also try direct scroll as backup
+      if (scrollContainerRef.current) {
+        console.log('📜 Also trying direct scroll as backup')
+        setTimeout(() => {
+          scrollContainerRef.current.scrollTop = scrollContainerRef.current.scrollHeight
+        }, 100)
+      }
+    } else {
+      console.log('❌ messagesEndRef.current is null, cannot scroll')
+    }
   }
 
   // Check if user is scrolled to bottom (or close to it)
   const isScrolledToBottom = () => {
-    if (!scrollContainerRef.current) return true // Default to true if no container
+    if (!scrollContainerRef.current) {
+      console.log('🔍 isScrolledToBottom: No scroll container ref, defaulting to true')
+      return true // Default to true if no container
+    }
     
     const container = scrollContainerRef.current
     const threshold = 50 // Allow 50px tolerance
-    const isAtBottom = container.scrollTop + container.clientHeight >= container.scrollHeight - threshold
+    const scrollTop = container.scrollTop
+    const clientHeight = container.clientHeight
+    const scrollHeight = container.scrollHeight
+    const isAtBottom = scrollTop + clientHeight >= scrollHeight - threshold
+    
+    console.log('🔍 Scroll position check:', {
+      scrollTop,
+      clientHeight,
+      scrollHeight,
+      threshold,
+      calculation: `${scrollTop} + ${clientHeight} >= ${scrollHeight} - ${threshold}`,
+      result: `${scrollTop + clientHeight} >= ${scrollHeight - threshold}`,
+      isAtBottom
+    })
     
     return isAtBottom
   }
@@ -36,8 +69,13 @@ function ChatWindow({ app, riff, userUuid }) {
 
   // Fetch messages from API
   const fetchMessages = useCallback(async () => {
+    console.log('🔄 fetchMessages called')
+    console.log('🔄 Current loading state:', loading)
+    console.log('🔄 Current messages count:', messages.length)
+    
     // Check if user was at bottom before fetching
     const wasAtBottom = isScrolledToBottom()
+    console.log('🔄 User was at bottom before fetch:', wasAtBottom)
     
     try {
       const response = await fetch(`/api/apps/${app.slug}/riffs/${riff.slug}/messages`, {
@@ -54,11 +92,16 @@ function ChatWindow({ app, riff, userUuid }) {
       const newMessages = data.messages || []
       const newMessageCount = newMessages.length
       
+      console.log('🔄 Fetched messages count:', newMessageCount)
+      console.log('🔄 Previous messages count:', messages.length)
+      
       // Check if messages actually changed
       const messagesChanged = JSON.stringify(newMessages) !== JSON.stringify(messages)
+      console.log('🔄 Messages changed:', messagesChanged)
       
       // Only update messages if there's actually a change
       if (messagesChanged) {
+        console.log('🔄 Updating messages state')
         setMessages(newMessages)
         setPreviousMessageCount(newMessageCount)
       }
@@ -66,11 +109,22 @@ function ChatWindow({ app, riff, userUuid }) {
       // Scroll to bottom if:
       // 1. Initial load (loading is true), OR
       // 2. User was at bottom and messages changed
-      if (loading || (wasAtBottom && messagesChanged)) {
+      const shouldScroll = loading || (wasAtBottom && messagesChanged)
+      console.log('🔄 Should scroll decision:', {
+        loading,
+        wasAtBottom,
+        messagesChanged,
+        shouldScroll
+      })
+      
+      if (shouldScroll) {
+        console.log('🔄 Scheduling scroll to bottom with requestAnimationFrame')
         // Use requestAnimationFrame to ensure DOM is updated
         requestAnimationFrame(() => {
           scrollToBottom()
         })
+      } else {
+        console.log('🔄 Not scrolling - conditions not met')
       }
       
       setError('')
@@ -107,10 +161,12 @@ function ChatWindow({ app, riff, userUuid }) {
       }
 
       // Immediately fetch messages to update the UI
+      console.log('💬 Message sent, fetching updated messages')
       await fetchMessages()
       
       // Always scroll to bottom after sending a message
       // (user just sent it, they should see it)
+      console.log('💬 Scheduling scroll after sending message')
       requestAnimationFrame(() => {
         scrollToBottom()
       })
@@ -199,8 +255,8 @@ function ChatWindow({ app, riff, userUuid }) {
           userUuid={userUuid}
           scrollContainerRef={scrollContainerRef}
           onScroll={handleScroll}
+          messagesEndRef={messagesEndRef}
         />
-        <div ref={messagesEndRef} />
       </div>
 
       {/* Message Input */}
