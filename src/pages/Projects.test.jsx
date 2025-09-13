@@ -1,5 +1,6 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { MemoryRouter } from 'react-router-dom'
 import Projects from './Projects'
 
 // Mock fetch globally
@@ -18,6 +19,15 @@ vi.mock('../utils/uuid', () => ({
   generateUUID: () => 'test-uuid-12345',
   getUserUUID: () => 'test-uuid-12345',
 }))
+
+// Helper function to render with router
+const renderWithRouter = (component) => {
+  return render(
+    <MemoryRouter>
+      {component}
+    </MemoryRouter>
+  )
+}
 
 describe('Projects', () => {
   beforeEach(() => {
@@ -38,7 +48,7 @@ describe('Projects', () => {
       json: async () => ({ projects: [], count: 0 })
     })
 
-    render(<Projects />)
+    renderWithRouter(<Projects />)
     
     // Check header content
     expect(screen.getByText('Projects')).toBeInTheDocument()
@@ -63,7 +73,7 @@ describe('Projects', () => {
       json: async () => ({ projects: [], count: 0 })
     })
 
-    render(<Projects />)
+    renderWithRouter(<Projects />)
     
     await waitFor(() => {
       expect(screen.getByText('No projects yet. Create your first project above!')).toBeInTheDocument()
@@ -94,7 +104,7 @@ describe('Projects', () => {
       json: async () => ({ projects: mockProjects, count: 2 })
     })
 
-    render(<Projects />)
+    renderWithRouter(<Projects />)
     
     await waitFor(() => {
       expect(screen.getByText('Test Project')).toBeInTheDocument()
@@ -103,9 +113,9 @@ describe('Projects', () => {
       expect(screen.getByText('another-project')).toBeInTheDocument()
     })
     
-    // Check GitHub links
-    const githubLinks = screen.getAllByText('View on GitHub →')
-    expect(githubLinks).toHaveLength(2)
+    // Check GitHub info and project links
+    expect(screen.getAllByText('GitHub repository available')).toHaveLength(2)
+    expect(screen.getAllByText('View Project →')).toHaveLength(2)
   })
 
   it('shows slug preview when typing project name', async () => {
@@ -115,7 +125,7 @@ describe('Projects', () => {
       json: async () => ({ projects: [], count: 0 })
     })
 
-    render(<Projects />)
+    renderWithRouter(<Projects />)
     
     const nameInput = screen.getByLabelText('Project Name')
     
@@ -136,7 +146,7 @@ describe('Projects', () => {
       json: async () => ({ projects: [], count: 0 })
     })
 
-    render(<Projects />)
+    renderWithRouter(<Projects />)
     
     const nameInput = screen.getByLabelText('Project Name')
     const createButton = screen.getByText('Create Project')
@@ -178,7 +188,7 @@ describe('Projects', () => {
         json: async () => ({ projects: [], count: 0 })
       })
 
-    render(<Projects />)
+    renderWithRouter(<Projects />)
     
     const nameInput = screen.getByLabelText('Project Name')
     const createButton = screen.getByText('Create Project')
@@ -208,7 +218,7 @@ describe('Projects', () => {
         json: async () => ({ error: 'GitHub API key is required. Please set it up in integrations.' })
       })
 
-    render(<Projects />)
+    renderWithRouter(<Projects />)
     
     const nameInput = screen.getByLabelText('Project Name')
     const createButton = screen.getByText('Create Project')
@@ -227,7 +237,7 @@ describe('Projects', () => {
     // Mock fetch failure
     fetch.mockRejectedValueOnce(new Error('Network error'))
 
-    render(<Projects />)
+    renderWithRouter(<Projects />)
     
     await waitFor(() => {
       expect(screen.getByText('Failed to load projects. Please try again.')).toBeInTheDocument()
@@ -246,7 +256,7 @@ describe('Projects', () => {
         json: async () => ({ error: 'Some error occurred' })
       })
 
-    render(<Projects />)
+    renderWithRouter(<Projects />)
     
     const nameInput = screen.getByLabelText('Project Name')
     const createButton = screen.getByText('Create Project')

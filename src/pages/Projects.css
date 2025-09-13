@@ -41,24 +41,24 @@
   font-size: 1.5rem;
 }
 
-.create-project-form {
+.create-project-section .create-project-form {
   display: flex;
   flex-direction: column;
   gap: 1rem;
 }
 
-.form-group {
+.create-project-section .form-group {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
 }
 
-.form-group label {
+.create-project-section .form-group label {
   font-weight: 600;
   color: #555;
 }
 
-.form-group input {
+.create-project-section .form-group input {
   padding: 0.75rem;
   border: 2px solid #e1e5e9;
   border-radius: 8px;
@@ -66,22 +66,22 @@
   transition: border-color 0.3s ease;
 }
 
-.form-group input:focus {
+.create-project-section .form-group input:focus {
   outline: none;
   border-color: #667eea;
 }
 
-.form-group input.error {
+.create-project-section .form-group input.error {
   border-color: #e74c3c;
 }
 
-.slug-preview {
+.create-project-section .slug-preview {
   font-size: 0.9rem;
   color: #666;
   margin-top: 0.25rem;
 }
 
-.slug-preview code {
+.create-project-section .slug-preview code {
   background: #f8f9fa;
   padding: 0.2rem 0.4rem;
   border-radius: 4px;
@@ -89,7 +89,7 @@
   color: #667eea;
 }
 
-.create-button {
+.create-project-section .create-button {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: white;
   border: none;
@@ -102,32 +102,32 @@
   align-self: flex-start;
 }
 
-.create-button:hover:not(:disabled) {
+.create-project-section .create-button:hover:not(:disabled) {
   transform: translateY(-2px);
   box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
 }
 
-.create-button:disabled {
+.create-project-section .create-button:disabled {
   opacity: 0.6;
   cursor: not-allowed;
   transform: none;
 }
 
 /* Messages */
-.message {
+.create-project-section .message {
   padding: 1rem;
   border-radius: 8px;
   margin-top: 1rem;
   font-weight: 500;
 }
 
-.error-message {
+.create-project-section .error-message {
   background: #fee;
   color: #c53030;
   border: 1px solid #fed7d7;
 }
 
-.success-message {
+.create-project-section .success-message {
   background: #f0fff4;
   color: #38a169;
   border: 1px solid #c6f6d5;
@@ -190,16 +190,22 @@
 }
 
 .project-card {
+  display: block;
   background: #f8f9fa;
   border: 1px solid #e9ecef;
   border-radius: 8px;
   padding: 1.5rem;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+  text-decoration: none;
+  color: inherit;
 }
 
 .project-card:hover {
   transform: translateY(-2px);
   box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+  border-color: #667eea;
+  text-decoration: none;
+  color: inherit;
 }
 
 .project-header {
@@ -233,17 +239,20 @@
   margin: 0;
 }
 
-.github-link {
-  color: #667eea;
-  text-decoration: none;
-  font-weight: 500;
-  transition: color 0.2s ease;
-  align-self: flex-start;
+.github-info {
+  color: #666;
+  font-size: 0.9rem;
+  font-style: italic;
 }
 
-.github-link:hover {
-  color: #764ba2;
-  text-decoration: underline;
+.project-actions {
+  margin-top: 0.5rem;
+}
+
+.view-project {
+  color: #667eea;
+  font-weight: 500;
+  font-size: 0.9rem;
 }
 
 /* Responsive Design */
@@ -266,11 +275,11 @@
     grid-template-columns: 1fr;
   }
   
-  .create-project-form {
+  .create-project-section .create-project-form {
     gap: 1.5rem;
   }
   
-  .create-button {
+  .create-project-section .create-button {
     align-self: stretch;
   }
 }

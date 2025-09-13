@@ -20,6 +20,10 @@ def get_projects_file():
     """Get the path to the projects.json file"""
     return DATA_DIR / 'projects.json'
 
+def get_conversations_file(project_id):
+    """Get the path to the conversations.json file for a specific project"""
+    return DATA_DIR / f'conversations_{project_id}.json'
+
 def load_projects():
     """Load projects from file"""
     projects_file = get_projects_file()
@@ -81,6 +85,61 @@ def save_projects(projects):
         logger.debug(f"💾 Error type: {type(e).__name__}")
         return False
 
+def load_conversations(project_id):
+    """Load conversations for a specific project from file"""
+    conversations_file = get_conversations_file(project_id)
+    logger.debug(f"📁 Loading conversations from: {conversations_file}")
+    logger.debug(f"📁 File exists: {conversations_file.exists()}")
+    
+    if conversations_file.exists():
+        try:
+            logger.debug(f"📁 File size: {conversations_file.stat().st_size} bytes")
+            
+            with open(conversations_file, 'r') as f:
+                content = f.read()
+                logger.debug(f"📁 File content length: {len(content)} characters")
+                
+                conversations = json.loads(content)
+                logger.info(f"📁 Successfully loaded {len(conversations)} conversations for project {project_id}")
+                return conversations
+        except (json.JSONDecodeError, IOError) as e:
+            logger.error(f"❌ Failed to load conversations for project {project_id}: {e}")
+            return []
+    else:
+        logger.info(f"📁 Conversations file doesn't exist for project {project_id}, returning empty list")
+    return []
+
+def save_conversations(project_id, conversations):
+    """Save conversations for a specific project to file"""
+    logger.debug(f"💾 Saving {len(conversations)} conversations for project {project_id}")
+    
+    try:
+        DATA_DIR.mkdir(parents=True, exist_ok=True)
+        logger.debug(f"💾 Data directory created/verified")
+    except Exception as e:
+        logger.error(f"❌ Failed to create data directory: {e}")
+        return False
+    
+    conversations_file = get_conversations_file(project_id)
+    logger.debug(f"💾 Conversations file path: {conversations_file}")
+    
+    try:
+        # Create backup if file exists
+        if conversations_file.exists():
+            backup_file = conversations_file.with_suffix('.json.backup')
+            logger.debug(f"💾 Creating backup: {backup_file}")
+            conversations_file.rename(backup_file)
+        
+        with open(conversations_file, 'w') as f:
+            json.dump(conversations, f, indent=2)
+        
+        logger.info(f"💾 Successfully saved {len(conversations)} conversations for project {project_id}")
+        logger.debug(f"💾 File size: {conversations_file.stat().st_size} bytes")
+        return True
+    except IOError as e:
+        logger.error(f"❌ Failed to save conversations for project {project_id}: {e}")
+        return False
+
 def create_slug(name):
     """Convert project name to slug format"""
     # Convert to lowercase and replace spaces/special chars with hyphens
@@ -91,7 +150,11 @@ def create_slug(name):
 
 def get_user_default_org(fly_token):
     """
-    Get the user's default organization slug (usually 'personal').
+    Get the user's default organization slug.
+    
+    Since Fly.io's REST API for organizations is not stable/available,
+    we'll use 'personal' as the default organization slug, which is
+    the most common case for individual users.
     
     Args:
         fly_token (str): The user's Fly.io API token
@@ -99,41 +162,13 @@ def get_user_default_org(fly_token):
     Returns:
         tuple: (success, org_slug_or_error_message)
     """
-    headers = {
-        'Authorization': f'Bearer {fly_token}',
-        'Content-Type': 'application/json',
-        'User-Agent': 'OpenVibe-Backend/1.0'
-    }
+    if not fly_token:
+        return False, "Fly.io API token is required"
     
-    try:
-        # Get user's organizations
-        orgs_response = requests.get(
-            'https://api.fly.io/v1/orgs',
-            headers=headers,
-            timeout=10
-        )
-        
-        if orgs_response.status_code == 200:
-            user_orgs = orgs_response.json()
-            logger.debug(f"🛩️ User organizations: {user_orgs}")
-            
-            # Look for personal org first, then fall back to first org
-            for org in user_orgs:
-                if org.get('type') == 'PERSONAL' or org.get('slug') == 'personal':
-                    return True, org.get('slug')
-            
-            # If no personal org found, use the first one
-            if user_orgs:
-                return True, user_orgs[0].get('slug')
-            else:
-                return False, "No organizations found for user"
-        else:
-            logger.error(f"❌ Failed to get user organizations: {orgs_response.text}")
-            return False, f"Failed to get organizations: {orgs_response.status_code}"
-    
-    except Exception as e:
-        logger.error(f"💥 Error getting user organizations: {str(e)}")
-        return False, f"Error getting organizations: {str(e)}"
+    # For most users, the personal organization slug is 'personal'
+    # If this doesn't work, the app creation will fail with a clear error
+    logger.debug(f"🛩️ Using default organization: personal")
+    return True, "personal"
 
 def create_fly_app(app_name, fly_token):
     """
@@ -249,6 +284,130 @@ def create_fly_app(app_name, fly_token):
     except Exception as e:
         logger.error(f"💥 Unexpected error creating Fly.io app: {str(e)}")
         return False, f"Unexpected error: {str(e)}"
+
+def get_github_status(repo_url, github_token):
+    """Get GitHub repository status including CI/CD tests"""
+    logger.info(f"🐙 Checking GitHub status for: {repo_url}")
+    
+    try:
+        # Extract owner and repo from URL
+        # Expected format: https://github.com/owner/repo
+        if not repo_url or 'github.com' not in repo_url:
+            logger.warning(f"❌ Invalid GitHub URL: {repo_url}")
+            return None
+            
+        parts = repo_url.replace('https://github.com/', '').split('/')
+        if len(parts) < 2:
+            logger.warning(f"❌ Cannot parse GitHub URL: {repo_url}")
+            return None
+            
+        owner, repo = parts[0], parts[1]
+        logger.debug(f"🔍 GitHub repo: {owner}/{repo}")
+        
+        headers = {
+            'Authorization': f'token {github_token}',
+            'Accept': 'application/vnd.github.v3+json',
+            'User-Agent': 'OpenVibe-Backend/1.0'
+        }
+        
+        # Get latest commit on main branch
+        commits_response = requests.get(
+            f'https://api.github.com/repos/{owner}/{repo}/commits/main',
+            headers=headers,
+            timeout=10
+        )
+        
+        if commits_response.status_code != 200:
+            logger.warning(f"❌ Failed to get commits: {commits_response.status_code}")
+            return None
+            
+        commit_data = commits_response.json()
+        latest_commit_sha = commit_data['sha']
+        logger.debug(f"🔍 Latest commit: {latest_commit_sha[:7]}")
+        
+        # Get status checks for the latest commit
+        status_response = requests.get(
+            f'https://api.github.com/repos/{owner}/{repo}/commits/{latest_commit_sha}/status',
+            headers=headers,
+            timeout=10
+        )
+        
+        if status_response.status_code != 200:
+            logger.warning(f"❌ Failed to get status checks: {status_response.status_code}")
+            # Return basic info even if status checks fail
+            return {
+                'tests_passing': None,
+                'last_commit': latest_commit_sha,
+                'status': 'unknown'
+            }
+            
+        status_data = status_response.json()
+        tests_passing = status_data.get('state') == 'success'
+        
+        logger.info(f"✅ GitHub status retrieved: {status_data.get('state')}")
+        
+        return {
+            'tests_passing': tests_passing,
+            'last_commit': latest_commit_sha,
+            'status': status_data.get('state', 'unknown'),
+            'total_count': status_data.get('total_count', 0)
+        }
+        
+    except Exception as e:
+        logger.error(f"💥 GitHub status check error: {str(e)}")
+        return None
+
+def get_fly_status(project_slug, fly_token):
+    """Get Fly.io deployment status"""
+    logger.info(f"🚁 Checking Fly.io status for: {project_slug}")
+    
+    try:
+        if not fly_token:
+            logger.warning("❌ No Fly.io token available")
+            return None
+            
+        headers = {
+            'Authorization': f'Bearer {fly_token}',
+            'Content-Type': 'application/json'
+        }
+        
+        # Check if app exists and get status
+        app_response = requests.get(
+            f'https://api.fly.io/v1/apps/{project_slug}',
+            headers=headers,
+            timeout=10
+        )
+        
+        if app_response.status_code == 404:
+            logger.info(f"⚠️ Fly.io app not found: {project_slug}")
+            return {
+                'deployed': False,
+                'app_url': None,
+                'status': 'not_found'
+            }
+        elif app_response.status_code != 200:
+            logger.warning(f"❌ Failed to get Fly.io app status: {app_response.status_code}")
+            return None
+            
+        app_data = app_response.json()
+        app_status = app_data.get('status', 'unknown')
+        
+        # Construct app URL
+        app_url = f"https://{project_slug}.fly.dev"
+        
+        logger.info(f"✅ Fly.io status retrieved: {app_status}")
+        
+        return {
+            'deployed': app_status in ['running', 'deployed'],
+            'app_url': app_url,
+            'status': app_status,
+            'name': app_data.get('name'),
+            'organization': app_data.get('organization', {}).get('slug')
+        }
+        
+    except Exception as e:
+        logger.error(f"💥 Fly.io status check error: {str(e)}")
+        return None
 
 
 
@@ -384,6 +543,65 @@ def get_projects():
         logger.error(f"💥 Error fetching projects: {str(e)}")
         return jsonify({'error': 'Failed to fetch projects'}), 500
 
+@projects_bp.route('/api/projects/<slug>', methods=['GET'])
+def get_project(slug):
+    """Get a specific project by slug with status information"""
+    logger.info(f"📋 GET /api/projects/{slug} - Fetching project details")
+    
+    try:
+        # Get UUID from headers for API keys
+        user_uuid = request.headers.get('X-User-UUID')
+        if user_uuid:
+            user_uuid = user_uuid.strip()
+        
+        projects = load_projects()
+        
+        # Find project by slug
+        project = next((p for p in projects if p.get('slug') == slug), None)
+        if not project:
+            logger.warning(f"❌ Project not found: {slug}")
+            return jsonify({'error': 'Project not found'}), 404
+        
+        logger.info(f"📊 Found project: {project['name']}")
+        
+        # Get user's API keys if UUID is provided
+        github_status = None
+        fly_status = None
+        
+        if user_uuid:
+            try:
+                user_keys = load_user_keys(user_uuid)
+                github_token = user_keys.get('github')
+                fly_token = user_keys.get('fly')
+                
+                # Get GitHub status if token is available
+                if github_token and project.get('github_url'):
+                    logger.info(f"🔍 Checking GitHub status for {project['name']}")
+                    github_status = get_github_status(project['github_url'], github_token)
+                
+                # Get Fly.io status if token is available
+                if fly_token:
+                    logger.info(f"🔍 Checking Fly.io status for {project['name']}")
+                    fly_status = get_fly_status(project['slug'], fly_token)
+                    
+            except Exception as e:
+                logger.warning(f"⚠️ Error getting status information: {str(e)}")
+                # Continue without status info
+        
+        # Add status information to project
+        project_with_status = project.copy()
+        project_with_status['github_status'] = github_status
+        project_with_status['fly_status'] = fly_status
+        
+        logger.info(f"✅ Returning project details for: {project['name']}")
+        return jsonify({
+            'project': project_with_status
+        })
+        
+    except Exception as e:
+        logger.error(f"💥 Error fetching project: {str(e)}")
+        return jsonify({'error': 'Failed to fetch project'}), 500
+
 @projects_bp.route('/api/projects', methods=['POST'])
 def create_project():
     """Create a new project"""
@@ -517,3 +735,115 @@ def create_project():
     except Exception as e:
         logger.error(f"💥 Error creating project: {str(e)}")
         return jsonify({'error': 'Failed to create project'}), 500
+
+@projects_bp.route('/api/projects/<int:project_id>/conversations', methods=['GET'])
+def get_conversations(project_id):
+    """Get all conversations for a specific project"""
+    logger.info(f"📋 GET /api/projects/{project_id}/conversations - Fetching conversations")
+    
+    try:
+        # Verify project exists
+        projects = load_projects()
+        project = next((p for p in projects if p.get('id') == project_id), None)
+        if not project:
+            logger.warning(f"❌ Project not found: {project_id}")
+            return jsonify({'error': 'Project not found'}), 404
+        
+        conversations = load_conversations(project_id)
+        # Sort conversations by creation date (newest first)
+        conversations.sort(key=lambda x: x.get('created_at', ''), reverse=True)
+        
+        logger.info(f"📊 Returning {len(conversations)} conversations for project {project_id}")
+        return jsonify({
+            'conversations': conversations,
+            'count': len(conversations),
+            'project_id': project_id
+        })
+    except Exception as e:
+        logger.error(f"💥 Error fetching conversations: {str(e)}")
+        return jsonify({'error': 'Failed to fetch conversations'}), 500
+
+@projects_bp.route('/api/projects/<int:project_id>/conversations', methods=['POST'])
+def create_conversation(project_id):
+    """Create a new conversation for a specific project"""
+    logger.info(f"🆕 POST /api/projects/{project_id}/conversations - Creating new conversation")
+    
+    try:
+        # Get UUID from headers
+        user_uuid = request.headers.get('X-User-UUID')
+        if not user_uuid:
+            logger.warning("❌ X-User-UUID header is required")
+            return jsonify({'error': 'X-User-UUID header is required'}), 400
+        
+        user_uuid = user_uuid.strip()
+        if not user_uuid:
+            logger.warning("❌ Empty UUID provided in header")
+            return jsonify({'error': 'UUID cannot be empty'}), 400
+        
+        # Verify project exists
+        projects = load_projects()
+        project = next((p for p in projects if p.get('id') == project_id), None)
+        if not project:
+            logger.warning(f"❌ Project not found: {project_id}")
+            return jsonify({'error': 'Project not found'}), 404
+        
+        # Get request data
+        data = request.get_json()
+        if not data or 'name' not in data:
+            logger.warning("❌ Conversation name is required")
+            return jsonify({'error': 'Conversation name is required'}), 400
+        
+        conversation_name = data['name'].strip()
+        if not conversation_name:
+            logger.warning("❌ Conversation name cannot be empty")
+            return jsonify({'error': 'Conversation name cannot be empty'}), 400
+        
+        # Create slug from name (use provided slug if available, otherwise generate)
+        conversation_slug = data.get('slug', create_slug(conversation_name)).strip()
+        if not conversation_slug:
+            conversation_slug = create_slug(conversation_name)
+        
+        if not conversation_slug:
+            logger.warning("❌ Invalid conversation name - cannot create slug")
+            return jsonify({'error': 'Invalid conversation name'}), 400
+        
+        logger.info(f"🔄 Creating conversation: {conversation_name} -> {conversation_slug}")
+        
+        # Load existing conversations
+        conversations = load_conversations(project_id)
+        
+        # Check if conversation with same slug already exists
+        existing_conversation = next((c for c in conversations if c.get('slug') == conversation_slug), None)
+        if existing_conversation:
+            logger.warning(f"❌ Conversation with slug '{conversation_slug}' already exists")
+            return jsonify({'error': f'Conversation with name "{conversation_name}" already exists'}), 409
+        
+        # Create conversation record
+        conversation = {
+            'id': len(conversations) + 1,
+            'name': conversation_name,
+            'slug': conversation_slug,
+            'project_id': project_id,
+            'created_at': datetime.utcnow().isoformat(),
+            'created_by': user_uuid,
+            'last_message_at': None,
+            'message_count': 0
+        }
+        
+        # Add to conversations list
+        conversations.append(conversation)
+        
+        # Save to file
+        if not save_conversations(project_id, conversations):
+            logger.error("❌ Failed to save conversation to file")
+            return jsonify({'error': 'Failed to save conversation'}), 500
+        
+        logger.info(f"✅ Conversation created successfully: {conversation_name}")
+        return jsonify({
+            'message': 'Conversation created successfully',
+            'conversation': conversation
+        }), 201
+        
+    except Exception as e:
+        logger.error(f"💥 Error creating conversation: {str(e)}")
+        return jsonify({'error': 'Failed to create conversation'}), 500
