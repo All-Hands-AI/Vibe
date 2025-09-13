@@ -1,5 +1,7 @@
 import { defineConfig, devices } from '@playwright/test';
 
+/* eslint-env node */
+
 /**
  * @see https://playwright.dev/docs/test-configuration
  */

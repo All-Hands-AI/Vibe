@@ -2,20 +2,18 @@ import { test, expect } from '@playwright/test';
 import { SetupPage } from './pages/SetupPage.js';
 import { AppsPage } from './pages/AppsPage.js';
 import { AppDetailPage } from './pages/AppDetailPage.js';
-import { RiffDetailPage } from './pages/RiffDetailPage.js';
+
 import { setupTestEnvironment, generateTestAppName, generateTestRiffName } from './utils/test-helpers.js';
 
 test.describe('Error Handling', () => {
   let setupPage;
   let appsPage;
   let appDetailPage;
-  let riffDetailPage;
 
   test.beforeEach(async ({ page }) => {
     setupPage = new SetupPage(page);
     appsPage = new AppsPage(page);
     appDetailPage = new AppDetailPage(page);
-    riffDetailPage = new RiffDetailPage(page);
     
     // Set up test environment
     await setupTestEnvironment(page);
