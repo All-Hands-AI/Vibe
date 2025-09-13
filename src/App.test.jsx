@@ -1,63 +1,63 @@
-import { render, screen, waitFor } from '@testing-library/react'
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { render, screen } from '@testing-library/react'
+import { describe, it, expect, beforeEach, vi } from 'vitest'
 import App from './App'
 
-// Mock fetch globally
+// Mock fetch globally for App tests too
 global.fetch = vi.fn()
 
 describe('App', () => {
   beforeEach(() => {
+    // Reset fetch mock before each test
     fetch.mockClear()
+    
+    // Mock successful API responses
+    fetch
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ message: 'Hello from the API!', endpoint: '/api/hello' })
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ status: 'healthy', service: 'OpenVibe Backend' })
+      })
   })
 
-  it('shows loading state initially', () => {
-    // Mock fetch to never resolve to test loading state
-    fetch.mockImplementation(() => new Promise(() => {}))
-    
+  it('renders the main layout components', () => {
     render(<App />)
     
-    expect(screen.getByText('Loading...')).toBeInTheDocument()
+    // Check for header logo specifically
+    expect(screen.getByRole('link', { name: 'OpenVibe' })).toBeInTheDocument()
+    
+    // Check for home page content (default route) - updated text
+    expect(screen.getByText('Welcome to OpenVibe')).toBeInTheDocument()
+    expect(screen.getByText('Your React App is Running with Python Backend!')).toBeInTheDocument()
+    
+    // Check for footer
+    expect(screen.getByText('© 2025 OpenVibe. All rights reserved.')).toBeInTheDocument()
   })
 
-  it('shows setup window when API keys are not configured', async () => {
-    // Mock API response indicating no keys are configured
-    fetch.mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({ anthropic: false, github: false, fly: false })
-    })
-    
+  it('has proper navigation structure', () => {
     render(<App />)
     
-    await waitFor(() => {
-      expect(screen.getByText('🚀 Welcome to OpenVibe!')).toBeInTheDocument()
-      expect(screen.getByText('Please configure your API keys to get started. All keys are required.')).toBeInTheDocument()
-    })
+    // Check navigation links in header specifically
+    const nav = screen.getByRole('navigation')
+    expect(nav).toBeInTheDocument()
+    
+    // Use getAllByRole to handle multiple links with same name
+    const homeLinks = screen.getAllByRole('link', { name: 'Home' })
+    expect(homeLinks.length).toBeGreaterThan(0)
+    
+    const aboutLinks = screen.getAllByRole('link', { name: 'About' })
+    expect(aboutLinks.length).toBeGreaterThan(0)
+    
+    const contactLinks = screen.getAllByRole('link', { name: 'Contact' })
+    expect(contactLinks.length).toBeGreaterThan(0)
   })
 
-  it('shows main app when all API keys are configured', async () => {
-    // Mock API response indicating all keys are configured
-    fetch.mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({ anthropic: true, github: true, fly: true })
-    })
+  it('renders with theme provider', () => {
+    const { container } = render(<App />)
     
-    render(<App />)
-    
-    await waitFor(() => {
-      // Should show main app content instead of setup window
-      expect(screen.queryByText('🚀 Welcome to OpenVibe!')).not.toBeInTheDocument()
-      expect(screen.getByRole('link', { name: 'OpenVibe' })).toBeInTheDocument()
-    })
-  })
-
-  it('shows setup window when API check fails', async () => {
-    // Mock API failure (backend not available)
-    fetch.mockRejectedValueOnce(new Error('Network error'))
-    
-    render(<App />)
-    
-    await waitFor(() => {
-      expect(screen.getByText('🚀 Welcome to OpenVibe!')).toBeInTheDocument()
-    })
+    // Check that theme class is applied
+    expect(container.querySelector('.app-theme-dark')).toBeInTheDocument()
   })
 })

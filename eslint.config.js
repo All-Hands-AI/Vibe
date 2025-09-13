@@ -6,30 +6,11 @@ import reactRefresh from 'eslint-plugin-react-refresh'
 
 export default [
   { ignores: ['dist'] },
-  // Backend configuration
   {
-    files: ['backend/**/*.{js,jsx}'],
+    files: ['**/*.{js,jsx}'],
     languageOptions: {
       ecmaVersion: 2020,
-      globals: globals.node,
-      parserOptions: {
-        ecmaVersion: 'latest',
-        sourceType: 'module',
-      },
-    },
-    rules: {
-      ...js.configs.recommended.rules,
-    },
-  },
-  // Frontend configuration
-  {
-    files: ['src/**/*.{js,jsx}'],
-    languageOptions: {
-      ecmaVersion: 2020,
-      globals: {
-        ...globals.browser,
-        process: 'readonly',
-      },
+      globals: globals.browser,
       parserOptions: {
         ecmaVersion: 'latest',
         ecmaFeatures: { jsx: true },
@@ -54,16 +35,13 @@ export default [
       ],
     },
   },
-  // Test files configuration
   {
-    files: ['src/**/*.test.{js,jsx}'],
+    files: ['**/*.test.{js,jsx}', '**/*.spec.{js,jsx}'],
     languageOptions: {
       ecmaVersion: 2020,
       globals: {
         ...globals.browser,
         ...globals.node,
-        global: 'readonly',
-        process: 'readonly',
       },
       parserOptions: {
         ecmaVersion: 'latest',
@@ -75,6 +53,7 @@ export default [
     plugins: {
       react,
       'react-hooks': reactHooks,
+      'react-refresh': reactRefresh,
     },
     rules: {
       ...js.configs.recommended.rules,
@@ -82,6 +61,7 @@ export default [
       ...react.configs['jsx-runtime'].rules,
       ...reactHooks.configs.recommended.rules,
       'react/jsx-no-target-blank': 'off',
+      'react-refresh/only-export-components': 'off',
     },
   },
 ]

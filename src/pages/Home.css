@@ -24,6 +24,64 @@
   margin-right: auto;
 }
 
+.backend-status {
+  background-color: rgba(97, 218, 251, 0.1);
+  border: 1px solid #61dafb;
+  border-radius: 8px;
+  padding: 1.5rem;
+  margin: 2rem auto;
+  max-width: 500px;
+  text-align: center;
+}
+
+.backend-status h3 {
+  margin: 0 0 1rem 0;
+  font-size: 1.2rem;
+  color: #61dafb;
+}
+
+.backend-status p {
+  margin: 0;
+  font-size: 1rem;
+  color: #61dafb;
+}
+
+.api-results {
+  margin: 1rem 0;
+}
+
+.api-result {
+  background-color: rgba(26, 26, 26, 0.5);
+  border-radius: 4px;
+  padding: 0.75rem;
+  margin: 0.5rem 0;
+  color: #cccccc;
+  font-size: 0.9rem;
+}
+
+.api-result strong {
+  color: #61dafb;
+}
+
+.btn-test {
+  background-color: #4ade80;
+  color: #1a1a1a;
+  margin-top: 1rem;
+  font-size: 0.9rem;
+  padding: 0.5rem 1rem;
+}
+
+.btn-test:hover:not(:disabled) {
+  background-color: #22c55e;
+  transform: translateY(-2px);
+}
+
+.btn-test:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
 .hero-buttons {
   display: flex;
   gap: 1rem;
