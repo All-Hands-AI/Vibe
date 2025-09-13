@@ -10,6 +10,25 @@ echo "🚨 START-SERVICES.SH IS EXECUTING 🚨"
 echo "Script path: $0"
 echo "Arguments: $@"
 
+# Check if supervisor is already running and stop it
+if pgrep supervisord > /dev/null; then
+    echo "⚠️  Found running supervisord, stopping it..."
+    pkill supervisord || true
+    sleep 2
+fi
+
+# Check for any existing services that might conflict
+echo "📋 Checking for existing services..."
+ps aux | grep -E "(nginx|gunicorn|vite|flask)" | grep -v grep || echo "No conflicting services found"
+
+# Emergency fallback: if nothing is listening on port 80, start nginx immediately
+if ! netstat -tuln 2>/dev/null | grep ":80 " > /dev/null; then
+    echo "🚨 EMERGENCY: Nothing listening on port 80, starting nginx immediately..."
+    nginx -g "daemon off;" &
+    EMERGENCY_NGINX_PID=$!
+    echo "🚨 Emergency nginx started (PID: $EMERGENCY_NGINX_PID)"
+fi
+
 echo "========================================="
 echo "🚀 OpenVibe Container Starting"
 echo "========================================="

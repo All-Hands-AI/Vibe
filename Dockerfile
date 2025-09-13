@@ -70,8 +70,7 @@ RUN mkdir -p /data && chown -R www-data:www-data /data
 # Copy nginx configuration
 COPY nginx.conf /etc/nginx/sites-available/default
 
-# Copy supervisor configuration
-COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+# Note: supervisord.conf is no longer used - we use start-services.sh instead
 
 # Copy git watcher, service restarter, and startup scripts
 COPY git-watcher.sh /usr/local/bin/git-watcher.sh
@@ -85,5 +84,8 @@ RUN mkdir -p /var/log/supervisor
 # Expose ports for both production and development
 EXPOSE 80 3000 8000
 
+# Ensure our startup script is executable and used
+RUN chmod +x /usr/local/bin/start-services.sh
+
 # Start services using our dynamic startup script
-CMD ["/usr/local/bin/start-services.sh"]
+CMD ["/bin/bash", "/usr/local/bin/start-services.sh"]
