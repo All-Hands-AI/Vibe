@@ -48,10 +48,28 @@ jobs:
           else
             # For PRs and feature branches, create a unique app name
             branch_name="${{ github.head_ref || github.ref_name }}"
-            # Clean branch name for fly.io app naming (lowercase, alphanumeric and hyphens only)
-            clean_branch=$(echo "$branch_name" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9-]/-/g' | sed 's/--*/-/g' | sed 's/^-\|-$//g')
-            # Truncate to 30 chars to stay within fly.io limits
-            clean_branch=$(echo "$clean_branch" | cut -c1-30 | sed 's/-$//')
+            # Strip "github" from branch name (case insensitive)
+            branch_name=$(echo "$branch_name" | sed 's/github//gi')
+            # Convert to lowercase
+            clean_branch=$(echo "$branch_name" | tr '[:upper:]' '[:lower:]')
+            # Replace any non-alphanumeric characters with hyphens
+            clean_branch=$(echo "$clean_branch" | sed 's/[^a-z0-9]/-/g')
+            # Remove multiple consecutive hyphens
+            clean_branch=$(echo "$clean_branch" | sed 's/-\+/-/g')
+            # Remove leading and trailing hyphens
+            clean_branch=$(echo "$clean_branch" | sed 's/^-\+\|-\+$//g')
+            # Ensure it doesn't start with a number (Fly.io requirement)
+            if [[ "$clean_branch" =~ ^[0-9] ]]; then
+              clean_branch="br-$clean_branch"
+            fi
+            # Truncate to 25 chars to leave room for "openvibe-" prefix (Fly.io 63 char limit)
+            clean_branch=$(echo "$clean_branch" | cut -c1-25)
+            # Remove trailing hyphen if truncation created one
+            clean_branch=$(echo "$clean_branch" | sed 's/-$//')
+            # Ensure we have a valid name (fallback if empty)
+            if [[ -z "$clean_branch" ]]; then
+              clean_branch="feature"
+            fi
             echo "app_name=openvibe-$clean_branch" >> $GITHUB_OUTPUT
             echo "environment=preview" >> $GITHUB_OUTPUT
             echo "is_production=false" >> $GITHUB_OUTPUT
@@ -155,8 +173,28 @@ jobs:
       - name: Delete feature app
         run: |
           branch_name="${{ github.head_ref }}"
-          clean_branch=$(echo "$branch_name" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9-]/-/g' | sed 's/--*/-/g' | sed 's/^-\|-$//g')
-          clean_branch=$(echo "$clean_branch" | cut -c1-30 | sed 's/-$//')
+          # Strip "github" from branch name (case insensitive)
+          branch_name=$(echo "$branch_name" | sed 's/github//gi')
+          # Convert to lowercase
+          clean_branch=$(echo "$branch_name" | tr '[:upper:]' '[:lower:]')
+          # Replace any non-alphanumeric characters with hyphens
+          clean_branch=$(echo "$clean_branch" | sed 's/[^a-z0-9]/-/g')
+          # Remove multiple consecutive hyphens
+          clean_branch=$(echo "$clean_branch" | sed 's/-\+/-/g')
+          # Remove leading and trailing hyphens
+          clean_branch=$(echo "$clean_branch" | sed 's/^-\+\|-\+$//g')
+          # Ensure it doesn't start with a number (Fly.io requirement)
+          if [[ "$clean_branch" =~ ^[0-9] ]]; then
+            clean_branch="br-$clean_branch"
+          fi
+          # Truncate to 25 chars to leave room for "openvibe-" prefix (Fly.io 63 char limit)
+          clean_branch=$(echo "$clean_branch" | cut -c1-25)
+          # Remove trailing hyphen if truncation created one
+          clean_branch=$(echo "$clean_branch" | sed 's/-$//')
+          # Ensure we have a valid name (fallback if empty)
+          if [[ -z "$clean_branch" ]]; then
+            clean_branch="feature"
+          fi
           app_name="openvibe-$clean_branch"
           
           # Delete the app (this will also delete all associated resources)
@@ -168,8 +206,29 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
-            const branch_name = '${{ github.head_ref }}';
-            const clean_branch = branch_name.toLowerCase().replace(/[^a-z0-9-]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '').substring(0, 30).replace(/-$/, '');
+            let branch_name = '${{ github.head_ref }}';
+            // Strip "github" from branch name (case insensitive)
+            branch_name = branch_name.replace(/github/gi, '');
+            // Convert to lowercase
+            let clean_branch = branch_name.toLowerCase();
+            // Replace any non-alphanumeric characters with hyphens
+            clean_branch = clean_branch.replace(/[^a-z0-9]/g, '-');
+            // Remove multiple consecutive hyphens
+            clean_branch = clean_branch.replace(/-+/g, '-');
+            // Remove leading and trailing hyphens
+            clean_branch = clean_branch.replace(/^-+|-+$/g, '');
+            // Ensure it doesn't start with a number (Fly.io requirement)
+            if (/^[0-9]/.test(clean_branch)) {
+              clean_branch = `br-${clean_branch}`;
+            }
+            // Truncate to 25 chars to leave room for "openvibe-" prefix (Fly.io 63 char limit)
+            clean_branch = clean_branch.substring(0, 25);
+            // Remove trailing hyphen if truncation created one
+            clean_branch = clean_branch.replace(/-$/, '');
+            // Ensure we have a valid name (fallback if empty)
+            if (!clean_branch) {
+              clean_branch = 'feature';
+            }
             const app_name = `openvibe-${clean_branch}`;
             
             await github.rest.issues.createComment({
