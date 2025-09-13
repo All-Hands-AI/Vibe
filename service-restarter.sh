@@ -1,38 +1,42 @@
 #!/bin/bash
 
-# Service restarter script that monitors for restart triggers
-# and restarts development servers when code changes are detected
-
-set -e
+# Simplified service restarter script
+# Monitors for restart triggers and handles dependency updates
 
 RESTART_TRIGGER="/tmp/restart-services"
 
-echo "Service restarter starting..."
+# Function to log with timestamp
+log() {
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] SERVICE-RESTARTER: $1"
+}
+
+log "🔄 Service restarter starting..."
 
 # Function to restart development services
 restart_services() {
-    echo "$(date): Restarting development services..."
+    log "🔄 Restarting development services..."
     
-    # Install/update npm dependencies if package.json changed
-    if git diff --name-only HEAD~1 HEAD | grep -q "package.json\|package-lock.json"; then
-        echo "$(date): Package files changed, updating dependencies..."
-        npm install
+    # Check if package.json changed and update dependencies
+    if git diff --name-only HEAD~1 HEAD 2>/dev/null | grep -q "package.json\|package-lock.json"; then
+        log "📦 Package files changed, updating npm dependencies..."
+        cd /app && npm install 2>/dev/null || log "⚠️  Failed to update npm dependencies"
     fi
     
-    # Install/update Python dependencies if pyproject.toml changed
-    if git diff --name-only HEAD~1 HEAD | grep -q "backend/pyproject.toml"; then
-        echo "$(date): Python dependencies changed, updating..."
-        cd backend && uv pip compile pyproject.toml -o requirements.txt && uv pip install --system -r requirements.txt && rm requirements.txt
-        cd ..
+    # Check if Python dependencies changed
+    if git diff --name-only HEAD~1 HEAD 2>/dev/null | grep -q "backend/pyproject.toml"; then
+        log "🐍 Python dependencies changed, updating..."
+        cd /app/backend && {
+            uv pip compile pyproject.toml -o requirements.txt 2>/dev/null && \
+            uv pip install --system -r requirements.txt 2>/dev/null && \
+            rm requirements.txt
+        } || log "⚠️  Failed to update Python dependencies"
+        cd /app
     fi
     
-    # Restart supervisor services
-    supervisorctl restart all || true
-    
-    echo "$(date): Services restarted"
+    log "✅ Services restarted"
 }
 
-# Monitor for restart trigger
+# Monitor for restart trigger with simple polling
 while true; do
     if [ -f "$RESTART_TRIGGER" ]; then
         # Get the modification time to avoid duplicate restarts
@@ -45,5 +49,9 @@ while true; do
         fi
     fi
     
-    sleep 5
+    # Sleep with interruption handling
+    sleep 10 || {
+        log "🛑 Service restarter interrupted, exiting"
+        exit 0
+    }
 done

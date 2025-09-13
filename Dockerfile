@@ -47,6 +47,7 @@ RUN apt-get update -qq && \
     curl \
     git \
     inotify-tools \
+    net-tools \
     && rm -rf /var/lib/apt/lists/* \
     && pip3 install uv
 
