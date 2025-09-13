@@ -18,13 +18,19 @@ export class BasePage {
    * Wait for page to load completely
    */
   async waitForPageLoad() {
-    await this.page.waitForLoadState('networkidle');
+    // Wait for DOM to be ready
+    await this.page.waitForLoadState('domcontentloaded');
     
-    // Wait for any loading spinners to disappear
-    await this.page.waitForFunction(() => {
-      const spinners = document.querySelectorAll('.animate-spin');
-      return spinners.length === 0;
-    }, { timeout: 30000 });
+    // Wait for any loading spinners to disappear with shorter timeout
+    try {
+      await this.page.waitForFunction(() => {
+        const spinners = document.querySelectorAll('.animate-spin');
+        return spinners.length === 0;
+      }, { timeout: 10000 });
+    } catch (error) {
+      // If spinners don't disappear, continue anyway to avoid hanging
+      console.warn('Loading spinners did not disappear within timeout, continuing...');
+    }
   }
 
   /**

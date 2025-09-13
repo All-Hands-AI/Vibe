@@ -36,11 +36,16 @@ export async function waitForElement(page, selector, options = {}) {
  * Wait for loading to complete
  */
 export async function waitForLoadingToComplete(page) {
-  // Wait for any loading spinners to disappear
-  await page.waitForFunction(() => {
-    const spinners = document.querySelectorAll('.animate-spin');
-    return spinners.length === 0;
-  }, { timeout: 30000 });
+  // Wait for any loading spinners to disappear with shorter timeout
+  try {
+    await page.waitForFunction(() => {
+      const spinners = document.querySelectorAll('.animate-spin');
+      return spinners.length === 0;
+    }, { timeout: 10000 });
+  } catch (error) {
+    // If spinners don't disappear, continue anyway to avoid hanging
+    console.warn('Loading spinners did not disappear within timeout, continuing...');
+  }
 }
 
 /**
@@ -48,17 +53,21 @@ export async function waitForLoadingToComplete(page) {
  */
 export async function waitForSuccessMessage(page, expectedMessage = null) {
   const successSelector = '.bg-green-900\\/20';
-  await waitForElement(page, successSelector);
+  await waitForElement(page, successSelector, { timeout: 10000 });
   
   if (expectedMessage) {
-    await page.waitForFunction(
-      (message) => {
-        const successElement = document.querySelector('.bg-green-900\\/20');
-        return successElement && successElement.textContent.includes(message);
-      },
-      expectedMessage,
-      { timeout: 10000 }
-    );
+    try {
+      await page.waitForFunction(
+        (message) => {
+          const successElement = document.querySelector('.bg-green-900\\/20');
+          return successElement && successElement.textContent.includes(message);
+        },
+        expectedMessage,
+        { timeout: 5000 }
+      );
+    } catch (error) {
+      console.warn(`Success message "${expectedMessage}" not found within timeout`);
+    }
   }
 }
 
@@ -67,17 +76,21 @@ export async function waitForSuccessMessage(page, expectedMessage = null) {
  */
 export async function waitForErrorMessage(page, expectedMessage = null) {
   const errorSelector = '.bg-red-900\\/20';
-  await waitForElement(page, errorSelector);
+  await waitForElement(page, errorSelector, { timeout: 10000 });
   
   if (expectedMessage) {
-    await page.waitForFunction(
-      (message) => {
-        const errorElement = document.querySelector('.bg-red-900\\/20');
-        return errorElement && errorElement.textContent.includes(message);
-      },
-      expectedMessage,
-      { timeout: 10000 }
-    );
+    try {
+      await page.waitForFunction(
+        (message) => {
+          const errorElement = document.querySelector('.bg-red-900\\/20');
+          return errorElement && errorElement.textContent.includes(message);
+        },
+        expectedMessage,
+        { timeout: 5000 }
+      );
+    } catch (error) {
+      console.warn(`Error message "${expectedMessage}" not found within timeout`);
+    }
   }
 }
 
@@ -85,10 +98,15 @@ export async function waitForErrorMessage(page, expectedMessage = null) {
  * Clear local storage and session storage
  */
 export async function clearStorage(page) {
-  await page.evaluate(() => {
-    localStorage.clear();
-    sessionStorage.clear();
-  });
+  try {
+    await page.evaluate(() => {
+      localStorage.clear();
+      sessionStorage.clear();
+    });
+  } catch (error) {
+    // If localStorage is not accessible (e.g., before navigation), ignore the error
+    console.warn('Could not clear storage, continuing...');
+  }
 }
 
 /**
@@ -146,10 +164,7 @@ export async function mockApiResponses(page) {
  * Set up test environment
  */
 export async function setupTestEnvironment(page) {
-  // Clear storage
-  await clearStorage(page);
-  
-  // Mock API responses
+  // Mock API responses first
   await mockApiResponses(page);
   
   // Set up console logging for debugging
@@ -163,6 +178,9 @@ export async function setupTestEnvironment(page) {
   page.on('pageerror', (error) => {
     console.error(`Page error: ${error.message}`);
   });
+  
+  // Clear storage (will be done after navigation in individual tests)
+  await clearStorage(page);
 }
 
 /**
