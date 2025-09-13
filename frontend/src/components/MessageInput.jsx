@@ -6,18 +6,30 @@ function MessageInput({ onSendMessage, disabled = false, placeholder = 'Type a m
   const textareaRef = useRef(null)
   const fileInputRef = useRef(null)
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
     if (message.trim() && !disabled) {
-      onSendMessage(message, 'text')
-      setMessage('')
-      // Reset textarea height and maintain focus
-      if (textareaRef.current) {
-        textareaRef.current.style.height = 'auto'
-        // Keep focus on the textarea after sending
-        setTimeout(() => {
-          textareaRef.current?.focus()
-        }, 0)
+      // Store reference before async operation
+      const textareaElement = textareaRef.current
+      
+      try {
+        await onSendMessage(message, 'text')
+        setMessage('')
+        
+        // Reset textarea height and maintain focus
+        if (textareaElement) {
+          textareaElement.style.height = 'auto'
+          // Use requestAnimationFrame to ensure DOM updates are complete
+          requestAnimationFrame(() => {
+            textareaElement.focus()
+          })
+        }
+      } catch (error) {
+        console.error('Error sending message:', error)
+        // Still maintain focus even if there's an error
+        if (textareaElement) {
+          textareaElement.focus()
+        }
       }
     }
   }
@@ -77,13 +89,13 @@ function MessageInput({ onSendMessage, disabled = false, placeholder = 'Type a m
         </div>
 
         {/* Action Buttons */}
-        <div className="flex items-end space-x-2">
+        <div className="flex items-start space-x-2">
           {/* File Upload Button */}
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}
             disabled={disabled}
-            className="h-10 w-10 flex items-center justify-center bg-gray-700 hover:bg-gray-600 border border-gray-600 rounded-lg text-cyber-muted hover:text-cyber-text transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="min-h-[40px] w-10 flex items-center justify-center bg-gray-700 hover:bg-gray-600 border border-gray-600 rounded-lg text-cyber-muted hover:text-cyber-text transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
             title="Upload file"
           >
             📎
@@ -93,7 +105,7 @@ function MessageInput({ onSendMessage, disabled = false, placeholder = 'Type a m
           <button
             type="submit"
             disabled={disabled || !message.trim()}
-            className="h-10 px-4 flex items-center justify-center bg-neon-green/20 hover:bg-neon-green/30 border border-neon-green text-neon-green rounded-lg font-mono text-sm transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="min-h-[40px] px-4 flex items-center justify-center bg-neon-green/20 hover:bg-neon-green/30 border border-neon-green text-neon-green rounded-lg font-mono text-sm transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {disabled ? (
               <div className="flex items-center space-x-2">
