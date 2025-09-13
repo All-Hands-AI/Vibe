@@ -19,10 +19,10 @@ describe('Header', () => {
   it('renders navigation links', () => {
     render(<HeaderWithRouter />)
     
-    expect(screen.getByText('Projects')).toBeInTheDocument()
-    expect(screen.getByText('Home')).toBeInTheDocument()
-    expect(screen.getByText('About')).toBeInTheDocument()
-    expect(screen.getByText('Contact')).toBeInTheDocument()
+    expect(screen.getByText('🗂️ Projects')).toBeInTheDocument()
+    expect(screen.getByText('🏠 Home')).toBeInTheDocument()
+    expect(screen.getByText('ℹ️ About')).toBeInTheDocument()
+    expect(screen.getByText('📞 Contact')).toBeInTheDocument()
   })
 
   it('has proper navigation structure', () => {
@@ -31,16 +31,16 @@ describe('Header', () => {
     const nav = screen.getByRole('navigation')
     expect(nav).toBeInTheDocument()
     
-    const projectsLink = screen.getByRole('link', { name: 'Projects' })
+    const projectsLink = screen.getByRole('link', { name: '🗂️ Projects' })
     expect(projectsLink).toHaveAttribute('href', '/')
     
-    const homeLink = screen.getByRole('link', { name: 'Home' })
+    const homeLink = screen.getByRole('link', { name: '🏠 Home' })
     expect(homeLink).toHaveAttribute('href', '/home')
     
-    const aboutLink = screen.getByRole('link', { name: 'About' })
+    const aboutLink = screen.getByRole('link', { name: 'ℹ️ About' })
     expect(aboutLink).toHaveAttribute('href', '/about')
     
-    const contactLink = screen.getByRole('link', { name: 'Contact' })
+    const contactLink = screen.getByRole('link', { name: '📞 Contact' })
     expect(contactLink).toHaveAttribute('href', '/contact')
   })
 })

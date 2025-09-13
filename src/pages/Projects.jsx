@@ -252,21 +252,21 @@ function Projects() {
   }, [newProjectName, error])
 
   return (
-    <div className="min-h-screen bg-gray-900 text-white">
+    <div className="min-h-screen bg-black text-cyber-text">
       <div className="max-w-6xl mx-auto px-8 py-16">
         <header className="text-center mb-16">
-          <h1 className="text-5xl font-bold text-primary-300 mb-4">Projects</h1>
-          <p className="text-xl text-gray-300">Manage your OpenVibe projects</p>
+          <h1 className="text-5xl font-bold text-cyber-text mb-4 font-mono">Projects</h1>
+          <p className="text-xl text-cyber-muted font-mono">Manage your OpenVibe projects</p>
         </header>
 
         {/* Create New Project Form */}
         <section className="mb-16">
-          <h2 className="text-3xl font-bold text-primary-300 mb-8">Create New Project</h2>
-          <div className="bg-gray-850 p-8 rounded-lg border border-gray-700 max-w-2xl">
+          <h2 className="text-3xl font-bold text-cyber-text mb-8 font-mono">Create New Project</h2>
+          <div className="hacker-card max-w-2xl">
             <form onSubmit={handleCreateProject} className="space-y-6">
               <div>
-                <label htmlFor="projectName" className="block text-sm font-medium text-gray-300 mb-2">
-                  Project Name
+                <label htmlFor="projectName" className="block text-sm font-medium text-cyber-text mb-2 font-mono">
+                  <span className="text-cyber-muted">{'>'}</span> Project Name:
                 </label>
                 <input
                   type="text"
@@ -275,13 +275,13 @@ function Projects() {
                   onChange={(e) => setNewProjectName(e.target.value)}
                   placeholder="Enter project name"
                   disabled={creating}
-                  className={`w-full px-4 py-3 bg-gray-700 text-white rounded-md border transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary-300 focus:border-transparent ${
-                    error ? 'border-red-500' : 'border-gray-600'
+                  className={`w-full px-4 py-3 bg-black text-cyber-text font-mono border-2 transition-colors duration-200 focus:outline-none focus:border-neon-green ${
+                    error ? 'border-red-500' : 'border-cyber-border'
                   }`}
                 />
                 {newProjectName && (
-                  <div className="mt-2 text-sm text-gray-400">
-                    Slug: <code className="bg-gray-700 px-2 py-1 rounded text-primary-300">{createSlug(newProjectName)}</code>
+                  <div className="mt-2 text-sm text-cyber-muted font-mono">
+                    Slug: <code className="bg-cyber-accent px-2 py-1 rounded text-cyber-text">{createSlug(newProjectName)}</code>
                   </div>
                 )}
               </div>
@@ -289,20 +289,20 @@ function Projects() {
               <button 
                 type="submit" 
                 disabled={creating || !newProjectName.trim()}
-                className="w-full px-6 py-3 bg-primary-300 text-gray-900 rounded-md font-semibold hover:bg-primary-400 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 hover:transform hover:-translate-y-0.5"
+                className="btn-hacker-primary w-full disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {creating ? 'Creating...' : 'Create Project'}
               </button>
             </form>
 
             {error && (
-              <div className="mt-4 p-4 bg-red-900/20 border border-red-500 rounded-md text-red-400">
+              <div className="mt-4 p-4 bg-red-900/20 border border-red-500 rounded-md text-red-400 font-mono">
                 {error}
               </div>
             )}
 
             {success && (
-              <div className="mt-4 p-4 bg-green-900/20 border border-green-500 rounded-md text-green-400">
+              <div className="mt-4 p-4 bg-green-900/20 border border-green-500 rounded-md text-green-400 font-mono">
                 {success}
               </div>
             )}
@@ -311,26 +311,26 @@ function Projects() {
 
         {/* Projects List */}
         <section>
-          <h2 className="text-3xl font-bold text-primary-300 mb-8">Your Projects</h2>
+          <h2 className="text-3xl font-bold text-cyber-text mb-8 font-mono">Your Projects</h2>
           
           {loading ? (
             <div className="flex flex-col items-center justify-center py-16">
-              <div className="w-10 h-10 border-4 border-gray-600 border-t-primary-300 rounded-full animate-spin mb-4"></div>
-              <p className="text-gray-400">Loading projects...</p>
+              <div className="w-10 h-10 border-4 border-cyber-border border-t-transparent rounded-full animate-spin mb-4"></div>
+              <p className="text-cyber-muted font-mono">Loading projects...</p>
             </div>
           ) : projects.length === 0 ? (
             <div className="text-center py-16">
-              <p className="text-gray-400 text-lg">No projects yet. Create your first project above!</p>
+              <p className="text-cyber-muted text-lg font-mono">No projects yet. Create your first project above!</p>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {projects.map((project) => (
-                <div key={project.id} className="bg-gray-850 rounded-lg border border-gray-700 hover:border-primary-300 transition-all duration-300 hover:transform hover:-translate-y-1">
+                <div key={project.id} className="hacker-card transition-all duration-300 hover:transform hover:-translate-y-1">
                   <div className="p-6">
                     <div className="flex justify-between items-start mb-4">
                       <div className="flex-1">
-                        <h3 className="text-xl font-semibold text-white mb-1">{project.name}</h3>
-                        <span className="text-sm text-gray-400 font-mono">{project.slug}</span>
+                        <h3 className="text-xl font-semibold text-cyber-text mb-1 font-mono">{project.name}</h3>
+                        <span className="text-sm text-cyber-muted font-mono">{project.slug}</span>
                       </div>
                       <button 
                         className="text-red-400 hover:text-red-300 text-lg p-2 hover:bg-red-900/20 rounded transition-colors duration-200"
@@ -343,12 +343,12 @@ function Projects() {
                     </div>
                     
                     <div className="space-y-3">
-                      <p className="text-sm text-gray-400">
+                      <p className="text-sm text-cyber-muted font-mono">
                         Created: {new Date(project.created_at).toLocaleDateString()}
                       </p>
                       
                       {project.github_url && (
-                        <div className="text-sm text-green-400 bg-green-900/20 px-3 py-1 rounded">
+                        <div className="text-sm text-green-400 bg-green-900/20 px-3 py-1 rounded font-mono">
                           GitHub repository available
                         </div>
                       )}
@@ -356,7 +356,7 @@ function Projects() {
                       <div className="pt-2">
                         <Link 
                           to={`/projects/${project.slug}`}
-                          className="inline-flex items-center text-primary-300 hover:text-primary-400 font-medium transition-colors duration-200"
+                          className="inline-flex items-center text-cyber-muted hover:text-neon-green font-medium transition-colors duration-200 font-mono"
                         >
                           View Project →
                         </Link>
