@@ -77,7 +77,7 @@ function Contact() {
           
           {showSuccess && (
             <Alert variant="success" className="mb-6">
-              Thank you for your message! We'll get back to you soon.
+              Thank you for your message! We&apos;ll get back to you soon.
             </Alert>
           )}
           

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Container, Card, Button, LoadingSpinner, Alert } from '../components/ui'
+import { Card, Button, LoadingSpinner } from '../components/ui'
 import Layout from '../components/Layout'
 
 function Home() {

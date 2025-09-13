@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { getUserUUID } from '../utils/uuid'
-import { Container, Card, Button, Input, LoadingSpinner, Alert, PageHeader } from '../components/ui'
+import { Card, Button, Input, LoadingSpinner, Alert, PageHeader } from '../components/ui'
 import Layout from '../components/Layout'
 
 function Projects() {
