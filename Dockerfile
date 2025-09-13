@@ -56,6 +56,9 @@ WORKDIR /app/backend
 # Install Python dependencies
 RUN pip3 install -r requirements.txt
 
+# Create data directory for persistent storage
+RUN mkdir -p /data && chown -R www-data:www-data /data
+
 # Copy nginx configuration
 COPY nginx.conf /etc/nginx/sites-available/default
 
