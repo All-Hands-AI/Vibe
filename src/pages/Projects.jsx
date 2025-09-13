@@ -266,7 +266,7 @@ function Projects() {
             <form onSubmit={handleCreateProject} className="space-y-6">
               <div>
                 <label htmlFor="projectName" className="block text-sm font-medium text-cyber-text mb-2 font-mono">
-                  <span className="text-cyber-muted">></span> Project Name:
+                  <span className="text-cyber-muted">{'>'}</span> Project Name:
                 </label>
                 <input
                   type="text"
@@ -296,13 +296,13 @@ function Projects() {
             </form>
 
             {error && (
-              <div className="mt-4 p-4 bg-red-900/20 border border-red-500 rounded-md text-red-400">
+              <div className="mt-4 p-4 bg-red-900/20 border border-red-500 rounded-md text-red-400 font-mono">
                 {error}
               </div>
             )}
 
             {success && (
-              <div className="mt-4 p-4 bg-green-900/20 border border-green-500 rounded-md text-green-400">
+              <div className="mt-4 p-4 bg-green-900/20 border border-green-500 rounded-md text-green-400 font-mono">
                 {success}
               </div>
             )}
