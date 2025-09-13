@@ -5,13 +5,7 @@ from datetime import datetime, timezone
 from storage import get_riffs_storage, get_apps_storage, get_messages_storage
 from agent_loop import agent_loop_manager
 from keys import get_user_key
-
-# Import LLM from openhands-sdk at module level
-try:
-    from openhands.sdk import LLM
-except ImportError:
-    # SDK not available, will handle this in the route
-    LLM = None
+from openhands.sdk import LLM
 
 logger = logging.getLogger(__name__)
 
@@ -196,11 +190,6 @@ def create_riff(slug):
             if not anthropic_token:
                 logger.warning(f"⚠️ No Anthropic token found for user {user_uuid[:8]}")
                 return jsonify({"error": "Anthropic API key required"}), 400
-            
-            # Check if LLM is available
-            if LLM is None:
-                logger.error("❌ LLM from openhands-sdk is not available")
-                return jsonify({"error": "LLM service unavailable"}), 500
             
             # Create LLM instance
             try:
