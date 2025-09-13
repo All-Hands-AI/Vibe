@@ -55,8 +55,10 @@ COPY --from=build /app/dist /usr/share/nginx/html
 COPY backend/ /app/backend/
 WORKDIR /app/backend
 
-# Install Python dependencies using uv
-RUN uv pip install --system .
+# Install Python dependencies using uv from pyproject.toml
+RUN uv pip compile pyproject.toml -o requirements.txt && \
+    uv pip install --system -r requirements.txt && \
+    rm requirements.txt
 
 # Create data directory for persistent storage
 RUN mkdir -p /data && chown -R www-data:www-data /data
