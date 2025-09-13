@@ -1,8 +1,10 @@
 import { useState } from 'react'
 import PropTypes from 'prop-types'
+import { useSetup } from '../context/SetupContext'
 import './SetupWindow.css'
 
 const SetupWindow = ({ onSetupComplete }) => {
+  const { userUUID } = useSetup()
   const [apiKeys, setApiKeys] = useState({
     anthropic: '',
     github: '',
@@ -24,7 +26,7 @@ const SetupWindow = ({ onSetupComplete }) => {
     : 'http://localhost:8000'
 
   const validateApiKey = async (provider, apiKey) => {
-    if (!apiKey.trim()) {
+    if (!apiKey.trim() || !userUUID) {
       setValidationStatus(prev => ({
         ...prev,
         [provider]: { valid: false, message: '', loading: false }
@@ -43,7 +45,10 @@ const SetupWindow = ({ onSetupComplete }) => {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ api_key: apiKey })
+        body: JSON.stringify({ 
+          api_key: apiKey,
+          uuid: userUUID
+        })
       })
 
       const data = await response.json()
