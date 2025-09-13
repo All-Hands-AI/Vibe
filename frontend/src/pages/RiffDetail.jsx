@@ -161,7 +161,7 @@ function RiffDetail() {
         </header>
 
         {/* Main Content Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-12">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Branch Status */}
           <div className="lg:col-span-1">
             <BranchStatus app={app} />
@@ -187,36 +187,6 @@ function RiffDetail() {
             </div>
           </div>
         </div>
-
-        {/* Riff Actions */}
-        <section>
-          <h2 className="text-2xl font-bold text-cyber-muted mb-6">Actions</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="hacker-card p-6 rounded-lg border border-gray-700">
-              <h4 className="text-lg font-semibold text-cyber-text mb-2">Export Riff</h4>
-              <p className="text-cyber-muted mb-4">Download this riff as a file</p>
-              <button className="w-full px-4 py-2 bg-gray-600 text-cyber-muted rounded-md cursor-not-allowed" disabled>
-                Export (Coming Soon)
-              </button>
-            </div>
-            
-            <div className="hacker-card p-6 rounded-lg border border-gray-700">
-              <h4 className="text-lg font-semibold text-cyber-text mb-2">Share Riff</h4>
-              <p className="text-cyber-muted mb-4">Generate a shareable link</p>
-              <button className="w-full px-4 py-2 bg-gray-600 text-cyber-muted rounded-md cursor-not-allowed" disabled>
-                Share (Coming Soon)
-              </button>
-            </div>
-            
-            <div className="hacker-card p-6 rounded-lg border border-gray-700">
-              <h4 className="text-lg font-semibold text-cyber-text mb-2">Archive Riff</h4>
-              <p className="text-cyber-muted mb-4">Move to archived riffs</p>
-              <button className="w-full px-4 py-2 bg-red-600/20 text-red-400 border border-red-500 rounded-md cursor-not-allowed" disabled>
-                Archive (Coming Soon)
-              </button>
-            </div>
-          </div>
-        </section>
       </div>
     </div>
   )

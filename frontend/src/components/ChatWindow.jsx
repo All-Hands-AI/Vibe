@@ -12,25 +12,15 @@ function ChatWindow({ app, riff, userUuid }) {
   const pollingRef = useRef(null)
   const messagesEndRef = useRef(null)
   const scrollContainerRef = useRef(null)
-  const [userHasScrolled, setUserHasScrolled] = useState(false)
 
   // Scroll to bottom of messages
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }
 
-  // Check if user is near the bottom of the scroll container
-  const isNearBottom = () => {
-    if (!scrollContainerRef.current) return true
-    const { scrollTop, scrollHeight, clientHeight } = scrollContainerRef.current
-    return scrollHeight - scrollTop - clientHeight < 100 // Within 100px of bottom
-  }
-
-  // Handle scroll events to detect if user is manually scrolling
+  // Handle scroll events (simplified - no longer tracking user scroll)
   const handleScroll = () => {
-    if (!scrollContainerRef.current) return
-    const isAtBottom = isNearBottom()
-    setUserHasScrolled(!isAtBottom)
+    // Scroll handler for MessageList component
   }
 
   // Fetch messages from API
@@ -54,10 +44,8 @@ function ChatWindow({ app, riff, userUuid }) {
       if (JSON.stringify(newMessages) !== JSON.stringify(messages)) {
         setMessages(newMessages)
         
-        // Only scroll to bottom if:
-        // 1. This is the initial load, OR
-        // 2. New messages were added AND user hasn't manually scrolled up
-        if (loading || (newMessageCount > previousMessageCount && !userHasScrolled)) {
+        // Only scroll to bottom on initial load
+        if (loading) {
           // Use a small delay to ensure DOM is updated
           setTimeout(() => {
             scrollToBottom()
@@ -74,7 +62,7 @@ function ChatWindow({ app, riff, userUuid }) {
     } finally {
       setLoading(false)
     }
-  }, [app.slug, riff.slug, userUuid, messages, loading, previousMessageCount, userHasScrolled])
+  }, [app.slug, riff.slug, userUuid, messages, loading])
 
   // Send a new message
   const sendMessage = async (content, type = 'text', metadata = {}) => {
@@ -101,8 +89,7 @@ function ChatWindow({ app, riff, userUuid }) {
       }
 
       // Immediately fetch messages to update the UI
-      // Reset user scroll state since they just sent a message
-      setUserHasScrolled(false)
+      // Don't reset user scroll state - let them stay where they are
       await fetchMessages()
     } catch (err) {
       console.error('Error sending message:', err)

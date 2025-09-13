@@ -3,7 +3,6 @@ import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-route
 import { ThemeProvider } from './context/ThemeContext'
 import { SetupProvider, useSetup } from './context/SetupContext'
 import Header from './components/Header'
-import Footer from './components/Footer'
 import SetupWindow from './components/SetupWindow'
 import MatrixRain from './components/MatrixRain'
 import Home from './pages/Home'
@@ -74,7 +73,6 @@ function AppContent() {
             <Route path="/contact" element={<Contact />} />
           </Routes>
         </main>
-        <Footer />
       </div>
     </Router>
   )
