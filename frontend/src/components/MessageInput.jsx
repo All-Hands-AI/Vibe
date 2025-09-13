@@ -72,7 +72,7 @@ function MessageInput({ onSendMessage, disabled = false, placeholder = 'Type a m
 
   return (
     <form onSubmit={handleSubmit} className="p-4">
-      <div className="flex items-end space-x-3">
+      <div className="flex gap-3">
         {/* Message Input */}
         <div className="flex-1">
           <textarea
@@ -88,38 +88,35 @@ function MessageInput({ onSendMessage, disabled = false, placeholder = 'Type a m
           />
         </div>
 
-        {/* Action Buttons */}
-        <div className="flex items-start space-x-2">
-          {/* File Upload Button */}
-          <button
-            type="button"
-            onClick={() => fileInputRef.current?.click()}
-            disabled={disabled}
-            className="min-h-[40px] w-10 flex items-center justify-center bg-gray-700 hover:bg-gray-600 border border-gray-600 rounded-lg text-cyber-muted hover:text-cyber-text transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-            title="Upload file"
-          >
-            📎
-          </button>
+        {/* File Upload Button */}
+        <button
+          type="button"
+          onClick={() => fileInputRef.current?.click()}
+          disabled={disabled}
+          className="h-10 w-10 flex-shrink-0 flex items-center justify-center bg-gray-700 hover:bg-gray-600 border border-gray-600 rounded-lg text-cyber-muted hover:text-cyber-text transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+          title="Upload file"
+        >
+          📎
+        </button>
 
-          {/* Send Button */}
-          <button
-            type="submit"
-            disabled={disabled || !message.trim()}
-            className="min-h-[40px] px-4 flex items-center justify-center bg-neon-green/20 hover:bg-neon-green/30 border border-neon-green text-neon-green rounded-lg font-mono text-sm transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {disabled ? (
-              <div className="flex items-center space-x-2">
-                <div className="w-4 h-4 border-2 border-neon-green border-t-transparent rounded-full animate-spin"></div>
-                <span>Sending...</span>
-              </div>
-            ) : (
-              <div className="flex items-center space-x-2">
-                <span>💬</span>
-                <span>Send</span>
-              </div>
-            )}
-          </button>
-        </div>
+        {/* Send Button */}
+        <button
+          type="submit"
+          disabled={disabled || !message.trim()}
+          className="h-10 px-4 flex-shrink-0 flex items-center justify-center bg-neon-green/20 hover:bg-neon-green/30 border border-neon-green text-neon-green rounded-lg font-mono text-sm transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {disabled ? (
+            <div className="flex items-center space-x-2">
+              <div className="w-4 h-4 border-2 border-neon-green border-t-transparent rounded-full animate-spin"></div>
+              <span>Sending...</span>
+            </div>
+          ) : (
+            <div className="flex items-center space-x-2">
+              <span>💬</span>
+              <span>Send</span>
+            </div>
+          )}
+        </button>
       </div>
 
       {/* Hidden File Input */}

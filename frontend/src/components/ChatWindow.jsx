@@ -43,16 +43,15 @@ function ChatWindow({ app, riff, userUuid }) {
       // Only update messages if there's actually a change
       if (JSON.stringify(newMessages) !== JSON.stringify(messages)) {
         setMessages(newMessages)
-        
-        // Only scroll to bottom on initial load
-        if (loading) {
-          // Use a small delay to ensure DOM is updated
-          setTimeout(() => {
-            scrollToBottom()
-          }, 100)
-        }
-        
         setPreviousMessageCount(newMessageCount)
+      }
+      
+      // Always scroll to bottom on initial load, regardless of message changes
+      if (loading) {
+        // Use a small delay to ensure DOM is updated
+        setTimeout(() => {
+          scrollToBottom()
+        }, 100)
       }
       
       setError('')
@@ -134,6 +133,16 @@ function ChatWindow({ app, riff, userUuid }) {
       setPreviousMessageCount(messages.length)
     }
   }, [messages, previousMessageCount])
+
+  // Ensure scroll to bottom after messages are rendered
+  useEffect(() => {
+    if (messages.length > 0) {
+      // Use requestAnimationFrame to ensure DOM is fully updated
+      requestAnimationFrame(() => {
+        scrollToBottom()
+      })
+    }
+  }, [messages.length])
 
   if (loading) {
     return (
