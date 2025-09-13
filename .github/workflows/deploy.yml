@@ -1,0 +1,217 @@
+name: Deploy to Fly.io
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+
+env:
+  FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+
+jobs:
+  deploy:
+    name: Deploy app
+    runs-on: ubuntu-latest
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.ref }}
+      cancel-in-progress: true
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests
+        run: npm run test:run
+
+      - name: Build application
+        run: npm run build
+
+      - name: Setup Fly CLI
+        uses: superfly/flyctl-actions/setup-flyctl@master
+
+      - name: Determine deployment environment
+        id: deployment-env
+        run: |
+          if [[ "${{ github.event_name }}" == "push" && "${{ github.ref }}" == "refs/heads/main" ]]; then
+            echo "app_name=openvibe" >> $GITHUB_OUTPUT
+            echo "environment=production" >> $GITHUB_OUTPUT
+            echo "is_production=true" >> $GITHUB_OUTPUT
+          else
+            # For PRs and feature branches, create a unique app name
+            branch_name="${{ github.head_ref || github.ref_name }}"
+            # Strip "github" from branch name (case insensitive)
+            branch_name=$(echo "$branch_name" | sed 's/github//gi')
+            # Convert to lowercase
+            clean_branch=$(echo "$branch_name" | tr '[:upper:]' '[:lower:]')
+            # Replace any non-alphanumeric characters with hyphens
+            clean_branch=$(echo "$clean_branch" | sed 's/[^a-z0-9]/-/g')
+            # Remove multiple consecutive hyphens
+            clean_branch=$(echo "$clean_branch" | sed 's/-\+/-/g')
+            # Remove leading and trailing hyphens
+            clean_branch=$(echo "$clean_branch" | sed 's/^-\+\|-\+$//g')
+            # Ensure it doesn't start with a number (Fly.io requirement)
+            if [[ "$clean_branch" =~ ^[0-9] ]]; then
+              clean_branch="br-$clean_branch"
+            fi
+            # Truncate to 25 chars to leave room for "openvibe-" prefix (Fly.io 63 char limit)
+            clean_branch=$(echo "$clean_branch" | cut -c1-25)
+            # Remove trailing hyphen if truncation created one
+            clean_branch=$(echo "$clean_branch" | sed 's/-$//')
+            # Ensure we have a valid name (fallback if empty)
+            if [[ -z "$clean_branch" ]]; then
+              clean_branch="feature"
+            fi
+            echo "app_name=openvibe-$clean_branch" >> $GITHUB_OUTPUT
+            echo "environment=preview" >> $GITHUB_OUTPUT
+            echo "is_production=false" >> $GITHUB_OUTPUT
+            echo "branch_name=$clean_branch" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create fly.toml for feature deployment
+        if: steps.deployment-env.outputs.is_production == 'false'
+        run: |
+          cp fly.toml fly-feature.toml
+          sed -i "s/app = 'openvibe'/app = '${{ steps.deployment-env.outputs.app_name }}'/" fly-feature.toml
+
+      - name: Deploy to production
+        if: steps.deployment-env.outputs.is_production == 'true'
+        run: flyctl deploy --remote-only
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+
+      - name: Deploy to feature environment
+        if: steps.deployment-env.outputs.is_production == 'false'
+        run: |
+          # Create the app if it doesn't exist
+          flyctl apps create ${{ steps.deployment-env.outputs.app_name }} --org personal || true
+          # Deploy using the feature-specific config
+          flyctl deploy --config fly-feature.toml --remote-only
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+
+      - name: Get deployment URL
+        id: deployment-url
+        run: |
+          if [[ "${{ steps.deployment-env.outputs.is_production }}" == "true" ]]; then
+            echo "url=https://openvibe.fly.dev" >> $GITHUB_OUTPUT
+          else
+            echo "url=https://${{ steps.deployment-env.outputs.app_name }}.fly.dev" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Comment on PR
+        if: github.event_name == 'pull_request'
+        uses: KeisukeYamashita/create-comment@v1
+        with:
+          comment: |
+            ## 🚀 Deployment Status
+            
+            **Environment:** `${{ steps.deployment-env.outputs.environment }}`
+            **App Name:** `${{ steps.deployment-env.outputs.app_name }}`
+            **Status:** ✅ Successfully deployed
+            
+            ### 🔗 Preview URL
+            **[Visit deployment →](${{ steps.deployment-url.outputs.url }})**
+            
+            ---
+            
+            This deployment will be automatically cleaned up when the PR is closed.
+            
+            <sub>Deployed via GitHub Actions • [View workflow run](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})</sub>
+          unique: true
+
+  cleanup:
+    name: Cleanup feature deployments
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request' && github.event.action == 'closed'
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: write
+    
+    steps:
+      - name: Setup Fly CLI
+        uses: superfly/flyctl-actions/setup-flyctl@master
+
+      - name: Delete feature app
+        run: |
+          branch_name="${{ github.head_ref }}"
+          # Strip "github" from branch name (case insensitive)
+          branch_name=$(echo "$branch_name" | sed 's/github//gi')
+          # Convert to lowercase
+          clean_branch=$(echo "$branch_name" | tr '[:upper:]' '[:lower:]')
+          # Replace any non-alphanumeric characters with hyphens
+          clean_branch=$(echo "$clean_branch" | sed 's/[^a-z0-9]/-/g')
+          # Remove multiple consecutive hyphens
+          clean_branch=$(echo "$clean_branch" | sed 's/-\+/-/g')
+          # Remove leading and trailing hyphens
+          clean_branch=$(echo "$clean_branch" | sed 's/^-\+\|-\+$//g')
+          # Ensure it doesn't start with a number (Fly.io requirement)
+          if [[ "$clean_branch" =~ ^[0-9] ]]; then
+            clean_branch="br-$clean_branch"
+          fi
+          # Truncate to 25 chars to leave room for "openvibe-" prefix (Fly.io 63 char limit)
+          clean_branch=$(echo "$clean_branch" | cut -c1-25)
+          # Remove trailing hyphen if truncation created one
+          clean_branch=$(echo "$clean_branch" | sed 's/-$//')
+          # Ensure we have a valid name (fallback if empty)
+          if [[ -z "$clean_branch" ]]; then
+            clean_branch="feature"
+          fi
+          app_name="openvibe-$clean_branch"
+          
+          # Delete the app (this will also delete all associated resources)
+          flyctl apps destroy $app_name --yes || echo "App $app_name may not exist or already deleted"
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+
+      - name: Get cleaned app name for comment
+        id: cleanup-app-name
+        run: |
+          branch_name="${{ github.head_ref }}"
+          # Strip "github" from branch name (case insensitive)
+          branch_name=$(echo "$branch_name" | sed 's/github//gi')
+          # Convert to lowercase
+          clean_branch=$(echo "$branch_name" | tr '[:upper:]' '[:lower:]')
+          # Replace any non-alphanumeric characters with hyphens
+          clean_branch=$(echo "$clean_branch" | sed 's/[^a-z0-9]/-/g')
+          # Remove multiple consecutive hyphens
+          clean_branch=$(echo "$clean_branch" | sed 's/-\+/-/g')
+          # Remove leading and trailing hyphens
+          clean_branch=$(echo "$clean_branch" | sed 's/^-\+\|-\+$//g')
+          # Ensure it doesn't start with a number (Fly.io requirement)
+          if [[ "$clean_branch" =~ ^[0-9] ]]; then
+            clean_branch="br-$clean_branch"
+          fi
+          # Truncate to 25 chars to leave room for "openvibe-" prefix (Fly.io 63 char limit)
+          clean_branch=$(echo "$clean_branch" | cut -c1-25)
+          # Remove trailing hyphen if truncation created one
+          clean_branch=$(echo "$clean_branch" | sed 's/-$//')
+          # Ensure we have a valid name (fallback if empty)
+          if [[ -z "$clean_branch" ]]; then
+            clean_branch="feature"
+          fi
+          echo "app_name=openvibe-$clean_branch" >> $GITHUB_OUTPUT
+
+      - name: Comment cleanup status
+        uses: KeisukeYamashita/create-comment@v1
+        with:
+          comment: |
+            ## 🧹 Deployment Cleanup
+            
+            The feature deployment `${{ steps.cleanup-app-name.outputs.app_name }}` has been automatically destroyed since this PR was closed.
+            
+            <sub>Cleaned up via GitHub Actions • [View workflow run](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})</sub>
