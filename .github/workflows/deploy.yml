@@ -111,6 +111,11 @@ jobs:
             ### 🔗 Preview URL
             **[Visit deployment →](${{ steps.deployment-url.outputs.url }})**
             
+            ### 📊 Fly.io Management
+            - **[View App Status →](https://fly.io/apps/${{ steps.deployment-env.outputs.app_name }})**
+            - **[View Metrics →](https://fly.io/apps/${{ steps.deployment-env.outputs.app_name }}/metrics)**
+            - **[View Monitoring →](https://fly.io/apps/${{ steps.deployment-env.outputs.app_name }}/monitoring)**
+            
             ---
             
             This deployment will be automatically cleaned up when the PR is closed.
