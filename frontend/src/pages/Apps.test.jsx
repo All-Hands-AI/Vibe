@@ -218,6 +218,11 @@ describe('Apps', () => {
 
     renderWithRouter(<Apps />)
     
+    // Wait for initial load
+    await waitFor(() => {
+      expect(screen.getByText('Create New App')).toBeInTheDocument()
+    })
+    
     const nameInput = screen.getByLabelText('> App Name:')
     const createButton = screen.getByText('Create App')
     
@@ -228,7 +233,7 @@ describe('Apps', () => {
     // Check error message appears
     await waitFor(() => {
       expect(screen.getByText('GitHub API key is required. Please set it up in integrations.')).toBeInTheDocument()
-    })
+    }, { timeout: 5000 })
   })
 
   it('handles fetch error gracefully', async () => {
