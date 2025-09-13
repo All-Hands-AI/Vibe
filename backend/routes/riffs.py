@@ -195,7 +195,7 @@ def create_riff(slug):
 # Message storage utilities
 def get_messages_dir(user_uuid, app_slug, riff_slug):
     """Get the directory path for messages"""
-    return DATA_DIR / user_uuid / "apps" / app_slug / "riffs" / riff_slug / "messages"
+    return Path("/data") / user_uuid / "apps" / app_slug / "riffs" / riff_slug / "messages"
 
 
 def get_messages_file(user_uuid, app_slug, riff_slug):
