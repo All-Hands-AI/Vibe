@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useParams, Link } from 'react-router-dom'
+import { getUserUUID } from '../utils/uuid'
 
 function RiffDetail() {
   const { slug: appSlug, riffSlug } = useParams()
@@ -14,8 +15,13 @@ function RiffDetail() {
     try {
       setLoading(true)
       
+      const uuid = getUserUUID()
+      const headers = {
+        'X-User-UUID': uuid
+      }
+      
       // First, get the app to find its ID
-      const appResponse = await fetch(`/api/apps/${appSlug}`)
+      const appResponse = await fetch(`/api/apps/${appSlug}`, { headers })
       console.log('📡 App response status:', appResponse?.status)
       
       if (!appResponse || !appResponse.ok) {
@@ -29,7 +35,7 @@ function RiffDetail() {
       setApp(appData)
       
       // Now get the riffs for this app
-      const riffsResponse = await fetch(`/api/apps/${appData.slug}/riffs`)
+      const riffsResponse = await fetch(`/api/apps/${appData.slug}/riffs`, { headers })
       console.log('📡 Riffs response status:', riffsResponse?.status)
       
       if (!riffsResponse || !riffsResponse.ok) {

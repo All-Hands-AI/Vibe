@@ -105,7 +105,12 @@ function AppDetail() {
     try {
       setRiffsLoading(true)
       
-      const response = await fetch(`/api/apps/${app.slug}/riffs`)
+      const uuid = getUserUUID()
+      const headers = {
+        'X-User-UUID': uuid
+      }
+      
+      const response = await fetch(`/api/apps/${app.slug}/riffs`, { headers })
       console.log('📡 Riffs response status:', response?.status)
       
       if (!response || !response.ok) {

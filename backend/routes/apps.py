@@ -3,90 +3,65 @@ import requests
 import json
 import logging
 import re
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from keys import load_user_keys
+from storage import get_apps_storage
 
 logger = logging.getLogger(__name__)
 
 # Create Blueprint for apps
 apps_bp = Blueprint("apps", __name__)
 
-# File-based storage utilities
-DATA_DIR = Path("/data")
+
+def load_user_apps(user_uuid):
+    """Load apps for a specific user"""
+    storage = get_apps_storage(user_uuid)
+    return storage.list_apps()
 
 
-def get_apps_file():
-    """Get the path to the apps.json file"""
-    return DATA_DIR / "apps.json"
+def load_user_app(user_uuid, app_slug):
+    """Load specific app for a user"""
+    storage = get_apps_storage(user_uuid)
+    return storage.load_app(app_slug)
 
 
-def get_riffs_file(app_slug):
-    """Get the path to the riffs.json file for a specific app"""
-    return DATA_DIR / f"riffs_{app_slug}.json"
+def save_user_app(user_uuid, app_slug, app_data):
+    """Save app for a specific user"""
+    storage = get_apps_storage(user_uuid)
+    return storage.save_app(app_slug, app_data)
 
 
+def user_app_exists(user_uuid, app_slug):
+    """Check if app exists for user"""
+    storage = get_apps_storage(user_uuid)
+    return storage.app_exists(app_slug)
+
+
+def delete_user_app(user_uuid, app_slug):
+    """Delete app for a specific user"""
+    storage = get_apps_storage(user_uuid)
+    return storage.delete_app(app_slug)
+
+
+# Legacy functions for backward compatibility during migration
 def load_apps():
-    """Load apps from file"""
-    apps_file = get_apps_file()
-    logger.debug(f"📁 Loading apps from: {apps_file}")
-    logger.debug(f"📁 File exists: {apps_file.exists()}")
-
-    if apps_file.exists():
+    """Load apps from legacy file - DEPRECATED"""
+    logger.warning("⚠️ Using deprecated load_apps() function")
+    legacy_file = Path("/data/apps.json")
+    if legacy_file.exists():
         try:
-            logger.debug(f"📁 File size: {apps_file.stat().st_size} bytes")
-            logger.debug(f"📁 File permissions: {oct(apps_file.stat().st_mode)[-3:]}")
-
-            with open(apps_file, "r") as f:
-                content = f.read()
-                logger.debug(f"📁 File content length: {len(content)} characters")
-                logger.debug(f"📁 File content preview: {content[:200]}...")
-
-                apps = json.loads(content)
-                logger.info(f"📁 Successfully loaded {len(apps)} apps")
-                return apps
-        except (json.JSONDecodeError, IOError) as e:
-            logger.error(f"❌ Failed to load apps: {e}")
-            logger.debug(f"📁 Error type: {type(e).__name__}")
-            return []
-    else:
-        logger.info(f"📁 Apps file doesn't exist, returning empty list")
+            with open(legacy_file, "r") as f:
+                return json.load(f)
+        except Exception as e:
+            logger.error(f"❌ Failed to load legacy apps: {e}")
     return []
 
 
 def save_apps(apps):
-    """Save apps to file"""
-    logger.debug(f"💾 Saving {len(apps)} apps")
-    logger.debug(f"💾 Data directory: {DATA_DIR}")
-    logger.debug(f"💾 Data directory exists: {DATA_DIR.exists()}")
-
-    try:
-        DATA_DIR.mkdir(parents=True, exist_ok=True)
-        logger.debug(f"💾 Data directory created/verified")
-    except Exception as e:
-        logger.error(f"❌ Failed to create data directory: {e}")
-        return False
-
-    apps_file = get_apps_file()
-    logger.debug(f"💾 Apps file path: {apps_file}")
-
-    try:
-        # Create backup if file exists
-        if apps_file.exists():
-            backup_file = apps_file.with_suffix(".json.backup")
-            logger.debug(f"💾 Creating backup: {backup_file}")
-            apps_file.rename(backup_file)
-
-        with open(apps_file, "w") as f:
-            json.dump(apps, f, indent=2)
-
-        logger.info(f"💾 Successfully saved {len(apps)} apps")
-        logger.debug(f"💾 File size: {apps_file.stat().st_size} bytes")
-        return True
-    except IOError as e:
-        logger.error(f"❌ Failed to save apps: {e}")
-        logger.debug(f"💾 Error type: {type(e).__name__}")
-        return False
+    """Save apps to legacy file - DEPRECATED"""
+    logger.warning("⚠️ Using deprecated save_apps() function")
+    return False  # Disable legacy saving
 
 
 def create_slug(name):
@@ -716,15 +691,26 @@ def create_github_repo(repo_name, github_token, fly_token):
 
 @apps_bp.route("/api/apps", methods=["GET"])
 def get_apps():
-    """Get all apps, ordered alphabetically"""
-    logger.info("📋 GET /api/apps - Fetching all apps")
+    """Get all apps for a user, ordered alphabetically"""
+    logger.info("📋 GET /api/apps - Fetching user apps")
 
     try:
-        apps = load_apps()
+        # Get UUID from headers
+        user_uuid = request.headers.get("X-User-UUID")
+        if not user_uuid:
+            logger.warning("❌ X-User-UUID header is required")
+            return jsonify({"error": "X-User-UUID header is required"}), 400
+
+        user_uuid = user_uuid.strip()
+        if not user_uuid:
+            logger.warning("❌ Empty UUID provided in header")
+            return jsonify({"error": "UUID cannot be empty"}), 400
+
+        apps = load_user_apps(user_uuid)
         # Sort apps alphabetically by name
         apps.sort(key=lambda x: x.get("name", "").lower())
 
-        logger.info(f"📊 Returning {len(apps)} apps")
+        logger.info(f"📊 Returning {len(apps)} apps for user {user_uuid[:8]}")
         return jsonify({"apps": apps, "count": len(apps)})
     except Exception as e:
         logger.error(f"💥 Error fetching apps: {str(e)}")
@@ -737,41 +723,44 @@ def get_app(slug):
     logger.info(f"📋 GET /api/apps/{slug} - Fetching app details")
 
     try:
-        # Get UUID from headers for API keys
+        # Get UUID from headers
         user_uuid = request.headers.get("X-User-UUID")
-        if user_uuid:
-            user_uuid = user_uuid.strip()
+        if not user_uuid:
+            logger.warning("❌ X-User-UUID header is required")
+            return jsonify({"error": "X-User-UUID header is required"}), 400
 
-        apps = load_apps()
+        user_uuid = user_uuid.strip()
+        if not user_uuid:
+            logger.warning("❌ Empty UUID provided in header")
+            return jsonify({"error": "UUID cannot be empty"}), 400
 
-        # Find app by slug
-        app = next((a for a in apps if a.get("slug") == slug), None)
+        # Load app for this user
+        app = load_user_app(user_uuid, slug)
         if not app:
-            logger.warning(f"❌ App not found: {slug}")
+            logger.warning(f"❌ App not found: {slug} for user {user_uuid[:8]}")
             return jsonify({"error": "App not found"}), 404
 
-        logger.info(f"📊 Found app: {app['name']}")
+        logger.info(f"📊 Found app: {app['name']} for user {user_uuid[:8]}")
 
-        # Get user's API keys if UUID is provided
+        # Get user's API keys for status information
         github_status = None
         fly_status = None
 
-        if user_uuid:
-            try:
-                user_keys = load_user_keys(user_uuid)
-                github_token = user_keys.get("github")
-                fly_token = user_keys.get("fly")
+        try:
+            user_keys = load_user_keys(user_uuid)
+            github_token = user_keys.get("github")
+            fly_token = user_keys.get("fly")
 
-                # Get GitHub status if token is available
-                if github_token and app.get("github_url"):
-                    github_status = get_github_status(app["github_url"], github_token)
+            # Get GitHub status if token is available
+            if github_token and app.get("github_url"):
+                github_status = get_github_status(app["github_url"], github_token)
 
-                # Get Fly.io status if token is available
-                if fly_token and app.get("slug"):
-                    fly_status = get_fly_status(app["slug"], fly_token)
+            # Get Fly.io status if token is available
+            if fly_token and app.get("slug"):
+                fly_status = get_fly_status(app["slug"], fly_token)
 
-            except Exception as e:
-                logger.warning(f"⚠️ Error getting status information: {str(e)}")
+        except Exception as e:
+            logger.warning(f"⚠️ Error getting status information: {str(e)}")
 
         # Add status information to app
         app_with_status = app.copy()
@@ -823,15 +812,15 @@ def create_app():
             logger.warning("❌ Invalid app name - cannot create slug")
             return jsonify({"error": "Invalid app name"}), 400
 
-        logger.info(f"🔄 Creating app: {app_name} -> {app_slug}")
+        logger.info(
+            f"🔄 Creating app: {app_name} -> {app_slug} for user {user_uuid[:8]}"
+        )
 
-        # Load existing apps
-        apps = load_apps()
-
-        # Check if app with same slug already exists
-        existing_app = next((p for p in apps if p.get("slug") == app_slug), None)
-        if existing_app:
-            logger.warning(f"❌ App with slug '{app_slug}' already exists")
+        # Check if app with same slug already exists for this user
+        if user_app_exists(user_uuid, app_slug):
+            logger.warning(
+                f"❌ App with slug '{app_slug}' already exists for user {user_uuid[:8]}"
+            )
             return jsonify({"error": f'App with name "{app_name}" already exists'}), 409
 
         # Get user's API keys
@@ -899,15 +888,12 @@ def create_app():
             "slug": app_slug,
             "github_url": github_url,
             "fly_app_name": fly_app_name,
-            "created_at": datetime.utcnow().isoformat(),
+            "created_at": datetime.now(timezone.utc).isoformat(),
             "created_by": user_uuid,
         }
 
-        # Add to apps list
-        apps.append(app)
-
-        # Save to file
-        if not save_apps(apps):
+        # Save app for this user
+        if not save_user_app(user_uuid, app_slug, app):
             logger.error("❌ Failed to save app to file")
             return jsonify({"error": "Failed to save app"}), 500
 
@@ -949,16 +935,13 @@ def delete_app(slug):
             logger.warning("❌ Empty UUID provided in header")
             return jsonify({"error": "UUID cannot be empty"}), 400
 
-        # Load apps
-        apps = load_apps()
-
-        # Find app by slug
-        app = next((p for p in apps if p.get("slug") == slug), None)
+        # Load app for this user
+        app = load_user_app(user_uuid, slug)
         if not app:
-            logger.warning(f"❌ App not found: {slug}")
+            logger.warning(f"❌ App not found: {slug} for user {user_uuid[:8]}")
             return jsonify({"error": "App not found"}), 404
 
-        logger.info(f"🔍 Found app to delete: {app['name']}")
+        logger.info(f"🔍 Found app to delete: {app['name']} for user {user_uuid[:8]}")
 
         # Get user's API keys
         user_keys = load_user_keys(user_uuid)
@@ -1000,24 +983,14 @@ def delete_app(slug):
         else:
             logger.info("⚠️ Skipping Fly.io deletion (no app name or token)")
 
-        # Remove app from list
-        apps = [p for p in apps if p.get("slug") != slug]
-
-        # Save updated apps list
-        if save_apps(apps):
-            logger.info(f"✅ App {slug} removed from database")
+        # Delete app and all its data (including riffs)
+        if delete_user_app(user_uuid, slug):
+            logger.info(
+                f"✅ App {slug} and all associated data deleted for user {user_uuid[:8]}"
+            )
         else:
-            logger.error(f"❌ Failed to save apps after deletion")
-            return jsonify({"error": "Failed to update app database"}), 500
-
-        # Delete associated riffs file
-        try:
-            riffs_file = get_riffs_file(slug)
-            if riffs_file.exists():
-                riffs_file.unlink()
-                logger.info(f"✅ Deleted riffs file for app {slug}")
-        except Exception as e:
-            logger.warning(f"⚠️ Failed to delete riffs file: {str(e)}")
+            logger.error(f"❌ Failed to delete app data")
+            return jsonify({"error": "Failed to delete app data"}), 500
 
         # Prepare response
         response_data = {

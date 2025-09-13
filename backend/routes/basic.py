@@ -1,6 +1,6 @@
 from flask import Blueprint, jsonify
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 
 logger = logging.getLogger(__name__)
 
@@ -16,7 +16,7 @@ def hello_world():
             "message": "Hello World from Python Backend!",
             "status": "success",
             "version": "1.0.0",
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
         }
     )
 
@@ -28,7 +28,7 @@ def health_check():
         {
             "status": "healthy",
             "service": "OpenVibe Backend",
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
         }
     )
 
@@ -40,6 +40,6 @@ def api_hello():
         {
             "message": "Hello from the API!",
             "endpoint": "/api/hello",
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
         }
     )
