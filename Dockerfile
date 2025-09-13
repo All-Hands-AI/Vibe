@@ -4,42 +4,85 @@
 ARG NODE_VERSION=20.18.0
 FROM node:${NODE_VERSION}-slim AS base
 
-LABEL fly_launch_runtime="Vite"
-
-# Vite app lives here
-WORKDIR /app
+LABEL fly_launch_runtime="Full-Stack"
 
 # Set production environment
 ENV NODE_ENV="production"
 
-
-# Throw-away build stage to reduce size of final image
-FROM base AS build
-
-# Install packages needed to build node modules
+# Install packages needed for both frontend and backend
 RUN apt-get update -qq && \
-    apt-get install --no-install-recommends -y build-essential node-gyp pkg-config python-is-python3
+    apt-get install --no-install-recommends -y build-essential node-gyp pkg-config python-is-python3 nginx
 
-# Install node modules
+# Build frontend
+FROM base AS frontend-build
+WORKDIR /app
 COPY package-lock.json package.json ./
 RUN npm ci --include=dev
-
-# Copy application code
 COPY . .
-
-# Build application
 RUN npm run build
 
-# Remove development dependencies
-RUN npm prune --omit=dev
-
+# Build backend
+FROM base AS backend-build
+WORKDIR /app/backend
+COPY backend/package.json ./
+RUN npm ci --omit=dev
 
 # Final stage for app image
-FROM nginx
+FROM node:${NODE_VERSION}-slim AS final
 
-# Copy built application
-COPY --from=build /app/dist /usr/share/nginx/html
+# Install nginx
+RUN apt-get update -qq && \
+    apt-get install --no-install-recommends -y nginx && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
 
-# Start the server by default, this can be overwritten at runtime
+# Set production environment
+ENV NODE_ENV="production"
+
+# Copy built frontend
+COPY --from=frontend-build /app/dist /usr/share/nginx/html
+
+# Copy backend
+WORKDIR /app/backend
+COPY --from=backend-build /app/backend/node_modules ./node_modules
+COPY backend/server.js ./
+
+# Create nginx configuration
+RUN echo 'server { \
+    listen 80; \
+    server_name _; \
+    \
+    # Serve frontend \
+    location / { \
+        root /usr/share/nginx/html; \
+        try_files $uri $uri/ /index.html; \
+    } \
+    \
+    # Proxy API requests to backend \
+    location /api/ { \
+        proxy_pass http://localhost:3001/; \
+        proxy_http_version 1.1; \
+        proxy_set_header Upgrade $http_upgrade; \
+        proxy_set_header Connection "upgrade"; \
+        proxy_set_header Host $host; \
+        proxy_set_header X-Real-IP $remote_addr; \
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for; \
+        proxy_set_header X-Forwarded-Proto $scheme; \
+    } \
+}' > /etc/nginx/sites-available/default
+
+# Create startup script
+RUN echo '#!/bin/bash \
+set -e \
+\
+# Start backend server in background \
+cd /app/backend && node server.js & \
+\
+# Start nginx in foreground \
+nginx -g "daemon off;"' > /start.sh && chmod +x /start.sh
+
+# Expose port
 EXPOSE 80
-CMD [ "/usr/sbin/nginx", "-g", "daemon off;" ]
+
+# Start both services
+CMD ["/start.sh"]
