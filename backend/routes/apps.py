@@ -307,7 +307,7 @@ def get_github_status(repo_url, github_token):
         if commits_response.status_code != 200:
             logger.warning(f"❌ Failed to get commits: {commits_response.status_code}")
             logger.warning(f"❌ Response body: {commits_response.text[:500]}")
-            logger.warning(f"❌ Response headers: {dict(commits_response.headers)}")
+            logger.debug(f"❌ Response headers count: {len(commits_response.headers)}")
             return None
 
         commit_data = commits_response.json()
@@ -338,8 +338,8 @@ def get_github_status(repo_url, github_token):
             }
 
         status_data = status_response.json()
-        logger.info(
-            f"🔍 Raw GitHub status response: {json.dumps(status_data, indent=2)}"
+        logger.debug(
+            f"🔍 GitHub status response received with {len(status_data)} fields"
         )
 
         state = status_data.get("state", "unknown")
@@ -422,9 +422,7 @@ def get_github_status(repo_url, github_token):
             "total_count": status_data.get("total_count", 0),
         }
 
-        logger.info(
-            f"🔍 Final status object being returned: {json.dumps(result, indent=2)}"
-        )
+        logger.debug(f"🔍 Returning GitHub status: {result.get('status', 'unknown')}")
 
         return result
 
@@ -737,10 +735,7 @@ def create_github_repo(repo_name, github_token, fly_token):
         user_response = requests.get(
             "https://api.github.com/user", headers=headers, timeout=10
         )
-        logger.debug(f"🐙 GitHub user API response status: {user_response.status_code}")
-        logger.debug(
-            f"🐙 GitHub user API response headers: {dict(user_response.headers)}"
-        )
+        logger.debug(f"🐙 GitHub user API response: {user_response.status_code}")
 
         if user_response.status_code != 200:
             logger.error(f"❌ Failed to get GitHub user: {user_response.text}")
@@ -750,7 +745,9 @@ def create_github_repo(repo_name, github_token, fly_token):
         user_data = user_response.json()
         owner = user_data["login"]
         logger.info(f"🔍 GitHub owner: {owner}")
-        logger.debug(f"🔍 GitHub user data: {user_data}")
+        logger.debug(
+            f"🔍 GitHub user authenticated: {user_data.get('login', 'unknown')}"
+        )
 
         # Check if repo already exists
         check_response = requests.get(
@@ -999,8 +996,8 @@ def get_app(slug):
         app_with_status = app.copy()
         if github_status:
             app_with_status["github_status"] = github_status
-            logger.info(
-                f"🔍 Adding github_status to response: {json.dumps(github_status, indent=2)}"
+            logger.debug(
+                f"🔍 Added GitHub status: {github_status.get('status', 'unknown')}"
             )
         else:
             logger.info(f"🔍 No github_status to add (github_status is None or empty)")
@@ -1013,9 +1010,7 @@ def get_app(slug):
             app_with_status["deployment_status"] = deployment_status
             logger.info(f"🔍 Adding deployment_status to response")
 
-        logger.info(
-            f"🔍 Final API response for app {slug}: {json.dumps(app_with_status, indent=2, default=str)}"
-        )
+        logger.debug(f"🔍 Returning app {slug} with status information")
         return jsonify(app_with_status)
     except Exception as e:
         logger.error(f"💥 Error fetching app: {str(e)}")

@@ -1,17 +1,113 @@
 from flask import Blueprint, jsonify, request
-import logging
 import re
 import uuid
 from datetime import datetime, timezone
 from storage import get_riffs_storage, get_apps_storage
 from agent_loop import agent_loop_manager
 from keys import get_user_key
-from openhands.sdk import LLM
 
-logger = logging.getLogger(__name__)
+import os
+
+
+# Mock LLM class for testing
+class MockLLM:
+    def __init__(self, *args, **kwargs):
+        pass
+
+    def completion(self, messages):
+        # Mock response for testing
+        class MockChoice:
+            def __init__(self):
+                self.message = MockMessage()
+
+        class MockMessage:
+            def __init__(self):
+                self.content = "Hello! This is a mock response from the LLM."
+
+        class MockResponse:
+            def __init__(self):
+                self.choices = [MockChoice()]
+
+        return MockResponse()
+
+
+def get_llm_class():
+    """Get the appropriate LLM class based on MOCK_MODE environment variable"""
+    if os.environ.get("MOCK_MODE", "false").lower() == "true":
+        return MockLLM
+    else:
+        try:
+            from openhands.sdk import LLM
+
+            return LLM
+        except ImportError:
+            # SDK not available, fall back to mock
+            return MockLLM
+
+
+from utils.logging import get_logger, log_api_request, log_api_response
+
+logger = get_logger(__name__)
 
 # Create Blueprint for riffs
 riffs_bp = Blueprint("riffs", __name__)
+
+
+def create_llm_for_user(user_uuid, app_slug, riff_slug):
+    """
+    Create and store an LLM object for a specific user, app, and riff.
+    This function deduplicates the LLM creation logic used in both
+    riff creation and reset operations.
+
+    Args:
+        user_uuid: User's UUID
+        app_slug: App slug identifier
+        riff_slug: Riff slug identifier
+
+    Returns:
+        tuple: (success: bool, error_message: str or None)
+    """
+    try:
+        # Get user's Anthropic token
+        anthropic_token = get_user_key(user_uuid, "anthropic")
+        if not anthropic_token:
+            logger.warning(f"⚠️ No Anthropic token found for user {user_uuid[:8]}")
+            return False, "Anthropic API key required"
+
+        # Create LLM instance
+        try:
+            LLM = get_llm_class()
+            llm = LLM(api_key=anthropic_token, model="claude-3-haiku-20240307")
+
+            # Create and store the agent loop
+            logger.info(
+                f"🔧 Creating AgentLoop with key: {user_uuid[:8]}:{app_slug}:{riff_slug}"
+            )
+            agent_loop_manager.create_agent_loop(user_uuid, app_slug, riff_slug, llm)
+            logger.info(f"🤖 Created AgentLoop for riff: {riff_slug}")
+
+            # Verify it was stored correctly
+            test_retrieval = agent_loop_manager.get_agent_loop(
+                user_uuid, app_slug, riff_slug
+            )
+            if test_retrieval:
+                logger.info(
+                    f"✅ AgentLoop verification successful for {user_uuid[:8]}:{app_slug}:{riff_slug}"
+                )
+                return True, None
+            else:
+                logger.error(
+                    f"❌ AgentLoop verification failed for {user_uuid[:8]}:{app_slug}:{riff_slug}"
+                )
+                return False, "Failed to verify LLM creation"
+
+        except Exception as e:
+            logger.error(f"❌ Failed to create LLM instance: {e}")
+            return False, "Failed to initialize LLM"
+
+    except Exception as e:
+        logger.error(f"❌ Failed to create AgentLoop: {e}")
+        return False, f"Failed to create LLM: {str(e)}"
 
 
 def load_user_riffs(user_uuid, app_slug):
@@ -167,45 +263,10 @@ def create_riff(slug):
             return jsonify({"error": "Failed to save riff"}), 500
 
         # Create AgentLoop with user's Anthropic token
-        try:
-            anthropic_token = get_user_key(user_uuid, "anthropic")
-            if not anthropic_token:
-                logger.warning(f"⚠️ No Anthropic token found for user {user_uuid[:8]}")
-                return jsonify({"error": "Anthropic API key required"}), 400
-
-            # Create LLM instance
-            try:
-                llm = LLM(api_key=anthropic_token, model="claude-3-haiku-20240307")
-
-                # Create and store the agent loop
-                logger.info(
-                    f"🔧 Creating AgentLoop with key: {user_uuid[:8]}:{slug}:{riff_slug}"
-                )
-                agent_loop_manager.create_agent_loop(user_uuid, slug, riff_slug, llm)
-                logger.info(f"🤖 Created AgentLoop for riff: {riff_name}")
-
-                # Verify it was stored correctly
-                test_retrieval = agent_loop_manager.get_agent_loop(
-                    user_uuid, slug, riff_slug
-                )
-                if test_retrieval:
-                    logger.info(
-                        f"✅ AgentLoop verification successful for {user_uuid[:8]}:{slug}:{riff_slug}"
-                    )
-                else:
-                    logger.error(
-                        f"❌ AgentLoop verification failed for {user_uuid[:8]}:{slug}:{riff_slug}"
-                    )
-
-            except Exception as e:
-                logger.error(f"❌ Failed to create LLM instance: {e}")
-                return jsonify({"error": "Failed to initialize LLM"}), 500
-
-        except Exception as e:
-            logger.error(f"❌ Failed to create AgentLoop: {e}")
-            # Don't fail the riff creation if AgentLoop creation fails
-            # The riff is still created, just without the agent loop
-            logger.warning("⚠️ Riff created but AgentLoop creation failed")
+        success, error_message = create_llm_for_user(user_uuid, slug, riff_slug)
+        if not success:
+            logger.error(f"❌ Failed to create LLM for riff: {error_message}")
+            return jsonify({"error": error_message}), 400
 
         logger.info(f"✅ Riff created successfully: {riff_name}")
         return jsonify({"message": "Riff created successfully", "riff": riff}), 201
@@ -467,3 +528,160 @@ def create_message(slug):
     except Exception as e:
         logger.error(f"💥 Error creating message: {str(e)}")
         return jsonify({"error": "Failed to create message"}), 500
+
+
+@riffs_bp.route("/api/apps/<slug>/riffs/<riff_slug>/ready", methods=["GET"])
+def check_riff_ready(slug, riff_slug):
+    """Check if an LLM object is ready in memory for a specific riff"""
+    log_api_request(logger, "GET", f"/api/apps/{slug}/riffs/{riff_slug}/ready")
+
+    try:
+        # Get UUID from headers
+        user_uuid = request.headers.get("X-User-UUID")
+        if not user_uuid:
+            logger.warning("❌ X-User-UUID header is required")
+            return jsonify({"error": "X-User-UUID header is required"}), 400
+
+        user_uuid = user_uuid.strip()
+        if not user_uuid:
+            logger.warning("❌ Empty UUID provided in header")
+            return jsonify({"error": "UUID cannot be empty"}), 400
+
+        # Verify app exists
+        if not user_app_exists(user_uuid, slug):
+            logger.warning(f"❌ App not found: {slug}")
+            return jsonify({"error": "App not found"}), 404
+
+        # Verify riff exists
+        if not user_riff_exists(user_uuid, slug, riff_slug):
+            logger.warning(f"❌ Riff not found: {riff_slug}")
+            return jsonify({"error": "Riff not found"}), 404
+
+        # Check if AgentLoop exists for this riff
+        agent_loop = agent_loop_manager.get_agent_loop(user_uuid, slug, riff_slug)
+        is_ready = agent_loop is not None
+
+        # Additional debugging for flakiness
+        if not is_ready:
+            stats = agent_loop_manager.get_stats()
+            logger.warning(
+                f"🔍 LLM not ready for {user_uuid[:8]}:{slug}:{riff_slug}. "
+                f"Total loops: {stats.get('total_loops', 0)}"
+            )
+        else:
+            logger.info(f"✅ LLM ready for {user_uuid[:8]}:{slug}:{riff_slug}")
+
+        log_api_response(
+            logger, "GET", f"/api/apps/{slug}/riffs/{riff_slug}/ready", 200, user_uuid
+        )
+        return jsonify({"ready": is_ready}), 200
+
+    except Exception as e:
+        logger.error(f"💥 Error checking riff readiness: {str(e)}")
+        log_api_response(
+            logger, "GET", f"/api/apps/{slug}/riffs/{riff_slug}/ready", 500
+        )
+        return jsonify({"error": "Failed to check riff readiness"}), 500
+
+
+@riffs_bp.route("/api/apps/<slug>/riffs/<riff_slug>/reset", methods=["POST"])
+def reset_riff_llm(slug, riff_slug):
+    """Reset the LLM object for a specific riff by creating a brand new one"""
+    log_api_request(logger, "POST", f"/api/apps/{slug}/riffs/{riff_slug}/reset")
+
+    try:
+        # Get UUID from headers
+        user_uuid = request.headers.get("X-User-UUID")
+        if not user_uuid:
+            logger.warning("❌ X-User-UUID header is required")
+            return jsonify({"error": "X-User-UUID header is required"}), 400
+
+        user_uuid = user_uuid.strip()
+        if not user_uuid:
+            logger.warning("❌ Empty UUID provided in header")
+            return jsonify({"error": "UUID cannot be empty"}), 400
+
+        # Verify app exists
+        if not user_app_exists(user_uuid, slug):
+            logger.warning(f"❌ App not found: {slug}")
+            return jsonify({"error": "App not found"}), 404
+
+        # Verify riff exists
+        if not user_riff_exists(user_uuid, slug, riff_slug):
+            logger.warning(f"❌ Riff not found: {riff_slug}")
+            return jsonify({"error": "Riff not found"}), 404
+
+        # Remove existing AgentLoop if it exists
+        existing_removed = agent_loop_manager.remove_agent_loop(
+            user_uuid, slug, riff_slug
+        )
+        if existing_removed:
+            logger.info(
+                f"🗑️ Removed existing AgentLoop for {user_uuid[:8]}:{slug}:{riff_slug}"
+            )
+        else:
+            logger.info(
+                f"ℹ️ No existing AgentLoop found for {user_uuid[:8]}:{slug}:{riff_slug}"
+            )
+
+        # Create a brand new LLM object using the reusable function
+        success, error_message = create_llm_for_user(user_uuid, slug, riff_slug)
+        if not success:
+            logger.error(f"❌ Failed to reset LLM for riff: {error_message}")
+            return jsonify({"error": error_message}), 500
+
+        # Double-check that the LLM is actually ready before returning success
+        logger.info(
+            f"🔍 Verifying LLM readiness after reset for {user_uuid[:8]}:{slug}:{riff_slug}"
+        )
+        agent_loop = agent_loop_manager.get_agent_loop(user_uuid, slug, riff_slug)
+        if not agent_loop:
+            logger.error(
+                f"❌ LLM reset appeared successful but AgentLoop not found for {user_uuid[:8]}:{slug}:{riff_slug}"
+            )
+            return (
+                jsonify({"error": "LLM reset failed - could not verify readiness"}),
+                500,
+            )
+
+        # Test that the LLM can actually respond to a simple query
+        try:
+            logger.info(
+                f"🧪 Testing LLM functionality for {user_uuid[:8]}:{slug}:{riff_slug}"
+            )
+            test_response = agent_loop.send_message("Hello")
+            if test_response and len(test_response.strip()) > 0:
+                logger.info(
+                    f"✅ LLM test successful for {user_uuid[:8]}:{slug}:{riff_slug}"
+                )
+            else:
+                logger.error(
+                    f"❌ LLM test failed - empty response for {user_uuid[:8]}:{slug}:{riff_slug}"
+                )
+                return (
+                    jsonify(
+                        {"error": "LLM reset failed - LLM not responding properly"}
+                    ),
+                    500,
+                )
+        except Exception as e:
+            logger.error(
+                f"❌ LLM test failed with exception for {user_uuid[:8]}:{slug}:{riff_slug}: {e}"
+            )
+            return (
+                jsonify({"error": f"LLM reset failed - LLM test error: {str(e)}"}),
+                500,
+            )
+
+        logger.info(f"✅ LLM reset and verification successful for riff: {riff_slug}")
+        log_api_response(
+            logger, "POST", f"/api/apps/{slug}/riffs/{riff_slug}/reset", 200, user_uuid
+        )
+        return jsonify({"message": "LLM reset successfully", "ready": True}), 200
+
+    except Exception as e:
+        logger.error(f"💥 Error resetting riff LLM: {str(e)}")
+        log_api_response(
+            logger, "POST", f"/api/apps/{slug}/riffs/{riff_slug}/reset", 500
+        )
+        return jsonify({"error": "Failed to reset riff LLM"}), 500
