@@ -20,6 +20,13 @@ export function generateUUID() {
  */
 export function getUserUUID() {
   const STORAGE_KEY = 'openvibe_user_uuid'
+  const LEGACY_KEY = 'user_uuid'
+  
+  // Clean up any legacy user_uuid entries
+  if (localStorage.getItem(LEGACY_KEY)) {
+    localStorage.removeItem(LEGACY_KEY)
+    console.log('🧹 Cleaned up legacy user_uuid from localStorage')
+  }
   
   // Try to get existing UUID from localStorage
   let uuid = localStorage.getItem(STORAGE_KEY)
@@ -41,6 +48,9 @@ export function getUserUUID() {
  */
 export function clearUserUUID() {
   const STORAGE_KEY = 'openvibe_user_uuid'
+  const LEGACY_KEY = 'user_uuid'
+  
   localStorage.removeItem(STORAGE_KEY)
-  console.log('🗑️ Cleared user UUID')
+  localStorage.removeItem(LEGACY_KEY)
+  console.log('🗑️ Cleared user UUID (including any legacy entries)')
 }
