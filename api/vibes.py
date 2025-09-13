@@ -1,10 +1,15 @@
 from http.server import BaseHTTPRequestHandler
 import json
 import random
+import sys
 from datetime import datetime, timedelta
 
 class handler(BaseHTTPRequestHandler):
     def do_GET(self):
+        # Log to stderr (visible in Vercel function logs)
+        print(f"[{datetime.now().isoformat()}] Vibes API called from {self.client_address}", file=sys.stderr)
+        print(f"[{datetime.now().isoformat()}] Generating random vibes data... 🎨", file=sys.stderr)
+        
         self.send_response(200)
         self.send_header('Content-type', 'application/json')
         self.send_header('Access-Control-Allow-Origin', '*')
@@ -36,8 +41,11 @@ class handler(BaseHTTPRequestHandler):
             'total': len(sample_vibes),
             'timestamp': datetime.now().isoformat(),
             'status': 'success',
-            'app': 'OpenVibe'
+            'app': 'OpenVibe',
+            'backend_logs': 'Check Vercel function logs to see backend activity'
         }
+        
+        print(f"[{datetime.now().isoformat()}] Generated {len(sample_vibes)} vibes successfully! ✨", file=sys.stderr)
         
         self.wfile.write(json.dumps(response_data).encode())
         return
