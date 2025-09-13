@@ -14,16 +14,7 @@ function AppDetail() {
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
 
-  // Helper function to extract hostname from URL
-  const getHostname = (url) => {
-    if (!url) return null
-    try {
-      const urlObj = new URL(url)
-      return urlObj.hostname
-    } catch {
-      return null
-    }
-  }
+
 
   // Helper function to extract repo name from GitHub URL
   const getRepoName = (githubUrl) => {

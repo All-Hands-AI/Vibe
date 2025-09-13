@@ -275,6 +275,12 @@ AppStatus.propTypes = {
     name: PropTypes.string,
     slug: PropTypes.string,
     conversation_id: PropTypes.string,
+    branch: PropTypes.string,
+    github_status: PropTypes.shape({
+      branch: PropTypes.string,
+      tests_passing: PropTypes.bool,
+      last_commit: PropTypes.string
+    }),
     pr_status: PropTypes.shape({
       number: PropTypes.number,
       title: PropTypes.string,

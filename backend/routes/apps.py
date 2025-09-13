@@ -520,7 +520,7 @@ def get_pr_status(repo_url, github_token, branch="main"):
             return None
 
         prs = pr_response.json()
-        
+
         if not prs:
             logger.info(f"ℹ️ No open PRs found for branch {branch}")
             return None
@@ -528,7 +528,7 @@ def get_pr_status(repo_url, github_token, branch="main"):
         # Get the first (most recent) PR
         pr = prs[0]
         pr_number = pr["number"]
-        
+
         logger.debug(f"🔍 Found PR #{pr_number}: {pr['title']}")
 
         # Get PR details including mergeable status
@@ -539,7 +539,9 @@ def get_pr_status(repo_url, github_token, branch="main"):
         )
 
         if pr_detail_response.status_code != 200:
-            logger.warning(f"❌ Failed to get PR details: {pr_detail_response.status_code}")
+            logger.warning(
+                f"❌ Failed to get PR details: {pr_detail_response.status_code}"
+            )
             pr_details = pr  # Use basic PR data
         else:
             pr_details = pr_detail_response.json()
@@ -553,23 +555,35 @@ def get_pr_status(repo_url, github_token, branch="main"):
 
         checks = []
         ci_status = "pending"
-        
+
         if checks_response.status_code == 200:
             check_runs = checks_response.json().get("check_runs", [])
-            
+
             for check in check_runs:
-                checks.append({
-                    "name": check["name"],
-                    "status": check["conclusion"] or check["status"],
-                    "details_url": check["html_url"]
-                })
-            
+                checks.append(
+                    {
+                        "name": check["name"],
+                        "status": check["conclusion"] or check["status"],
+                        "details_url": check["html_url"],
+                    }
+                )
+
             # Determine overall CI status
-            if all(check["conclusion"] == "success" for check in check_runs if check["conclusion"]):
+            if all(
+                check["conclusion"] == "success"
+                for check in check_runs
+                if check["conclusion"]
+            ):
                 ci_status = "success"
-            elif any(check["conclusion"] in ["failure", "error"] for check in check_runs if check["conclusion"]):
+            elif any(
+                check["conclusion"] in ["failure", "error"]
+                for check in check_runs
+                if check["conclusion"]
+            ):
                 ci_status = "failure"
-            elif any(check["status"] in ["in_progress", "queued"] for check in check_runs):
+            elif any(
+                check["status"] in ["in_progress", "queued"] for check in check_runs
+            ):
                 ci_status = "pending"
 
         # Also check for Deploy action specifically
@@ -588,7 +602,7 @@ def get_pr_status(repo_url, github_token, branch="main"):
             "changed_files": pr_details.get("changed_files", 0),
             "ci_status": ci_status,
             "deploy_status": deploy_status,
-            "checks": checks
+            "checks": checks,
         }
 
         logger.info(f"✅ PR status retrieved for #{pr_number}")
@@ -956,7 +970,7 @@ def get_app(slug):
                 logger.info(f"🔍 GitHub token length: {len(github_token)} characters")
                 logger.info(f"🔍 GitHub token starts with: {github_token[:10]}...")
                 github_status = get_github_status(app["github_url"], github_token)
-                
+
                 # Get PR status for the current branch
                 branch = app.get("branch", "main")
                 pr_status = get_pr_status(app["github_url"], github_token, branch)
@@ -964,12 +978,18 @@ def get_app(slug):
             # Get Fly.io status if token is available
             if fly_token and app.get("slug"):
                 fly_status = get_fly_status(app["slug"], fly_token)
-                
+
                 # Create deployment status from fly status and PR status
                 deployment_status = {
-                    "deployed": fly_status.get("deployed", False) if fly_status else False,
+                    "deployed": (
+                        fly_status.get("deployed", False) if fly_status else False
+                    ),
                     "app_url": fly_status.get("app_url") if fly_status else None,
-                    "deploy_status": pr_status.get("deploy_status", "pending") if pr_status else "pending"
+                    "deploy_status": (
+                        pr_status.get("deploy_status", "pending")
+                        if pr_status
+                        else "pending"
+                    ),
                 }
 
         except Exception as e:
