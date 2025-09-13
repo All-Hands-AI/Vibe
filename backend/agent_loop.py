@@ -10,7 +10,7 @@ from threading import Lock
 from utils.logging import get_logger
 
 # Add the site-packages to the path for openhands imports
-sys.path.insert(0, '.venv/lib/python3.12/site-packages')
+sys.path.insert(0, ".venv/lib/python3.12/site-packages")
 
 from openhands.sdk import Agent, Conversation, LLM, Message, TextContent, AgentContext
 
@@ -23,7 +23,7 @@ def create_test_agent(llm, tools):
     agent_context = AgentContext(
         system_message_suffix="IMPORTANT: Always prefix your response with 'howdy!' followed by a space, then respond normally to the user's request."
     )
-    
+
     return Agent(llm=llm, tools=tools, agent_context=agent_context)
 
 
@@ -33,7 +33,14 @@ class AgentLoop:
     Contains an Agent and Conversation instance from openhands-sdk, running in a thread.
     """
 
-    def __init__(self, user_uuid: str, app_slug: str, riff_slug: str, llm: LLM, message_callback: Optional[Callable] = None):
+    def __init__(
+        self,
+        user_uuid: str,
+        app_slug: str,
+        riff_slug: str,
+        llm: LLM,
+        message_callback: Optional[Callable] = None,
+    ):
         """
         Initialize an AgentLoop instance.
 
@@ -49,30 +56,32 @@ class AgentLoop:
         self.riff_slug = riff_slug
         self.llm = llm
         self.message_callback = message_callback
-        
+
         # Create Agent with only built-in tools (no bash or file tools)
-        tools = []  # Empty tools list - agent will only have built-in tools like 'finish' and 'think'
-        
+        tools: list = (
+            []
+        )  # Empty tools list - agent will only have built-in tools like 'finish' and 'think'
+
         # Use custom agent for testing - it will always reply with "howdy!"
         self.agent = create_test_agent(llm, tools)
-        
+
         # Create conversation callbacks
         callbacks = []
         if message_callback:
             callbacks.append(self._event_callback)
-        
+
         # Create Conversation
         self.conversation = Conversation(
             agent=self.agent,
             callbacks=callbacks,
-            visualize=False  # Disable default visualization since we handle events ourselves
+            visualize=False,  # Disable default visualization since we handle events ourselves
         )
-        
+
         # Thread management
         self.thread = None
         self.running = False
         self._thread_lock = threading.Lock()
-        
+
         logger.info(f"🤖 Created AgentLoop for {user_uuid[:8]}/{app_slug}/{riff_slug}")
 
     def _event_callback(self, event):
@@ -93,12 +102,10 @@ class AgentLoop:
             if self.thread is not None and self.thread.is_alive():
                 logger.warning(f"⚠️ Agent thread already running for {self.get_key()}")
                 return
-            
+
             self.running = True
             self.thread = threading.Thread(
-                target=self._run_agent,
-                name=f"AgentLoop-{self.get_key()}",
-                daemon=True
+                target=self._run_agent, name=f"AgentLoop-{self.get_key()}", daemon=True
             )
             self.thread.start()
             logger.info(f"🚀 Started agent thread for {self.get_key()}")
@@ -137,28 +144,22 @@ class AgentLoop:
         logger.info(f"💬 Sending message to agent for {self.get_key()}")
         try:
             # Create a Message object for the conversation
-            user_message = Message(
-                role="user",
-                content=[TextContent(text=message)]
-            )
-            
+            user_message = Message(role="user", content=[TextContent(text=message)])
+
             # Send message to conversation
             self.conversation.send_message(user_message)
-            
+
             # Start the conversation processing (this will trigger the agent)
             # We run this in the background so it doesn't block
             if not self.thread or not self.thread.is_alive():
                 self.start_agent_thread()
-            
+
             # Trigger conversation run in a separate thread
-            threading.Thread(
-                target=self._run_conversation,
-                daemon=True
-            ).start()
-            
+            threading.Thread(target=self._run_conversation, daemon=True).start()
+
             logger.info(f"✅ Message sent to agent for {self.get_key()}")
             return "Message sent to agent. Response will be processed asynchronously."
-            
+
         except Exception as e:
             logger.error(f"❌ Error sending message to agent for {self.get_key()}: {e}")
             raise
@@ -203,7 +204,12 @@ class AgentLoopManager:
         return key
 
     def create_agent_loop(
-        self, user_uuid: str, app_slug: str, riff_slug: str, llm: LLM, message_callback: Optional[Callable] = None
+        self,
+        user_uuid: str,
+        app_slug: str,
+        riff_slug: str,
+        llm: LLM,
+        message_callback: Optional[Callable] = None,
     ) -> AgentLoop:
         """
         Create a new AgentLoop and store it in the dictionary.
@@ -227,7 +233,9 @@ class AgentLoopManager:
                 old_loop = self.agent_loops[key]
                 old_loop.stop_agent_thread()
 
-            agent_loop = AgentLoop(user_uuid, app_slug, riff_slug, llm, message_callback)
+            agent_loop = AgentLoop(
+                user_uuid, app_slug, riff_slug, llm, message_callback
+            )
             self.agent_loops[key] = agent_loop
 
             logger.info(f"✅ Created and stored AgentLoop for {key}")
@@ -289,7 +297,7 @@ class AgentLoopManager:
                 # Stop the agent thread before removing
                 agent_loop = self.agent_loops[key]
                 agent_loop.stop_agent_thread()
-                
+
                 del self.agent_loops[key]
                 logger.info(f"🗑️ Removed AgentLoop for {key}")
                 logger.info(f"📊 Total agent loops: {len(self.agent_loops)}")

@@ -10,7 +10,7 @@ from keys import get_user_key
 import os
 
 # Add the site-packages to the path for openhands imports
-sys.path.insert(0, '.venv/lib/python3.12/site-packages')
+sys.path.insert(0, ".venv/lib/python3.12/site-packages")
 
 from openhands.sdk import LLM
 
@@ -37,13 +37,15 @@ class MockLLM:
         return MockResponse()
 
 
-def get_llm_class():
-    """Get the appropriate LLM class based on MOCK_MODE environment variable"""
+def get_llm_instance(api_key: str, model: str = "claude-3-haiku-20240307"):
+    """Get the appropriate LLM instance based on MOCK_MODE environment variable"""
     if os.environ.get("MOCK_MODE", "false").lower() == "true":
-        return MockLLM
+        # In mock mode, create a real LLM instance but with a fake key
+        # The actual API calls will be mocked by the mocks.py module
+        return LLM(api_key="mock-key", model=model)
     else:
-        # Use the imported LLM class
-        return LLM
+        # Use the real API key
+        return LLM(api_key=api_key, model=model)
 
 
 from utils.logging import get_logger, log_api_request, log_api_response
@@ -76,33 +78,34 @@ def create_agent_for_user(user_uuid, app_slug, riff_slug):
 
         # Create LLM instance
         try:
-            LLM_class = get_llm_class()
-            llm = LLM_class(api_key=anthropic_token, model="claude-3-haiku-20240307")
+            llm = get_llm_instance(api_key=anthropic_token, model="claude-3-haiku-20240307")
 
             # Create message callback to store events as messages
             def message_callback(event):
                 """Callback to handle events from the agent conversation"""
                 try:
                     logger.info(f"📨 Received event from agent: {type(event).__name__}")
-                    
+
                     # Convert agent events to messages and store them
                     # This is where we'll implement the event-to-message conversion
                     from openhands.sdk.event import MessageEvent
-                    
+
                     if isinstance(event, MessageEvent):
                         # Handle message events from the agent
-                        if event.source == "assistant" or event.llm_message.role == "assistant":
+                        if (event.source == "assistant" or event.llm_message.role == "assistant"):
                             # This is an assistant response
                             content = ""
                             if event.llm_message.content:
                                 for content_item in event.llm_message.content:
-                                    if hasattr(content_item, 'text'):
+                                    if hasattr(content_item, "text"):
                                         content += content_item.text
-                            
+
                             if content:
                                 # Create assistant message
                                 assistant_message_id = str(uuid.uuid4())
-                                assistant_created_at = datetime.now(timezone.utc).isoformat()
+                                assistant_created_at = datetime.now(
+                                    timezone.utc
+                                ).isoformat()
 
                                 assistant_message = {
                                     "id": assistant_message_id,
@@ -116,18 +119,29 @@ def create_agent_for_user(user_uuid, app_slug, riff_slug):
                                 }
 
                                 # Save assistant message
-                                if add_user_message(user_uuid, app_slug, riff_slug, assistant_message):
-                                    logger.info(f"✅ Agent response saved for riff: {riff_slug}")
-                                    
+                                if add_user_message(
+                                    user_uuid, app_slug, riff_slug, assistant_message
+                                ):
+                                    logger.info(
+                                        f"✅ Agent response saved for riff: {riff_slug}"
+                                    )
+
                                     # Update riff message stats
-                                    messages = load_user_messages(user_uuid, app_slug, riff_slug)
+                                    messages = load_user_messages(
+                                        user_uuid, app_slug, riff_slug
+                                    )
                                     update_riff_message_stats(
-                                        user_uuid, app_slug, riff_slug, 
-                                        len(messages), assistant_created_at
+                                        user_uuid,
+                                        app_slug,
+                                        riff_slug,
+                                        len(messages),
+                                        assistant_created_at,
                                     )
                                 else:
-                                    logger.error(f"❌ Failed to save agent response for riff: {riff_slug}")
-                    
+                                    logger.error(
+                                        f"❌ Failed to save agent response for riff: {riff_slug}"
+                                    )
+
                 except Exception as e:
                     logger.error(f"❌ Error in message callback: {e}")
 
@@ -135,7 +149,9 @@ def create_agent_for_user(user_uuid, app_slug, riff_slug):
             logger.info(
                 f"🔧 Creating AgentLoop with key: {user_uuid[:8]}:{app_slug}:{riff_slug}"
             )
-            agent_loop_manager.create_agent_loop(user_uuid, app_slug, riff_slug, llm, message_callback)
+            agent_loop_manager.create_agent_loop(
+                user_uuid, app_slug, riff_slug, llm, message_callback
+            )
             logger.info(f"🤖 Created AgentLoop for riff: {riff_slug}")
 
             # Verify it was stored correctly
