@@ -20,7 +20,7 @@ function ProjectDetail() {
     try {
       const urlObj = new URL(url)
       return urlObj.hostname
-    } catch (e) {
+    } catch {
       return null
     }
   }
@@ -35,7 +35,7 @@ function ProjectDetail() {
         return `${pathParts[0]}/${pathParts[1]}`
       }
       return null
-    } catch (e) {
+    } catch {
       return null
     }
   }
@@ -49,7 +49,7 @@ function ProjectDetail() {
       // Extract app name from hostname (e.g., "my-app.fly.dev" -> "my-app")
       const appName = hostname.replace('.fly.dev', '')
       return `https://fly.io/apps/${appName}`
-    } catch (e) {
+    } catch {
       return null
     }
   }

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import PropTypes from 'prop-types'
 
 function BranchStatus({ project }) {
   const [branchName, setBranchName] = useState('main')
@@ -129,6 +130,23 @@ function BranchStatus({ project }) {
       )}
     </div>
   )
+}
+
+BranchStatus.propTypes = {
+  project: PropTypes.shape({
+    github_url: PropTypes.string,
+    github_status: PropTypes.shape({
+      branch: PropTypes.string,
+      tests_passing: PropTypes.bool,
+      last_commit: PropTypes.string,
+      failing_checks: PropTypes.arrayOf(PropTypes.shape({
+        name: PropTypes.string,
+        status: PropTypes.string,
+        conclusion: PropTypes.string,
+        details_url: PropTypes.string
+      }))
+    })
+  })
 }
 
 export default BranchStatus
