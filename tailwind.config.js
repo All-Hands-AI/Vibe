@@ -21,7 +21,7 @@ export default {
           900: '#14532d',
         },
         neon: {
-          green: '#00ff41',
+          green: '#00ff41', // Keep for links only
           cyan: '#00ffff',
           pink: '#ff0080',
           purple: '#8000ff',
@@ -43,6 +43,10 @@ export default {
           purple: '#bc8cff',
           pink: '#f85149',
           orange: '#ff7b72',
+          text: '#c9d1d9',      // Muted text color
+          muted: '#8b949e',     // Muted secondary text
+          border: '#30363d',    // Subtle border color
+          accent: '#21262d',    // Subtle accent background
         },
         // Keep some original colors for compatibility
         primary: {
@@ -113,7 +117,6 @@ export default {
         'pulse-neon': 'pulse-neon 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
         'glitch': 'glitch 0.3s infinite',
         'matrix-rain': 'matrix-rain 20s linear infinite',
-        'terminal-blink': 'terminal-blink 1s infinite',
       },
       keyframes: {
         'pulse-neon': {
@@ -133,10 +136,6 @@ export default {
           '60%': { transform: 'translate(2px, 2px)' },
           '80%': { transform: 'translate(2px, -2px)' },
           '100%': { transform: 'translate(0)' },
-        },
-        'terminal-blink': {
-          '0%, 50%': { opacity: '1' },
-          '51%, 100%': { opacity: '0' },
         },
       },
       textShadow: {

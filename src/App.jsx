@@ -31,12 +31,11 @@ function AppContent() {
             💻 SYSTEM BOOT
           </div>
           <div className="terminal-content">
-            <div className="w-10 h-10 border-4 border-neon-green border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-            <p className="text-neon-green text-base font-mono">
-              <span className="animate-pulse">{'>'}</span> Initializing OpenVibe...
-              <span className="animate-terminal-blink">_</span>
+            <div className="w-10 h-10 border-4 border-cyber-border border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+            <p className="text-cyber-text text-base font-mono">
+              <span>{'>'}</span> Initializing OpenVibe...
             </p>
-            <p className="text-neon-green/60 text-sm mt-2">
+            <p className="text-cyber-muted text-sm mt-2">
               🔐 Loading hacker protocols...
             </p>
           </div>
@@ -47,7 +46,7 @@ function AppContent() {
 
   return (
     <Router>
-      <div className="min-h-screen flex flex-col bg-black text-neon-green transition-colors duration-300 relative">
+      <div className="min-h-screen flex flex-col bg-black text-cyber-text transition-colors duration-300 relative">
         <MatrixRain />
         {!isSetupComplete && (
           <SetupWindow onSetupComplete={completeSetup} />

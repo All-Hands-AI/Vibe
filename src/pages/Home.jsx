@@ -38,10 +38,10 @@ function Home() {
     <div className="min-h-[calc(100vh-200px)] relative">
       <section className="bg-gradient-to-br from-black via-terminal-darkgray to-terminal-gray py-16 px-8 text-center relative z-10">
         <div className="max-w-4xl mx-auto">
-          <h1 className="text-6xl font-bold text-neon-green mb-4 font-mono neon-glow-strong glitch-text" data-text="Welcome to OpenVibe">
-            <span className="text-neon-cyan">{'>'}</span> Welcome to OpenVibe <span className="animate-terminal-blink">_</span>
+          <h1 className="text-6xl font-bold text-cyber-text mb-4 font-mono glitch-text" data-text="Welcome to OpenVibe">
+            <span className="text-cyber-muted">{'>'}</span> Welcome to OpenVibe
           </h1>
-          <p className="text-xl text-neon-green/80 mb-8 max-w-2xl mx-auto font-mono">
+          <p className="text-xl text-cyber-muted mb-8 max-w-2xl mx-auto font-mono">
             🔥 Your Cyberpunk React App is Running with Python Backend! 🐍
           </p>
           
@@ -51,17 +51,16 @@ function Home() {
             </div>
             <div className="terminal-content">
               {loading ? (
-                <p className="text-neon-green font-mono">
-                  <span className="animate-pulse">{'>'}</span> Connecting to backend...
-                  <span className="animate-terminal-blink">_</span>
+                <p className="text-cyber-text font-mono">
+                  <span>{'>'}</span> Connecting to backend...
                 </p>
               ) : (
                 <div className="space-y-4 text-left">
-                  <div className="bg-terminal-gray/50 rounded p-3 text-neon-green text-sm font-mono border border-neon-green/30">
-                    <span className="text-neon-cyan">$</span> <strong className="text-neon-green">Hello API:</strong> {backendMessage}
+                  <div className="bg-terminal-gray/50 rounded p-3 text-cyber-text text-sm font-mono border border-cyber-border">
+                    <span className="text-cyber-muted">$</span> <strong className="text-cyber-text">Hello API:</strong> {backendMessage}
                   </div>
-                  <div className="bg-terminal-gray/50 rounded p-3 text-neon-green text-sm font-mono border border-neon-green/30">
-                    <span className="text-neon-cyan">$</span> <strong className="text-neon-green">Health Check:</strong> {healthStatus}
+                  <div className="bg-terminal-gray/50 rounded p-3 text-cyber-text text-sm font-mono border border-cyber-border">
+                    <span className="text-cyber-muted">$</span> <strong className="text-cyber-text">Health Check:</strong> {healthStatus}
                   </div>
                 </div>
               )}
@@ -88,39 +87,39 @@ function Home() {
       
       <section className="py-16 px-8 bg-black relative z-10">
         <div className="max-w-6xl mx-auto">
-          <h2 className="text-center text-4xl font-bold text-neon-green mb-12 font-mono neon-glow">
-            <span className="text-neon-cyan">{'<'}</span> Features <span className="text-neon-cyan">{'/>'}</span>
+          <h2 className="text-center text-4xl font-bold text-cyber-text mb-12 font-mono">
+            <span className="text-cyber-muted">{'<'}</span> Features <span className="text-cyber-muted">{'/>'}</span>
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
             <div className="hacker-card text-center group">
-              <h3 className="text-2xl font-semibold text-neon-green mb-4 font-mono neon-glow group-hover:animate-pulse-neon">
+              <h3 className="text-2xl font-semibold text-cyber-text mb-4 font-mono">
                 🐍 Full-Stack
               </h3>
-              <p className="text-neon-green/80 leading-relaxed font-mono">
+              <p className="text-cyber-muted leading-relaxed font-mono">
                 React frontend with Python Flask backend - complete cyberpunk solution
               </p>
             </div>
             <div className="hacker-card text-center group">
-              <h3 className="text-2xl font-semibold text-neon-green mb-4 font-mono neon-glow group-hover:animate-pulse-neon">
+              <h3 className="text-2xl font-semibold text-cyber-text mb-4 font-mono">
                 ⚡ Lightning Fast
               </h3>
-              <p className="text-neon-green/80 leading-relaxed font-mono">
+              <p className="text-cyber-muted leading-relaxed font-mono">
                 Built with Vite for matrix-speed development and builds
               </p>
             </div>
             <div className="hacker-card text-center group">
-              <h3 className="text-2xl font-semibold text-neon-green mb-4 font-mono neon-glow group-hover:animate-pulse-neon">
+              <h3 className="text-2xl font-semibold text-cyber-text mb-4 font-mono">
                 🔧 Cutting Edge
               </h3>
-              <p className="text-neon-green/80 leading-relaxed font-mono">
+              <p className="text-cyber-muted leading-relaxed font-mono">
                 Latest React features with hooks, context, and futuristic JavaScript
               </p>
             </div>
             <div className="hacker-card text-center group">
-              <h3 className="text-2xl font-semibold text-neon-green mb-4 font-mono neon-glow group-hover:animate-pulse-neon">
+              <h3 className="text-2xl font-semibold text-cyber-text mb-4 font-mono">
                 🚀 Deploy Ready
               </h3>
-              <p className="text-neon-green/80 leading-relaxed font-mono">
+              <p className="text-cyber-muted leading-relaxed font-mono">
                 Dockerized container with nginx proxy - ready for cyber deployment
               </p>
             </div>

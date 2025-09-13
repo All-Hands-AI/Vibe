@@ -34,7 +34,7 @@
     min-width: 320px;
     min-height: 100vh;
     background: linear-gradient(135deg, #000000 0%, #0a0a0a 50%, #1a1a1a 100%);
-    color: var(--neon-green);
+    color: #c9d1d9; /* Muted text color instead of bright green */
     font-feature-settings: "liga" 1, "calt" 1; /* Enable ligatures for Fira Code */
   }
 
@@ -64,47 +64,46 @@
   }
 
   ::-webkit-scrollbar-thumb {
-    background: var(--neon-green);
+    background: #30363d; /* Subtle border color instead of bright green */
     border-radius: 4px;
   }
 
   ::-webkit-scrollbar-thumb:hover {
-    background: var(--terminal-green);
+    background: #8b949e; /* Muted color on hover */
   }
 }
 
 @layer components {
   /* 🎯 Hacker Button Styles */
   .btn-hacker {
-    @apply font-mono font-semibold px-6 py-3 border-2 border-neon-green bg-transparent text-neon-green;
-    @apply hover:bg-neon-green hover:text-black transition-all duration-300;
+    @apply font-mono font-semibold px-6 py-3 border-2 border-cyber-border bg-transparent text-cyber-text;
+    @apply hover:bg-neon-green hover:text-black hover:border-neon-green transition-all duration-300;
     @apply hover:shadow-lg hover:shadow-neon-green/50;
-    text-shadow: 0 0 5px currentColor;
   }
 
   .btn-hacker-primary {
-    @apply btn-hacker bg-neon-green text-black;
-    @apply hover:bg-transparent hover:text-neon-green;
+    @apply btn-hacker bg-cyber-accent text-cyber-text border-cyber-border;
+    @apply hover:bg-neon-green hover:text-black hover:border-neon-green;
   }
 
   /* 🖥️ Terminal Window Style */
   .terminal-window {
-    @apply bg-black border-2 border-neon-green rounded-lg overflow-hidden;
-    box-shadow: 0 0 20px rgba(0, 255, 65, 0.3);
+    @apply bg-black border-2 border-cyber-border rounded-lg overflow-hidden;
+    box-shadow: 0 0 20px rgba(48, 54, 61, 0.3);
   }
 
   .terminal-header {
-    @apply bg-neon-green text-black px-4 py-2 font-mono text-sm font-semibold;
+    @apply bg-cyber-accent text-cyber-text px-4 py-2 font-mono text-sm font-semibold border-b border-cyber-border;
   }
 
   .terminal-content {
-    @apply p-4 font-mono text-neon-green;
+    @apply p-4 font-mono text-cyber-text;
   }
 
   /* ⚡ Glitch Text Effect */
   .glitch-text {
     position: relative;
-    color: var(--neon-green);
+    color: #c9d1d9; /* Muted text color */
     font-weight: bold;
   }
 
@@ -191,7 +190,7 @@
 
   /* 🔥 Hacker Card Styles */
   .hacker-card {
-    @apply bg-black border-2 border-neon-green/30 rounded-lg p-6;
+    @apply bg-black border-2 border-cyber-border rounded-lg p-6;
     @apply hover:border-neon-green hover:shadow-lg hover:shadow-neon-green/20;
     @apply transition-all duration-300;
     background: linear-gradient(135deg, rgba(0, 0, 0, 0.9) 0%, rgba(26, 26, 26, 0.9) 100%);
