@@ -244,7 +244,7 @@ function AppDetail() {
         </nav>
 
         {/* App Header */}
-        <header className="mb-12">
+        <header className="mb-6">
           <div className="flex flex-wrap items-baseline justify-between gap-4 mb-6">
             <div>
               <h1 className="text-4xl font-bold text-cyber-text mb-2 font-mono">{app.name}</h1>
@@ -253,20 +253,18 @@ function AppDetail() {
               Created {new Date(app.created_at).toLocaleDateString()}
             </p>
           </div>
-          
-
         </header>
 
         {/* App Status */}
-        <AppStatus app={app} />
+        <div className="mb-12">
+          <AppStatus app={app} />
+        </div>
 
         {/* Riffs Section */}
         <section>
-          <h2 className="text-3xl font-bold text-cyber-muted mb-8">Riffs</h2>
-          
           {/* Create New Riff */}
           <div className="mb-12">
-            <h3 className="text-2xl font-semibold text-cyber-text mb-6">Create New Riff</h3>
+            <h3 className="text-xl font-semibold text-cyber-text mb-4">Create New Riff</h3>
             <div className="hacker-card p-6 rounded-lg border border-gray-700 max-w-2xl">
               <form onSubmit={handleCreateRiff} className="space-y-6">
                 <div>
@@ -312,7 +310,7 @@ function AppDetail() {
 
           {/* Riffs List */}
           <div>
-            <h3 className="text-2xl font-semibold text-cyber-text mb-6">All Riffs</h3>
+            <h3 className="text-xl font-semibold text-cyber-text mb-4">All Riffs</h3>
             
             {riffsLoading ? (
               <div className="flex flex-col items-center justify-center py-16">
