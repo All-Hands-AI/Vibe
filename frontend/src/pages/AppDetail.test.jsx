@@ -117,7 +117,7 @@ describe('AppDetail', () => {
     })
 
     // Check that AppStatus shows branch and deployment status
-    expect(screen.getByText('main')).toBeInTheDocument() // Default branch
+    expect(screen.getByText('🌿 main')).toBeInTheDocument() // Default branch
     expect(screen.queryByText('No active pull request found')).not.toBeInTheDocument() // Should not show for main
     expect(screen.getByText('✅ Passing')).toBeInTheDocument() // CI status shows as passing
     expect(screen.getByText('🔄 Running')).toBeInTheDocument() // Deploy status shows as running
@@ -162,7 +162,7 @@ describe('AppDetail', () => {
     })
 
     // Check that AppStatus shows branch and deployment status
-    expect(screen.getByText('main')).toBeInTheDocument() // Default branch
+    expect(screen.getByText('🌿 main')).toBeInTheDocument() // Default branch
     expect(screen.queryByText('No active pull request found')).not.toBeInTheDocument() // Should not show for main
     expect(screen.getByText('❌ Failing')).toBeInTheDocument() // CI status shows as failing
     expect(screen.getByText('🔄 Running')).toBeInTheDocument() // Deploy status shows as running
@@ -202,7 +202,7 @@ describe('AppDetail', () => {
     })
 
     // Check that AppStatus shows branch and deployment status
-    expect(screen.getByText('main')).toBeInTheDocument() // Default branch
+    expect(screen.getByText('🌿 main')).toBeInTheDocument() // Default branch
     expect(screen.queryByText('No active pull request found')).not.toBeInTheDocument() // Should not show for main
     expect(screen.getAllByText('🔄 Running')).toHaveLength(2) // CI and Deploy status both show as running
   })

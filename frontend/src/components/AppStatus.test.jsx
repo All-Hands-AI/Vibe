@@ -33,12 +33,12 @@ describe('AppStatus', () => {
 
     render(<AppStatus app={app} />)
     
-    expect(screen.getByText('feature-branch')).toBeInTheDocument()
-    expect(screen.getByText('#123 - Add new feature')).toBeInTheDocument()
+    expect(screen.getByText('🌿 feature-branch')).toBeInTheDocument()
+    expect(screen.getByText('🔗 #123 - Add new feature')).toBeInTheDocument()
     expect(screen.getAllByText('✅ Passing')).toHaveLength(2) // CI and Deploy status
-    expect(screen.getByText('Open')).toBeInTheDocument()
-    expect(screen.getByText('Mergeable')).toBeInTheDocument()
-    expect(screen.getByText('5 files')).toBeInTheDocument()
+    expect(screen.getByText('🟢 Open')).toBeInTheDocument()
+    expect(screen.getByText('✅ Mergeable')).toBeInTheDocument()
+    expect(screen.getByText('📁 5 files')).toBeInTheDocument()
   })
 
   it('displays draft status correctly', () => {
@@ -58,9 +58,9 @@ describe('AppStatus', () => {
 
     render(<AppStatus app={app} />)
     
-    expect(screen.getByText('draft-feature')).toBeInTheDocument()
-    expect(screen.getByText('Draft')).toBeInTheDocument()
-    expect(screen.getByText('Checking...')).toBeInTheDocument()
+    expect(screen.getByText('🌿 draft-feature')).toBeInTheDocument()
+    expect(screen.getByText('📝 Draft')).toBeInTheDocument()
+    expect(screen.getByText('🔄 Checking...')).toBeInTheDocument()
     expect(screen.getAllByText('🔄 Running')).toHaveLength(2) // CI and Deploy status
   })
 
@@ -78,10 +78,10 @@ describe('AppStatus', () => {
 
     render(<AppStatus app={app} />)
     
-    expect(screen.getByText('main')).toBeInTheDocument()
+    expect(screen.getByText('🌿 main')).toBeInTheDocument()
     expect(screen.getByText('✅ Passing')).toBeInTheDocument()
     expect(screen.getByText('🚀 Deployed')).toBeInTheDocument()
-    expect(screen.getByText('https://my-project-conversation-123.fly.dev')).toBeInTheDocument()
+    expect(screen.getByText('🚀 https://my-project-conversation-123.fly.dev')).toBeInTheDocument()
   })
 
   it('displays individual check commits', () => {
@@ -112,10 +112,10 @@ describe('AppStatus', () => {
 
     render(<AppStatus app={app} />)
     
-    expect(screen.getByText('bugfix-branch')).toBeInTheDocument()
+    expect(screen.getByText('🌿 bugfix-branch')).toBeInTheDocument()
     expect(screen.getByText('Unit Tests')).toBeInTheDocument()
     expect(screen.getByText('Lint Check')).toBeInTheDocument()
-    expect(screen.getByText('Conflicts')).toBeInTheDocument()
+    expect(screen.getByText('⚠️ Conflicts')).toBeInTheDocument()
     expect(screen.getAllByText('View →')).toHaveLength(2)
   })
 
@@ -135,10 +135,10 @@ describe('AppStatus', () => {
 
     render(<AppStatus app={app} />)
     
-    expect(screen.getByText('feature-branch')).toBeInTheDocument()
-    expect(screen.getByText('No active pull request found')).toBeInTheDocument()
+    expect(screen.getByText('🌿 feature-branch')).toBeInTheDocument()
+    expect(screen.getByText('❌ No active pull request found')).toBeInTheDocument()
     expect(screen.getByText('❌ Failing')).toBeInTheDocument() // Branch CI status
-    expect(screen.getByText('abc1234')).toBeInTheDocument() // Last commit
+    expect(screen.getByText('📝 abc1234')).toBeInTheDocument() // Last commit
     expect(screen.getByText('🔄 Running')).toBeInTheDocument() // Deploy status
   })
 
@@ -151,8 +151,8 @@ describe('AppStatus', () => {
 
     render(<AppStatus app={app} />)
     
-    expect(screen.getByText('main')).toBeInTheDocument()
-    expect(screen.getByText('https://my-app-conv-456.fly.dev')).toBeInTheDocument()
+    expect(screen.getByText('🌿 main')).toBeInTheDocument()
+    expect(screen.getByText('🚀 https://my-app-conv-456.fly.dev')).toBeInTheDocument()
   })
 
   it('handles main branch without PR gracefully', () => {
@@ -167,11 +167,11 @@ describe('AppStatus', () => {
 
     render(<AppStatus app={app} />)
     
-    expect(screen.getByText('main')).toBeInTheDocument()
+    expect(screen.getByText('🌿 main')).toBeInTheDocument()
     expect(screen.queryByText('No active pull request found')).not.toBeInTheDocument() // Should not show for main
     expect(screen.getByText('✅ Passing')).toBeInTheDocument() // Branch CI status
-    expect(screen.getByText('def5678')).toBeInTheDocument() // Last commit
-    expect(screen.getByText('https://test-app-main.fly.dev')).toBeInTheDocument()
+    expect(screen.getByText('📝 def5678')).toBeInTheDocument() // Last commit
+    expect(screen.getByText('🚀 https://test-app-main.fly.dev')).toBeInTheDocument()
   })
 
   it('handles empty app data gracefully', () => {
@@ -179,8 +179,8 @@ describe('AppStatus', () => {
 
     render(<AppStatus app={app} />)
     
-    expect(screen.getByText('main')).toBeInTheDocument() // Default branch
+    expect(screen.getByText('🌿 main')).toBeInTheDocument() // Default branch
     expect(screen.queryByText('No active pull request found')).not.toBeInTheDocument() // Should not show for main
-    expect(screen.getByText('https://project-main.fly.dev')).toBeInTheDocument()
+    expect(screen.getByText('🚀 https://project-main.fly.dev')).toBeInTheDocument()
   })
 })
