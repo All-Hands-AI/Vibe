@@ -13,7 +13,6 @@ from utils.logging import get_logger
 sys.path.insert(0, '.venv/lib/python3.12/site-packages')
 
 from openhands.sdk import Agent, Conversation, LLM, Message, TextContent
-from openhands.tools import str_replace_editor_tool, execute_bash_tool
 import tempfile
 import os
 
@@ -62,8 +61,8 @@ class AgentLoop:
         self.llm = llm
         self.message_callback = message_callback
         
-        # Create Agent with FileEditor and Bash tools
-        tools = [str_replace_editor_tool, execute_bash_tool]
+        # Create Agent with only built-in tools (no bash or file tools)
+        tools = []  # Empty tools list - agent will only have built-in tools like 'finish' and 'think'
         
         # Use custom agent for testing - it will always reply with "howdy!"
         self.agent = create_test_agent(llm, tools)
