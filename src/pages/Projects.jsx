@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { getUserUUID } from '../utils/uuid'
+import ConfirmationModal from '../components/ConfirmationModal'
 import './Projects.css'
 
 function Projects() {
@@ -10,6 +11,13 @@ function Projects() {
   const [newProjectName, setNewProjectName] = useState('')
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
+  
+  // Delete modal state
+  const [deleteModal, setDeleteModal] = useState({
+    isOpen: false,
+    project: null,
+    isDeleting: false
+  })
 
   // Create slug from project name for preview
   const createSlug = (name) => {
@@ -136,6 +144,102 @@ function Projects() {
     }
   }
 
+  // Handle delete project button click
+  const handleDeleteClick = (project, event) => {
+    event.preventDefault() // Prevent navigation to project detail
+    event.stopPropagation() // Stop event bubbling
+    
+    console.log('🗑️ Delete button clicked for project:', project.name)
+    setDeleteModal({
+      isOpen: true,
+      project: project,
+      isDeleting: false
+    })
+  }
+
+  // Handle delete confirmation
+  const handleDeleteConfirm = async () => {
+    const project = deleteModal.project
+    if (!project) return
+
+    console.log('🗑️ Confirming deletion of project:', project.name)
+    
+    try {
+      setDeleteModal(prev => ({ ...prev, isDeleting: true }))
+      setError('')
+      setSuccess('')
+
+      const uuid = getUserUUID()
+      console.log('🆔 User UUID:', uuid)
+
+      const requestOptions = {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-User-UUID': uuid
+        }
+      }
+      
+      console.log('📡 Delete request options:', requestOptions)
+
+      const response = await fetch(`/api/projects/${project.slug}`, requestOptions)
+      
+      console.log('📡 Delete response status:', response?.status)
+      console.log('📡 Delete response ok:', response?.ok)
+
+      const data = await response.json()
+      console.log('📊 Delete response data:', data)
+
+      if (!response.ok) {
+        console.error('❌ Delete project failed:', data)
+        throw new Error(data.error || 'Failed to delete project')
+      }
+
+      console.log('✅ Project deleted successfully:', data)
+      
+      // Show success message
+      let successMessage = `Project "${project.name}" deleted successfully!`
+      if (data.warnings && data.warnings.length > 0) {
+        successMessage += ` (Note: ${data.warnings.join(', ')})`
+      }
+      setSuccess(successMessage)
+      
+      // Close modal
+      setDeleteModal({
+        isOpen: false,
+        project: null,
+        isDeleting: false
+      })
+      
+      // Refresh projects list
+      console.log('🔄 Refreshing projects list...')
+      await fetchProjects()
+      
+      // Clear success message after 8 seconds (longer for delete confirmation)
+      setTimeout(() => setSuccess(''), 8000)
+      
+    } catch (err) {
+      console.error('❌ Error deleting project:', err)
+      console.error('❌ Error stack:', err.stack)
+      setError(err.message || 'Failed to delete project. Please try again.')
+      
+      // Keep modal open but stop loading state
+      setDeleteModal(prev => ({ ...prev, isDeleting: false }))
+    }
+  }
+
+  // Handle delete modal close
+  const handleDeleteCancel = () => {
+    if (deleteModal.isDeleting) return // Prevent closing while deleting
+    
+    console.log('❌ Delete cancelled')
+    setDeleteModal({
+      isOpen: false,
+      project: null,
+      isDeleting: false
+    })
+  }
+
   // Load projects on component mount
   useEffect(() => {
     fetchProjects()
@@ -216,14 +320,20 @@ function Projects() {
           ) : (
             <div className="projects-grid">
               {projects.map((project) => (
-                <Link 
-                  key={project.id} 
-                  to={`/projects/${project.slug}`}
-                  className="project-card"
-                >
+                <div key={project.id} className="project-card">
                   <div className="project-header">
-                    <h3>{project.name}</h3>
-                    <span className="project-slug">{project.slug}</span>
+                    <div className="project-title-section">
+                      <h3>{project.name}</h3>
+                      <span className="project-slug">{project.slug}</span>
+                    </div>
+                    <button 
+                      className="delete-button"
+                      onClick={(e) => handleDeleteClick(project, e)}
+                      title={`Delete project "${project.name}"`}
+                      aria-label={`Delete project "${project.name}"`}
+                    >
+                      🗑️
+                    </button>
                   </div>
                   
                   <div className="project-details">
@@ -238,15 +348,49 @@ function Projects() {
                     )}
                     
                     <div className="project-actions">
-                      <span className="view-project">View Project →</span>
+                      <Link 
+                        to={`/projects/${project.slug}`}
+                        className="view-project-link"
+                      >
+                        View Project →
+                      </Link>
                     </div>
                   </div>
-                </Link>
+                </div>
               ))}
             </div>
           )}
         </section>
       </div>
+      
+      {/* Delete Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={deleteModal.isOpen}
+        onClose={handleDeleteCancel}
+        onConfirm={handleDeleteConfirm}
+        title="Delete Project"
+        message={
+          deleteModal.project ? (
+            <>
+              Are you sure you want to delete the project <strong>&ldquo;{deleteModal.project.name}&rdquo;</strong>?
+              <br /><br />
+              <strong>This action will permanently delete:</strong>
+              <ul style={{ marginTop: '0.5rem', paddingLeft: '1.5rem' }}>
+                <li>The project from OpenVibe</li>
+                {deleteModal.project.github_url && <li>The associated GitHub repository</li>}
+                <li>The associated Fly.io application</li>
+                <li>All project conversations and data</li>
+              </ul>
+              <br />
+              <strong>This action cannot be undone.</strong>
+            </>
+          ) : ''
+        }
+        confirmText="Delete Project"
+        cancelText="Cancel"
+        isDestructive={true}
+        isLoading={deleteModal.isDeleting}
+      />
     </div>
   )
 }
