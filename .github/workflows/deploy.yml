@@ -62,6 +62,14 @@ jobs:
           cp fly.toml fly-feature.toml
           sed -i "s/app = 'openvibe'/app = '${{ steps.deployment-env.outputs.app_name }}'/" fly-feature.toml
 
+      - name: Create volumes for production
+        if: steps.deployment-env.outputs.is_production == 'true'
+        run: |
+          # Create volumes if they don't exist (ignore errors if they already exist)
+          flyctl volume create data_volume -r ewr -n 2 -a openvibe || true
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+
       - name: Deploy to production
         if: steps.deployment-env.outputs.is_production == 'true'
         run: flyctl deploy --remote-only
@@ -73,6 +81,8 @@ jobs:
         run: |
           # Create the app if it doesn't exist
           flyctl apps create ${{ steps.deployment-env.outputs.app_name }} --org personal || true
+          # Create volumes if they don't exist (ignore errors if they already exist)
+          flyctl volume create data_volume -r ewr -n 2 -a ${{ steps.deployment-env.outputs.app_name }} || true
           # Deploy using the feature-specific config
           flyctl deploy --config fly-feature.toml --remote-only
         env:
