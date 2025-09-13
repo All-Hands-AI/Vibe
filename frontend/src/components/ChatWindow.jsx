@@ -18,6 +18,17 @@ function ChatWindow({ app, riff, userUuid }) {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }
 
+  // Check if user is scrolled to bottom (or close to it)
+  const isScrolledToBottom = () => {
+    if (!scrollContainerRef.current) return true // Default to true if no container
+    
+    const container = scrollContainerRef.current
+    const threshold = 50 // Allow 50px tolerance
+    const isAtBottom = container.scrollTop + container.clientHeight >= container.scrollHeight - threshold
+    
+    return isAtBottom
+  }
+
   // Handle scroll events (simplified - no longer tracking user scroll)
   const handleScroll = () => {
     // Scroll handler for MessageList component
@@ -25,6 +36,9 @@ function ChatWindow({ app, riff, userUuid }) {
 
   // Fetch messages from API
   const fetchMessages = useCallback(async () => {
+    // Check if user was at bottom before fetching
+    const wasAtBottom = isScrolledToBottom()
+    
     try {
       const response = await fetch(`/api/apps/${app.slug}/riffs/${riff.slug}/messages`, {
         headers: {
@@ -40,18 +54,23 @@ function ChatWindow({ app, riff, userUuid }) {
       const newMessages = data.messages || []
       const newMessageCount = newMessages.length
       
+      // Check if messages actually changed
+      const messagesChanged = JSON.stringify(newMessages) !== JSON.stringify(messages)
+      
       // Only update messages if there's actually a change
-      if (JSON.stringify(newMessages) !== JSON.stringify(messages)) {
+      if (messagesChanged) {
         setMessages(newMessages)
         setPreviousMessageCount(newMessageCount)
       }
       
-      // Always scroll to bottom on initial load, regardless of message changes
-      if (loading) {
-        // Use a small delay to ensure DOM is updated
-        setTimeout(() => {
+      // Scroll to bottom if:
+      // 1. Initial load (loading is true), OR
+      // 2. User was at bottom and messages changed
+      if (loading || (wasAtBottom && messagesChanged)) {
+        // Use requestAnimationFrame to ensure DOM is updated
+        requestAnimationFrame(() => {
           scrollToBottom()
-        }, 100)
+        })
       }
       
       setError('')
@@ -88,8 +107,13 @@ function ChatWindow({ app, riff, userUuid }) {
       }
 
       // Immediately fetch messages to update the UI
-      // Don't reset user scroll state - let them stay where they are
       await fetchMessages()
+      
+      // Always scroll to bottom after sending a message
+      // (user just sent it, they should see it)
+      requestAnimationFrame(() => {
+        scrollToBottom()
+      })
     } catch (err) {
       console.error('Error sending message:', err)
       setError(err.message || 'Failed to send message')
@@ -133,16 +157,6 @@ function ChatWindow({ app, riff, userUuid }) {
       setPreviousMessageCount(messages.length)
     }
   }, [messages, previousMessageCount])
-
-  // Ensure scroll to bottom after messages are rendered
-  useEffect(() => {
-    if (messages.length > 0) {
-      // Use requestAnimationFrame to ensure DOM is fully updated
-      requestAnimationFrame(() => {
-        scrollToBottom()
-      })
-    }
-  }, [messages.length])
 
   if (loading) {
     return (
