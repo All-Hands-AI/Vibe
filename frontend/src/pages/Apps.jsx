@@ -34,10 +34,23 @@ function Apps() {
     try {
       setLoading(true)
       
+      const uuid = getUserUUID()
+      console.log('🆔 User UUID:', uuid)
+      
       const url = '/api/apps'
       console.log('📡 Making request to:', url)
       
-      const response = await fetch(url)
+      const requestOptions = {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-User-UUID': uuid
+        }
+      }
+      
+      console.log('📡 Request options:', requestOptions)
+      
+      const response = await fetch(url, requestOptions)
       console.log('📡 Response status:', response?.status)
       console.log('📡 Response ok:', response?.ok)
       console.log('📡 Response headers:', response?.headers ? Object.fromEntries(response.headers.entries()) : 'N/A')

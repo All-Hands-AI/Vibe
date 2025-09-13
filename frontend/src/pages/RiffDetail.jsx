@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useParams, Link, useLocation } from 'react-router-dom'
 import { useSetup } from '../context/SetupContext'
+import { getUserUUID } from '../utils/uuid'
 import BranchStatus from '../components/BranchStatus'
 import ChatWindow from '../components/ChatWindow'
 
@@ -19,8 +20,13 @@ function RiffDetail() {
     try {
       setLoading(true)
       
+      const uuid = getUserUUID()
+      const headers = {
+        'X-User-UUID': uuid
+      }
+      
       // First, get the app to find its ID
-      const appResponse = await fetch(`/api/apps/${appSlug}`)
+      const appResponse = await fetch(`/api/apps/${appSlug}`, { headers })
       console.log('📡 App response status:', appResponse?.status)
       
       if (!appResponse || !appResponse.ok) {
@@ -34,7 +40,7 @@ function RiffDetail() {
       setApp(appData)
       
       // Now get the riffs for this app
-      const riffsResponse = await fetch(`/api/apps/${appData.slug}/riffs`)
+      const riffsResponse = await fetch(`/api/apps/${appData.slug}/riffs`, { headers })
       console.log('📡 Riffs response status:', riffsResponse?.status)
       
       if (!riffsResponse || !riffsResponse.ok) {
