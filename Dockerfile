@@ -47,7 +47,7 @@ RUN apt-get update -qq && \
     curl \
     git \
     && rm -rf /var/lib/apt/lists/* \
-    && pip3 install uv
+    && pip3 install --break-system-packages uv
 
 # Copy built React application
 COPY --from=build /app/dist /usr/share/nginx/html
