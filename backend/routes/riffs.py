@@ -31,15 +31,18 @@ class MockLLM:
         return MockResponse()
 
 
-# Use mock LLM in MOCK_MODE, otherwise try to import real LLM
-if os.environ.get("MOCK_MODE", "false").lower() == "true":
-    LLM = MockLLM
-else:
-    try:
-        from openhands.sdk import LLM
-    except ImportError:
-        # SDK not available, fall back to mock
-        LLM = MockLLM
+def get_llm_class():
+    """Get the appropriate LLM class based on MOCK_MODE environment variable"""
+    if os.environ.get("MOCK_MODE", "false").lower() == "true":
+        return MockLLM
+    else:
+        try:
+            from openhands.sdk import LLM
+
+            return LLM
+        except ImportError:
+            # SDK not available, fall back to mock
+            return MockLLM
 
 
 from utils.logging import get_logger, log_api_request, log_api_response
@@ -73,6 +76,7 @@ def create_llm_for_user(user_uuid, app_slug, riff_slug):
 
         # Create LLM instance
         try:
+            LLM = get_llm_class()
             llm = LLM(api_key=anthropic_token, model="claude-3-haiku-20240307")
 
             # Create and store the agent loop
