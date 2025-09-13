@@ -205,14 +205,22 @@ def get_github_status(repo_url, github_token):
             }
             
         status_data = status_response.json()
-        tests_passing = status_data.get('state') == 'success'
+        state = status_data.get('state', 'unknown')
         
-        logger.info(f"✅ GitHub status retrieved: {status_data.get('state')}")
+        # Handle different CI/CD states properly
+        if state == 'success':
+            tests_passing = True
+        elif state in ['pending', 'running']:
+            tests_passing = None  # Use None to indicate "in progress"
+        else:  # failure, error, or unknown
+            tests_passing = False
+        
+        logger.info(f"✅ GitHub status retrieved: {state}")
         
         return {
             'tests_passing': tests_passing,
             'last_commit': latest_commit_sha,
-            'status': status_data.get('state', 'unknown'),
+            'status': state,
             'total_count': status_data.get('total_count', 0)
         }
         

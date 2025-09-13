@@ -256,8 +256,14 @@ function ProjectDetail() {
               <h3>CI/CD Tests</h3>
               <div className="status-indicator">
                 {project.github_status ? (
-                  <span className={`status ${project.github_status.tests_passing ? 'success' : 'error'}`}>
-                    {project.github_status.tests_passing ? '✅ Passing' : '❌ Failing'}
+                  <span className={`status ${
+                    project.github_status.tests_passing === true ? 'success' : 
+                    project.github_status.tests_passing === false ? 'error' : 
+                    'running'
+                  }`}>
+                    {project.github_status.tests_passing === true ? '✅ Passing' : 
+                     project.github_status.tests_passing === false ? '❌ Failing' : 
+                     '🔄 Running'}
                   </span>
                 ) : (
                   <span className="status loading">🔄 Checking...</span>

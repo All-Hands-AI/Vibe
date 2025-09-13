@@ -136,6 +136,11 @@
   color: #991b1b;
 }
 
+.status.running {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
 .status.loading {
   background: #fef3c7;
   color: #92400e;
