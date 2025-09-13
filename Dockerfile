@@ -45,7 +45,7 @@ COPY --from=frontend-build /app/dist /usr/share/nginx/html
 # Copy backend
 WORKDIR /app/backend
 COPY --from=backend-build /app/backend/node_modules ./node_modules
-COPY backend/server.js ./
+COPY backend/package.json backend/server.js ./
 
 # Create nginx configuration
 RUN echo 'server { \
@@ -75,10 +75,28 @@ RUN echo 'server { \
 RUN echo '#!/bin/bash \
 set -e \
 \
+echo "Starting OpenVibe application..." \
+\
 # Start backend server in background \
-cd /app/backend && node server.js & \
+echo "Starting backend server..." \
+cd /app/backend \
+node server.js > /var/log/backend.log 2>&1 & \
+BACKEND_PID=$! \
+\
+# Wait a moment for backend to start \
+sleep 2 \
+\
+# Check if backend is still running \
+if ! kill -0 $BACKEND_PID 2>/dev/null; then \
+    echo "Backend failed to start!" \
+    cat /var/log/backend.log \
+    exit 1 \
+fi \
+\
+echo "Backend started successfully (PID: $BACKEND_PID)" \
 \
 # Start nginx in foreground \
+echo "Starting nginx..." \
 nginx -g "daemon off;"' > /start.sh && chmod +x /start.sh
 
 # Expose port
