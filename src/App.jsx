@@ -19,7 +19,7 @@ function AppContent() {
   React.useEffect(() => {
     logger.logSystemInfo()
     logger.info('🔧 Setup status:', { isSetupComplete, isLoading })
-  }, [])
+  }, [isSetupComplete, isLoading])
 
   if (isLoading) {
     return (

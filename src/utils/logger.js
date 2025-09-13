@@ -100,8 +100,8 @@ class Logger {
     
     // Environment information
     this.info('🌍 Environment Information:')
-    this.info(`  - NODE_ENV: ${process.env.NODE_ENV || 'unknown'}`)
     this.info(`  - Development Mode: ${import.meta.env?.DEV || false}`)
+    this.info(`  - Mode: ${import.meta.env?.MODE || 'unknown'}`)
     
     // Network information
     if ('connection' in navigator) {
