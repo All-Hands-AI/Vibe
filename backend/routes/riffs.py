@@ -1,12 +1,18 @@
 from flask import Blueprint, jsonify, request
 import re
 import uuid
+import sys
 from datetime import datetime, timezone
 from storage import get_riffs_storage, get_apps_storage
 from agent_loop import agent_loop_manager
 from keys import get_user_key
 
 import os
+
+# Add the site-packages to the path for openhands imports
+sys.path.insert(0, '.venv/lib/python3.12/site-packages')
+
+from openhands.sdk import LLM
 
 
 # Mock LLM class for testing
@@ -36,13 +42,8 @@ def get_llm_class():
     if os.environ.get("MOCK_MODE", "false").lower() == "true":
         return MockLLM
     else:
-        try:
-            from openhands.sdk import LLM
-
-            return LLM
-        except ImportError:
-            # SDK not available, fall back to mock
-            return MockLLM
+        # Use the imported LLM class
+        return LLM
 
 
 from utils.logging import get_logger, log_api_request, log_api_response
@@ -53,11 +54,10 @@ logger = get_logger(__name__)
 riffs_bp = Blueprint("riffs", __name__)
 
 
-def create_llm_for_user(user_uuid, app_slug, riff_slug):
+def create_agent_for_user(user_uuid, app_slug, riff_slug):
     """
-    Create and store an LLM object for a specific user, app, and riff.
-    This function deduplicates the LLM creation logic used in both
-    riff creation and reset operations.
+    Create and store an Agent object for a specific user, app, and riff.
+    This function creates an AgentLoop with Agent and Conversation from openhands-sdk.
 
     Args:
         user_uuid: User's UUID
@@ -76,14 +76,66 @@ def create_llm_for_user(user_uuid, app_slug, riff_slug):
 
         # Create LLM instance
         try:
-            LLM = get_llm_class()
-            llm = LLM(api_key=anthropic_token, model="claude-3-haiku-20240307")
+            LLM_class = get_llm_class()
+            llm = LLM_class(api_key=anthropic_token, model="claude-3-haiku-20240307")
+
+            # Create message callback to store events as messages
+            def message_callback(event):
+                """Callback to handle events from the agent conversation"""
+                try:
+                    logger.info(f"📨 Received event from agent: {type(event).__name__}")
+                    
+                    # Convert agent events to messages and store them
+                    # This is where we'll implement the event-to-message conversion
+                    from openhands.sdk.event import MessageEvent
+                    
+                    if isinstance(event, MessageEvent):
+                        # Handle message events from the agent
+                        if event.source == "assistant" or event.llm_message.role == "assistant":
+                            # This is an assistant response
+                            content = ""
+                            if event.llm_message.content:
+                                for content_item in event.llm_message.content:
+                                    if hasattr(content_item, 'text'):
+                                        content += content_item.text
+                            
+                            if content:
+                                # Create assistant message
+                                assistant_message_id = str(uuid.uuid4())
+                                assistant_created_at = datetime.now(timezone.utc).isoformat()
+
+                                assistant_message = {
+                                    "id": assistant_message_id,
+                                    "content": content,
+                                    "riff_slug": riff_slug,
+                                    "app_slug": app_slug,
+                                    "created_at": assistant_created_at,
+                                    "created_by": "assistant",
+                                    "type": "assistant",
+                                    "metadata": {"event_type": type(event).__name__},
+                                }
+
+                                # Save assistant message
+                                if add_user_message(user_uuid, app_slug, riff_slug, assistant_message):
+                                    logger.info(f"✅ Agent response saved for riff: {riff_slug}")
+                                    
+                                    # Update riff message stats
+                                    messages = load_user_messages(user_uuid, app_slug, riff_slug)
+                                    update_riff_message_stats(
+                                        user_uuid, app_slug, riff_slug, 
+                                        len(messages), assistant_created_at
+                                    )
+                                else:
+                                    logger.error(f"❌ Failed to save agent response for riff: {riff_slug}")
+                    
+                except Exception as e:
+                    logger.error(f"❌ Error in message callback: {e}")
 
             # Create and store the agent loop
             logger.info(
                 f"🔧 Creating AgentLoop with key: {user_uuid[:8]}:{app_slug}:{riff_slug}"
             )
-            agent_loop_manager.create_agent_loop(user_uuid, app_slug, riff_slug, llm)
+            agent_loop_manager.create_agent_loop(user_uuid, app_slug, riff_slug, llm, message_callback)
             logger.info(f"🤖 Created AgentLoop for riff: {riff_slug}")
 
             # Verify it was stored correctly
@@ -99,7 +151,7 @@ def create_llm_for_user(user_uuid, app_slug, riff_slug):
                 logger.error(
                     f"❌ AgentLoop verification failed for {user_uuid[:8]}:{app_slug}:{riff_slug}"
                 )
-                return False, "Failed to verify LLM creation"
+                return False, "Failed to verify Agent creation"
 
         except Exception as e:
             logger.error(f"❌ Failed to create LLM instance: {e}")
@@ -107,7 +159,7 @@ def create_llm_for_user(user_uuid, app_slug, riff_slug):
 
     except Exception as e:
         logger.error(f"❌ Failed to create AgentLoop: {e}")
-        return False, f"Failed to create LLM: {str(e)}"
+        return False, f"Failed to create Agent: {str(e)}"
 
 
 def load_user_riffs(user_uuid, app_slug):
@@ -263,9 +315,9 @@ def create_riff(slug):
             return jsonify({"error": "Failed to save riff"}), 500
 
         # Create AgentLoop with user's Anthropic token
-        success, error_message = create_llm_for_user(user_uuid, slug, riff_slug)
+        success, error_message = create_agent_for_user(user_uuid, slug, riff_slug)
         if not success:
-            logger.error(f"❌ Failed to create LLM for riff: {error_message}")
+            logger.error(f"❌ Failed to create Agent for riff: {error_message}")
             return jsonify({"error": error_message}), 400
 
         logger.info(f"✅ Riff created successfully: {riff_name}")
@@ -466,54 +518,37 @@ def create_message(slug):
             if agent_loop:
                 try:
                     logger.info(
-                        f"🤖 Generating LLM response for {user_uuid[:8]}/{slug}/{riff_slug}"
+                        f"🤖 Sending message to Agent for {user_uuid[:8]}/{slug}/{riff_slug}"
                     )
-                    llm_response = agent_loop.send_message(content)
+                    # Send message to agent - response will come through callback
+                    confirmation = agent_loop.send_message(content)
+                    logger.info(f"✅ Message sent to agent: {confirmation}")
 
-                    # Create assistant message
-                    assistant_message_id = str(uuid.uuid4())
-                    assistant_created_at = datetime.now(timezone.utc).isoformat()
+                    # Update riff message stats for the user message
+                    messages = load_user_messages(user_uuid, slug, riff_slug)
+                    update_riff_message_stats(
+                        user_uuid,
+                        slug,
+                        riff_slug,
+                        len(messages),
+                        created_at,
+                    )
 
-                    assistant_message = {
-                        "id": assistant_message_id,
-                        "content": llm_response,
-                        "riff_slug": riff_slug,
-                        "app_slug": slug,
-                        "created_at": assistant_created_at,
-                        "created_by": "assistant",
-                        "type": "assistant",
-                        "metadata": {},
-                    }
-
-                    # Save assistant message
-                    if add_user_message(user_uuid, slug, riff_slug, assistant_message):
-                        logger.info(f"✅ LLM response saved for riff: {riff_slug}")
-                        # Return both messages
-                        messages = load_user_messages(user_uuid, slug, riff_slug)
-                        update_riff_message_stats(
-                            user_uuid,
-                            slug,
-                            riff_slug,
-                            len(messages),
-                            assistant_created_at,
-                        )
-
-                        return (
-                            jsonify(
-                                {
-                                    "message": "Message created successfully with LLM response",
-                                    "user_message": message,
-                                    "assistant_message": assistant_message,
-                                }
-                            ),
-                            201,
-                        )
-                    else:
-                        logger.error("❌ Failed to save assistant message")
+                    # Return success - agent response will be saved via callback
+                    return (
+                        jsonify(
+                            {
+                                "message": "Message sent to agent successfully. Response will be processed asynchronously.",
+                                "user_message": message,
+                                "agent_status": confirmation,
+                            }
+                        ),
+                        201,
+                    )
 
                 except Exception as e:
-                    logger.error(f"❌ Error getting LLM response: {e}")
-                    # Continue without LLM response - user message was still saved
+                    logger.error(f"❌ Error sending message to agent: {e}")
+                    # Continue without agent response - user message was still saved
 
         # Get updated message count for stats (fallback if no LLM response)
         messages = load_user_messages(user_uuid, slug, riff_slug)
@@ -624,10 +659,10 @@ def reset_riff_llm(slug, riff_slug):
                 f"ℹ️ No existing AgentLoop found for {user_uuid[:8]}:{slug}:{riff_slug}"
             )
 
-        # Create a brand new LLM object using the reusable function
-        success, error_message = create_llm_for_user(user_uuid, slug, riff_slug)
+        # Create a brand new Agent object using the reusable function
+        success, error_message = create_agent_for_user(user_uuid, slug, riff_slug)
         if not success:
-            logger.error(f"❌ Failed to reset LLM for riff: {error_message}")
+            logger.error(f"❌ Failed to reset Agent for riff: {error_message}")
             return jsonify({"error": error_message}), 500
 
         # Double-check that the LLM is actually ready before returning success
