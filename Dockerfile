@@ -35,9 +35,9 @@ RUN npm prune --omit=dev
 
 
 # Final stage for app image - using Ubuntu to support both nginx and python
-FROM ubuntu:22.04
+FROM ubuntu:24.04
 
-# Install nginx, python, uv, and supervisor
+# Install nginx, python, uv, git, and supervisor
 RUN apt-get update -qq && \
     apt-get install --no-install-recommends -y \
     nginx \
@@ -45,8 +45,9 @@ RUN apt-get update -qq && \
     python3-pip \
     supervisor \
     curl \
+    git \
     && rm -rf /var/lib/apt/lists/* \
-    && pip3 install uv
+    && pip3 install --break-system-packages uv
 
 # Copy built React application
 COPY --from=build /app/dist /usr/share/nginx/html
@@ -57,7 +58,7 @@ WORKDIR /app/backend
 
 # Install Python dependencies using uv from pyproject.toml
 RUN uv pip compile pyproject.toml -o requirements.txt && \
-    uv pip install --system -r requirements.txt && \
+    uv pip install --system --break-system-packages -r requirements.txt && \
     rm requirements.txt
 
 # Create data directory for persistent storage
