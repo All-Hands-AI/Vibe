@@ -6,13 +6,13 @@ export default defineConfig({
   plugins: [react()],
   server: {
     host: '0.0.0.0',
-    port: 12003,
+    port: process.env.CI ? 5173 : 12003,
     allowedHosts: true,
     cors: true,
     strictPort: true,
     proxy: {
       '/api': {
-        target: 'http://localhost:12001',
+        target: process.env.CI ? 'http://localhost:8000' : 'http://localhost:12001',
         changeOrigin: true,
         secure: false
       }

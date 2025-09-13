@@ -123,6 +123,7 @@ jobs:
           timeout 60 bash -c 'until curl -f http://localhost:5173; do sleep 2; done'
         env:
           NODE_ENV: test
+          CI: true
 
       - name: Run Playwright tests
         run: npm run test:e2e
