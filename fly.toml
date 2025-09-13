@@ -2,6 +2,9 @@
 #
 # See https://fly.io/docs/reference/configuration/ for information about how to use this file.
 #
+# This app now serves both React frontend (via nginx) and Python backend (via Flask)
+# - Frontend: served at / (React SPA)
+# - Backend API: served at /api/* (proxied to Python Flask app)
 
 app = 'openvibe'
 primary_region = 'ewr'
