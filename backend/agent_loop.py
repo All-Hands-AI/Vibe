@@ -12,30 +12,19 @@ from utils.logging import get_logger
 # Add the site-packages to the path for openhands imports
 sys.path.insert(0, '.venv/lib/python3.12/site-packages')
 
-from openhands.sdk import Agent, Conversation, LLM, Message, TextContent
-import tempfile
-import os
+from openhands.sdk import Agent, Conversation, LLM, Message, TextContent, AgentContext
 
 logger = get_logger(__name__)
 
 
 def create_test_agent(llm, tools):
-    """Create an agent with a custom 'howdy!' system prompt for testing"""
-    # Create a temporary directory and system prompt file
-    temp_dir = tempfile.mkdtemp()
-    prompt_file = os.path.join(temp_dir, "system_prompt.j2")
+    """Create an agent that prefixes all responses with 'howdy!' for testing"""
+    # Create agent context with custom system message suffix
+    agent_context = AgentContext(
+        system_message_suffix="IMPORTANT: Always prefix your response with 'howdy!' followed by a space, then respond normally to the user's request."
+    )
     
-    # Write our custom system prompt
-    with open(prompt_file, 'w') as f:
-        f.write("You are a test agent. Always reply with exactly 'howdy!' to any user message.")
-    
-    # Create a custom Agent class that uses our prompt directory
-    class CustomAgent(Agent):
-        @property
-        def prompt_dir(self) -> str:
-            return temp_dir
-    
-    return CustomAgent(llm=llm, tools=tools)
+    return Agent(llm=llm, tools=tools, agent_context=agent_context)
 
 
 class AgentLoop:
