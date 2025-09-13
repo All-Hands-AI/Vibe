@@ -6,6 +6,7 @@ import logging
 import re
 from datetime import datetime
 from pathlib import Path
+from keys import load_user_keys
 
 logger = logging.getLogger(__name__)
 
@@ -52,22 +53,7 @@ def create_slug(name):
     slug = re.sub(r'-+', '-', slug)
     return slug.strip('-')
 
-def get_user_keys_file(uuid):
-    """Get the path to a user's keys.json file"""
-    user_dir = DATA_DIR / uuid
-    return user_dir / 'keys.json'
 
-def load_user_keys(uuid):
-    """Load user's API keys from file"""
-    keys_file = get_user_keys_file(uuid)
-    if keys_file.exists():
-        try:
-            with open(keys_file, 'r') as f:
-                return json.load(f)
-        except (json.JSONDecodeError, IOError) as e:
-            logger.error(f"Failed to load keys for user {uuid}: {e}")
-            return {}
-    return {}
 
 def create_github_repo(repo_name, github_token, fly_token):
     """Create a GitHub repository from template and set FLY_API_TOKEN secret"""
@@ -194,21 +180,27 @@ def create_project():
     logger.info("🆕 POST /api/projects - Creating new project")
     
     try:
+        # Get UUID from headers
+        user_uuid = request.headers.get('X-User-UUID')
+        if not user_uuid:
+            logger.warning("❌ X-User-UUID header is required")
+            return jsonify({'error': 'X-User-UUID header is required'}), 400
+        
+        user_uuid = user_uuid.strip()
+        if not user_uuid:
+            logger.warning("❌ Empty UUID provided in header")
+            return jsonify({'error': 'UUID cannot be empty'}), 400
+        
         data = request.get_json()
         if not data or 'name' not in data:
             logger.warning("❌ Project name is required")
             return jsonify({'error': 'Project name is required'}), 400
         
         project_name = data['name'].strip()
-        user_uuid = data.get('uuid', '').strip()
         
         if not project_name:
             logger.warning("❌ Project name cannot be empty")
             return jsonify({'error': 'Project name cannot be empty'}), 400
-        
-        if not user_uuid:
-            logger.warning("❌ User UUID is required")
-            return jsonify({'error': 'User UUID is required'}), 400
         
         # Create slug from name
         slug = create_slug(project_name)

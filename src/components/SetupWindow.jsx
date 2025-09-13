@@ -44,10 +44,10 @@ const SetupWindow = ({ onSetupComplete }) => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'X-User-UUID': userUUID
         },
         body: JSON.stringify({ 
-          api_key: apiKey,
-          uuid: userUUID
+          api_key: apiKey
         })
       })
 

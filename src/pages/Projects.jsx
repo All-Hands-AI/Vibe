@@ -74,10 +74,10 @@ function Projects() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'X-User-UUID': getUserUUID()
         },
         body: JSON.stringify({
-          name: newProjectName.trim(),
-          uuid: getUserUUID()
+          name: newProjectName.trim()
         }),
       })
 

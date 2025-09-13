@@ -1,12 +1,13 @@
 from flask import Flask, jsonify, request
 from flask_cors import CORS
 import os
-import requests
-import json
 import logging
 import sys
 from datetime import datetime
-from pathlib import Path
+from keys import (
+    load_user_keys, save_user_keys, user_has_keys,
+    validate_api_key, get_supported_providers, is_valid_provider
+)
 from projects import projects_bp
 
 # Configure logging for Fly.io - stdout only
@@ -43,53 +44,6 @@ api_keys = {
 
 logger.info(f"📊 API keys storage initialized: {list(api_keys.keys())}")
 
-# File-based storage utilities
-DATA_DIR = Path('/data')
-
-def get_user_keys_file(uuid):
-    """Get the path to a user's keys.json file"""
-    user_dir = DATA_DIR / uuid
-    return user_dir / 'keys.json'
-
-def ensure_user_directory(uuid):
-    """Ensure user directory exists"""
-    user_dir = DATA_DIR / uuid
-    user_dir.mkdir(parents=True, exist_ok=True)
-    return user_dir
-
-def load_user_keys(uuid):
-    """Load user's API keys from file"""
-    keys_file = get_user_keys_file(uuid)
-    if keys_file.exists():
-        try:
-            with open(keys_file, 'r') as f:
-                return json.load(f)
-        except (json.JSONDecodeError, IOError) as e:
-            logger.error(f"Failed to load keys for user {uuid}: {e}")
-            return {}
-    return {}
-
-def save_user_keys(uuid, keys):
-    """Save user's API keys to file"""
-    ensure_user_directory(uuid)
-    keys_file = get_user_keys_file(uuid)
-    try:
-        with open(keys_file, 'w') as f:
-            json.dump(keys, f, indent=2)
-        logger.info(f"💾 Saved keys for user {uuid}")
-        return True
-    except IOError as e:
-        logger.error(f"Failed to save keys for user {uuid}: {e}")
-        return False
-
-def user_has_keys(uuid):
-    """Check if user has any keys stored"""
-    keys_file = get_user_keys_file(uuid)
-    return keys_file.exists()
-
-logger.info(f"📁 Data directory: {DATA_DIR}")
-logger.info(f"📁 Data directory exists: {DATA_DIR.exists()}")
-
 @app.route('/')
 def hello_world():
     logger.info("📍 Root endpoint accessed")
@@ -118,160 +72,42 @@ def api_hello():
         'timestamp': datetime.utcnow().isoformat()
     })
 
-def validate_anthropic_key(api_key):
-    """Validate Anthropic API key by making a test request"""
-    logger.info(f"🤖 Validating Anthropic API key (length: {len(api_key)})")
-    try:
-        headers = {
-            'x-api-key': api_key,
-            'content-type': 'application/json',
-            'anthropic-version': '2023-06-01'
-        }
-        # Make a simple request to validate the key
-        logger.info("🔍 Making test request to Anthropic API...")
-        response = requests.post(
-            'https://api.anthropic.com/v1/messages',
-            headers=headers,
-            json={
-                'model': 'claude-3-haiku-20240307',
-                'max_tokens': 1,
-                'messages': [{'role': 'user', 'content': 'Hi'}]
-            },
-            timeout=10
-        )
-        logger.info(f"📡 Anthropic API response: {response.status_code}")
-        if response.status_code != 200:
-            logger.warning(f"❌ Anthropic API error: {response.text[:200]}")
-        return response.status_code == 200
-    except Exception as e:
-        logger.error(f"💥 Anthropic API validation error: {str(e)}")
-        return False
 
-def validate_github_key(api_key):
-    """Validate GitHub API key by making a test request"""
-    logger.info(f"🐙 Validating GitHub API key (length: {len(api_key)})")
-    try:
-        headers = {
-            'Authorization': f'token {api_key}',
-            'Accept': 'application/vnd.github.v3+json'
-        }
-        logger.info("🔍 Making test request to GitHub API...")
-        response = requests.get('https://api.github.com/user', headers=headers, timeout=10)
-        logger.info(f"📡 GitHub API response: {response.status_code}")
-        if response.status_code != 200:
-            logger.warning(f"❌ GitHub API error: {response.text[:200]}")
-        return response.status_code == 200
-    except Exception as e:
-        logger.error(f"💥 GitHub API validation error: {str(e)}")
-        return False
-
-def validate_fly_key(api_key):
-    """Validate Fly.io API key by checking format and making a test request"""
-    logger.info(f"🪰 Validating Fly.io API key (length: {len(api_key)})")
-    try:
-        # First, validate the token format
-        if not api_key or len(api_key.strip()) < 10:
-            logger.warning("❌ Fly.io token too short or empty")
-            return False
-            
-        # Check for valid Fly.io token prefixes
-        valid_prefixes = ['fo1_', 'fm1_', 'fm2_', 'ft1_', 'ft2_']
-        has_valid_prefix = any(api_key.startswith(prefix) for prefix in valid_prefixes)
-        
-        logger.info(f"🔍 Token prefix check - has valid prefix: {has_valid_prefix}")
-        if has_valid_prefix:
-            logger.info(f"✅ Found valid prefix: {api_key[:4]}...")
-        
-        # If it doesn't have a known prefix, it might be a personal auth token
-        # Personal tokens are typically longer and don't have specific prefixes
-        if not has_valid_prefix and len(api_key) < 20:
-            logger.warning("❌ No valid prefix and token too short for personal token")
-            return False
-            
-        # Determine the correct authorization format based on token type
-        if has_valid_prefix:
-            # Tokens created with 'fly tokens create' use FlyV1 format
-            auth_header = f'FlyV1 {api_key}'
-            logger.info("🔑 Using FlyV1 authentication format")
-        else:
-            # Personal auth tokens use Bearer format
-            auth_header = f'Bearer {api_key}'
-            logger.info("🔑 Using Bearer authentication format")
-            
-        headers = {
-            'Authorization': auth_header,
-            'Content-Type': 'application/json'
-        }
-        
-        # Try a simple API call to validate the token
-        # Use the apps endpoint which should work for most token types
-        logger.info("🔍 Making test request to Fly.io API...")
-        response = requests.get('https://api.machines.dev/v1/apps', headers=headers, timeout=10)
-        
-        logger.info(f"📡 Fly.io API response: {response.status_code}")
-        if response.status_code not in [200, 403, 404]:
-            logger.warning(f"❌ Fly.io API error: {response.text[:200]}")
-        
-        # Accept both 200 (success) and 403 (forbidden but authenticated)
-        # 403 might occur if the token doesn't have permission to list apps
-        # but it's still a valid token
-        if response.status_code in [200, 403]:
-            logger.info("✅ Fly.io token validated successfully")
-            return True
-        elif response.status_code == 401:
-            # 401 means authentication failed - invalid token
-            logger.warning("❌ Fly.io authentication failed (401)")
-            return False
-        elif response.status_code == 404:
-            # 404 might mean the endpoint doesn't exist or the token is valid
-            # but doesn't have access. For safety, we'll accept this as valid
-            # since the token format passed our initial checks
-            logger.info("⚠️ Fly.io API returned 404, accepting as valid due to format check")
-            return True
-        else:
-            # Other status codes (500, etc.) - assume invalid for safety
-            logger.warning(f"❌ Fly.io API returned unexpected status: {response.status_code}")
-            return False
-            
-    except Exception as e:
-        logger.error(f"💥 Fly.io API validation error: {str(e)}")
-        return False
 
 @app.route('/integrations/<provider>', methods=['POST'])
 def set_api_key(provider):
     """Set API key for a provider"""
     logger.info(f"🔑 POST /integrations/{provider} - Setting API key")
     
-    if provider not in ['anthropic', 'github', 'fly']:
+    if not is_valid_provider(provider):
         logger.warning(f"❌ Invalid provider requested: {provider}")
         return jsonify({'error': 'Invalid provider'}), 400
     
+    # Get UUID from headers
+    user_uuid = request.headers.get('X-User-UUID')
+    if not user_uuid:
+        logger.warning("❌ X-User-UUID header is required")
+        return jsonify({'error': 'X-User-UUID header is required'}), 400
+    
+    user_uuid = user_uuid.strip()
+    if not user_uuid:
+        logger.warning("❌ Empty UUID provided in header")
+        return jsonify({'error': 'UUID cannot be empty'}), 400
+    
     data = request.get_json()
-    if not data or 'api_key' not in data or 'uuid' not in data:
-        logger.warning("❌ API key and UUID are required in request")
-        return jsonify({'error': 'API key and UUID are required'}), 400
+    if not data or 'api_key' not in data:
+        logger.warning("❌ API key is required in request body")
+        return jsonify({'error': 'API key is required'}), 400
     
     api_key = data['api_key'].strip()
-    user_uuid = data['uuid'].strip()
-    
     if not api_key:
         logger.warning("❌ Empty API key provided")
         return jsonify({'error': 'API key cannot be empty'}), 400
-        
-    if not user_uuid:
-        logger.warning("❌ Empty UUID provided")
-        return jsonify({'error': 'UUID cannot be empty'}), 400
     
     logger.info(f"🔍 Validating {provider} API key for user {user_uuid[:8]}...")
     
-    # Validate the API key
-    is_valid = False
-    if provider == 'anthropic':
-        is_valid = validate_anthropic_key(api_key)
-    elif provider == 'github':
-        is_valid = validate_github_key(api_key)
-    elif provider == 'fly':
-        is_valid = validate_fly_key(api_key)
+    # Validate the API key using the keys module
+    is_valid = validate_api_key(provider, api_key)
     
     if is_valid:
         # Load existing keys for this user
@@ -296,15 +132,20 @@ def check_api_key(provider):
     """Check if API key is set and valid for a provider"""
     logger.info(f"🔍 GET /integrations/{provider} - Checking API key status")
     
-    if provider not in ['anthropic', 'github', 'fly']:
+    if not is_valid_provider(provider):
         logger.warning(f"❌ Invalid provider requested: {provider}")
         return jsonify({'error': 'Invalid provider'}), 400
     
-    # Get UUID from query parameters
-    user_uuid = request.args.get('uuid')
+    # Get UUID from headers
+    user_uuid = request.headers.get('X-User-UUID')
     if not user_uuid:
-        logger.warning("❌ UUID is required for checking API key status")
-        return jsonify({'error': 'UUID is required'}), 400
+        logger.warning("❌ X-User-UUID header is required")
+        return jsonify({'error': 'X-User-UUID header is required'}), 400
+    
+    user_uuid = user_uuid.strip()
+    if not user_uuid:
+        logger.warning("❌ Empty UUID provided in header")
+        return jsonify({'error': 'UUID cannot be empty'}), 400
     
     logger.info(f"🔍 Checking {provider} API key status for user {user_uuid[:8]}...")
     
@@ -323,14 +164,8 @@ def check_api_key(provider):
     
     logger.info(f"🔍 Re-validating stored {provider} API key for user {user_uuid[:8]}...")
     
-    # Re-validate the stored key
-    is_valid = False
-    if provider == 'anthropic':
-        is_valid = validate_anthropic_key(api_key)
-    elif provider == 'github':
-        is_valid = validate_github_key(api_key)
-    elif provider == 'fly':
-        is_valid = validate_fly_key(api_key)
+    # Re-validate the stored key using the keys module
+    is_valid = validate_api_key(provider, api_key)
     
     result = {
         'valid': is_valid,
