@@ -33,17 +33,9 @@ OpenVibe is a modern React application built with Vite and deployed on Fly.io us
 ## Development Workflow
 
 <IMPORTANT>
-Never run this application locally!
+When installing python dependencies, create a virtual envirionment using `uv`! This is
+very important or you will have import problems.
 </IMPORTANT>
-
-Instead, always follow this workflow:
-1. Make your changes to the codebase
-2. Push changes to GitHub
-3. Create a Pull Request
-
-This will create a fly.io deployment.
-
-This ensures consistent deployment and testing environments for all contributors.
 
 ## State Management & Data Storage
 
