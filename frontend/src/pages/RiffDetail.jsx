@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useParams, Link, useLocation } from 'react-router-dom'
 import { useSetup } from '../context/SetupContext'
 import { getUserUUID } from '../utils/uuid'
-import BranchStatus from '../components/BranchStatus'
+import AppStatus from '../components/AppStatus'
 import ChatWindow from '../components/ChatWindow'
 
 function RiffDetail() {
@@ -170,7 +170,7 @@ function RiffDetail() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Branch Status */}
           <div className="lg:col-span-1">
-            <BranchStatus app={app} />
+            <AppStatus app={app} />
           </div>
 
           {/* Chat Window */}

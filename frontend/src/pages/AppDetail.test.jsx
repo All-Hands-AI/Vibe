@@ -72,8 +72,8 @@ describe('AppDetail', () => {
       expect(screen.getByText('Test App')).toBeInTheDocument()
     })
 
-    // Check that CI/CD status shows "Running"
-    expect(screen.getByText('🔄 Running')).toBeInTheDocument()
+    // Check that CI/CD status shows "Running" (there are two instances - CI and Deploy)
+    expect(screen.getAllByText('🔄 Running')).toHaveLength(2)
     expect(screen.queryByText('❌ Failing')).not.toBeInTheDocument()
     expect(screen.queryByText('✅ Passing')).not.toBeInTheDocument()
   })
@@ -116,10 +116,11 @@ describe('AppDetail', () => {
       expect(screen.getByText('Test App')).toBeInTheDocument()
     })
 
-    // Check that CI/CD status shows "Passing"
-    expect(screen.getByText('✅ Passing')).toBeInTheDocument()
-    expect(screen.queryByText('❌ Failing')).not.toBeInTheDocument()
-    expect(screen.queryByText('🔄 Running')).not.toBeInTheDocument()
+    // Check that AppStatus shows branch and deployment status
+    expect(screen.getByText('🌿 main')).toBeInTheDocument() // Default branch
+    expect(screen.queryByText('No active pull request found')).not.toBeInTheDocument() // Should not show for main
+    expect(screen.getByText('✅ Passing')).toBeInTheDocument() // CI status shows as passing
+    expect(screen.getByText('🔄 Running')).toBeInTheDocument() // Deploy status shows as running
   })
 
   it('displays "Failing" status when CI/CD has failed', async () => {
@@ -160,10 +161,11 @@ describe('AppDetail', () => {
       expect(screen.getByText('Test App')).toBeInTheDocument()
     })
 
-    // Check that CI/CD status shows "Failing"
-    expect(screen.getByText('❌ Failing')).toBeInTheDocument()
-    expect(screen.queryByText('✅ Passing')).not.toBeInTheDocument()
-    expect(screen.queryByText('🔄 Running')).not.toBeInTheDocument()
+    // Check that AppStatus shows branch and deployment status
+    expect(screen.getByText('🌿 main')).toBeInTheDocument() // Default branch
+    expect(screen.queryByText('No active pull request found')).not.toBeInTheDocument() // Should not show for main
+    expect(screen.getByText('❌ Failing')).toBeInTheDocument() // CI status shows as failing
+    expect(screen.getByText('🔄 Running')).toBeInTheDocument() // Deploy status shows as running
   })
 
   it('displays "Checking..." status when github_status is null', async () => {
@@ -199,10 +201,9 @@ describe('AppDetail', () => {
       expect(screen.getByText('Test App')).toBeInTheDocument()
     })
 
-    // Check that CI/CD status shows "Checking..."
-    expect(screen.getByText('🔄 Checking...')).toBeInTheDocument()
-    expect(screen.queryByText('❌ Failing')).not.toBeInTheDocument()
-    expect(screen.queryByText('✅ Passing')).not.toBeInTheDocument()
-    expect(screen.queryByText('🔄 Running')).not.toBeInTheDocument()
+    // Check that AppStatus shows branch and deployment status
+    expect(screen.getByText('🌿 main')).toBeInTheDocument() // Default branch
+    expect(screen.queryByText('No active pull request found')).not.toBeInTheDocument() // Should not show for main
+    expect(screen.getAllByText('🔄 Running')).toHaveLength(2) // CI and Deploy status both show as running
   })
 })

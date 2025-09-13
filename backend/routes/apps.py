@@ -484,6 +484,135 @@ def get_fly_status(project_slug, fly_token):
         return None
 
 
+def get_pr_status(repo_url, github_token, branch="main"):
+    """Get GitHub Pull Request status for a specific branch"""
+    logger.info(f"🔀 Checking PR status for: {repo_url} (branch: {branch})")
+
+    try:
+        # Extract owner and repo from URL
+        if not repo_url or "github.com" not in repo_url:
+            logger.warning(f"❌ Invalid GitHub URL: {repo_url}")
+            return None
+
+        parts = repo_url.replace("https://github.com/", "").split("/")
+        if len(parts) < 2:
+            logger.warning(f"❌ Cannot parse GitHub URL: {repo_url}")
+            return None
+
+        owner, repo = parts[0], parts[1]
+        logger.debug(f"🔍 GitHub repo: {owner}/{repo}")
+
+        headers = {
+            "Authorization": f"token {github_token}",
+            "Accept": "application/vnd.github.v3+json",
+            "User-Agent": "OpenVibe-Backend/1.0",
+        }
+
+        # Get pull requests for the branch
+        pr_response = requests.get(
+            f"https://api.github.com/repos/{owner}/{repo}/pulls?head={owner}:{branch}&state=open",
+            headers=headers,
+            timeout=10,
+        )
+
+        if pr_response.status_code != 200:
+            logger.warning(f"❌ Failed to get PRs: {pr_response.status_code}")
+            return None
+
+        prs = pr_response.json()
+
+        if not prs:
+            logger.info(f"ℹ️ No open PRs found for branch {branch}")
+            return None
+
+        # Get the first (most recent) PR
+        pr = prs[0]
+        pr_number = pr["number"]
+
+        logger.debug(f"🔍 Found PR #{pr_number}: {pr['title']}")
+
+        # Get PR details including mergeable status
+        pr_detail_response = requests.get(
+            f"https://api.github.com/repos/{owner}/{repo}/pulls/{pr_number}",
+            headers=headers,
+            timeout=10,
+        )
+
+        if pr_detail_response.status_code != 200:
+            logger.warning(
+                f"❌ Failed to get PR details: {pr_detail_response.status_code}"
+            )
+            pr_details = pr  # Use basic PR data
+        else:
+            pr_details = pr_detail_response.json()
+
+        # Get check runs for the PR head commit
+        checks_response = requests.get(
+            f"https://api.github.com/repos/{owner}/{repo}/commits/{pr_details['head']['sha']}/check-runs",
+            headers=headers,
+            timeout=10,
+        )
+
+        checks = []
+        ci_status = "pending"
+
+        if checks_response.status_code == 200:
+            check_runs = checks_response.json().get("check_runs", [])
+
+            for check in check_runs:
+                checks.append(
+                    {
+                        "name": check["name"],
+                        "status": check["conclusion"] or check["status"],
+                        "details_url": check["html_url"],
+                    }
+                )
+
+            # Determine overall CI status
+            if all(
+                check["conclusion"] == "success"
+                for check in check_runs
+                if check["conclusion"]
+            ):
+                ci_status = "success"
+            elif any(
+                check["conclusion"] in ["failure", "error"]
+                for check in check_runs
+                if check["conclusion"]
+            ):
+                ci_status = "failure"
+            elif any(
+                check["status"] in ["in_progress", "queued"] for check in check_runs
+            ):
+                ci_status = "pending"
+
+        # Also check for Deploy action specifically
+        deploy_status = "pending"
+        for check in checks:
+            if "deploy" in check["name"].lower():
+                deploy_status = check["status"]
+                break
+
+        result = {
+            "number": pr_details["number"],
+            "title": pr_details["title"],
+            "html_url": pr_details["html_url"],
+            "draft": pr_details["draft"],
+            "mergeable": pr_details.get("mergeable"),
+            "changed_files": pr_details.get("changed_files", 0),
+            "ci_status": ci_status,
+            "deploy_status": deploy_status,
+            "checks": checks,
+        }
+
+        logger.info(f"✅ PR status retrieved for #{pr_number}")
+        return result
+
+    except Exception as e:
+        logger.error(f"💥 PR status check error: {str(e)}")
+        return None
+
+
 def delete_github_repo(repo_url, github_token):
     """Delete a GitHub repository"""
     logger.info(f"🗑️ Deleting GitHub repo: {repo_url}")
@@ -828,6 +957,8 @@ def get_app(slug):
         # Get user's API keys for status information
         github_status = None
         fly_status = None
+        pr_status = None
+        deployment_status = None
 
         try:
             user_keys = load_user_keys(user_uuid)
@@ -840,9 +971,26 @@ def get_app(slug):
                 logger.info(f"🔍 GitHub token starts with: {github_token[:10]}...")
                 github_status = get_github_status(app["github_url"], github_token)
 
+                # Get PR status for the current branch
+                branch = app.get("branch", "main")
+                pr_status = get_pr_status(app["github_url"], github_token, branch)
+
             # Get Fly.io status if token is available
             if fly_token and app.get("slug"):
                 fly_status = get_fly_status(app["slug"], fly_token)
+
+                # Create deployment status from fly status and PR status
+                deployment_status = {
+                    "deployed": (
+                        fly_status.get("deployed", False) if fly_status else False
+                    ),
+                    "app_url": fly_status.get("app_url") if fly_status else None,
+                    "deploy_status": (
+                        pr_status.get("deploy_status", "pending")
+                        if pr_status
+                        else "pending"
+                    ),
+                }
 
         except Exception as e:
             logger.warning(f"⚠️ Error getting status information: {str(e)}")
@@ -858,6 +1006,12 @@ def get_app(slug):
             logger.info(f"🔍 No github_status to add (github_status is None or empty)")
         if fly_status:
             app_with_status["fly_status"] = fly_status
+        if pr_status:
+            app_with_status["pr_status"] = pr_status
+            logger.info(f"🔍 Adding pr_status to response")
+        if deployment_status:
+            app_with_status["deployment_status"] = deployment_status
+            logger.info(f"🔍 Adding deployment_status to response")
 
         logger.info(
             f"🔍 Final API response for app {slug}: {json.dumps(app_with_status, indent=2, default=str)}"
