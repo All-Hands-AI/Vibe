@@ -15,10 +15,10 @@ except ImportError:
     # SDK not available, continue without it (useful for testing)
     pass
 
-# Configure logging for Fly.io - stdout only with enhanced formatting
+# Configure logging for Fly.io - stdout only with simplified formatting
 logging.basicConfig(
     level=logging.DEBUG,
-    format="%(asctime)s - %(name)s - %(levelname)s - [%(filename)s:%(lineno)d] - %(message)s",
+    format="%(levelname).1s %(message)s",
     stream=sys.stdout,
 )
 

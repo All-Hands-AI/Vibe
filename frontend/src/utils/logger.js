@@ -24,8 +24,7 @@ class Logger {
   _log(level, message, ...args) {
     if (LOG_LEVELS[level] < CURRENT_LOG_LEVEL) return
 
-    const timestamp = new Date().toISOString()
-    const prefix = `[${timestamp}] [${this.context}] [${level}]`
+    const prefix = `${level.charAt(0)}`
     
     switch (level) {
       case 'DEBUG':
