@@ -88,10 +88,12 @@ describe('SetupWindow', () => {
         'http://localhost:8000/integrations/anthropic',
         expect.objectContaining({
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 
+            'Content-Type': 'application/json',
+            'X-User-UUID': 'test-uuid-12345'
+          },
           body: JSON.stringify({ 
-            api_key: 'sk-ant-test123',
-            uuid: 'test-uuid-12345'
+            api_key: 'sk-ant-test123'
           })
         })
       )
