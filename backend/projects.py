@@ -418,6 +418,107 @@ def get_fly_status(project_slug, fly_token):
         return None
 
 
+def delete_github_repo(repo_url, github_token):
+    """Delete a GitHub repository"""
+    logger.info(f"🗑️ Deleting GitHub repo: {repo_url}")
+    
+    try:
+        # Extract owner and repo from URL
+        if not repo_url or 'github.com' not in repo_url:
+            logger.warning(f"❌ Invalid GitHub URL: {repo_url}")
+            return False, "Invalid GitHub URL"
+            
+        parts = repo_url.replace('https://github.com/', '').split('/')
+        if len(parts) < 2:
+            logger.warning(f"❌ Cannot parse GitHub URL: {repo_url}")
+            return False, "Cannot parse GitHub URL"
+            
+        owner, repo = parts[0], parts[1]
+        logger.debug(f"🔍 GitHub repo to delete: {owner}/{repo}")
+        
+        headers = {
+            'Authorization': f'token {github_token}',
+            'Accept': 'application/vnd.github.v3+json',
+            'User-Agent': 'OpenVibe-Backend/1.0'
+        }
+        
+        # Delete the repository
+        delete_response = requests.delete(
+            f'https://api.github.com/repos/{owner}/{repo}',
+            headers=headers,
+            timeout=30
+        )
+        
+        if delete_response.status_code == 204:
+            logger.info(f"✅ Successfully deleted GitHub repo: {owner}/{repo}")
+            return True, "Repository deleted successfully"
+        elif delete_response.status_code == 404:
+            logger.warning(f"⚠️ GitHub repo not found: {owner}/{repo}")
+            return True, "Repository not found (may have been already deleted)"
+        elif delete_response.status_code == 403:
+            logger.error(f"❌ Insufficient permissions to delete repo: {owner}/{repo}")
+            return False, "Insufficient permissions to delete repository"
+        else:
+            logger.error(f"❌ Failed to delete GitHub repo: {delete_response.status_code} - {delete_response.text}")
+            return False, f"GitHub API error: {delete_response.status_code}"
+            
+    except Exception as e:
+        logger.error(f"💥 Error deleting GitHub repo: {str(e)}")
+        return False, f"Error deleting repository: {str(e)}"
+
+
+def delete_fly_app(app_name, fly_token):
+    """Delete a Fly.io app"""
+    logger.info(f"🗑️ Deleting Fly.io app: {app_name}")
+    
+    try:
+        if not fly_token:
+            return False, "Fly.io API token is required"
+        
+        headers = {
+            'Authorization': f'Bearer {fly_token}',
+            'Content-Type': 'application/json',
+            'User-Agent': 'OpenVibe-Backend/1.0'
+        }
+        
+        # First check if app exists
+        check_response = requests.get(
+            f'https://api.machines.dev/v1/apps/{app_name}',
+            headers=headers,
+            timeout=10
+        )
+        
+        if check_response.status_code == 404:
+            logger.warning(f"⚠️ Fly.io app not found: {app_name}")
+            return True, "App not found (may have been already deleted)"
+        elif check_response.status_code != 200:
+            logger.error(f"❌ Error checking Fly.io app: {check_response.status_code}")
+            return False, f"Error checking app status: {check_response.status_code}"
+        
+        # Delete the app
+        delete_response = requests.delete(
+            f'https://api.machines.dev/v1/apps/{app_name}',
+            headers=headers,
+            timeout=30
+        )
+        
+        if delete_response.status_code in [200, 202, 204]:
+            logger.info(f"✅ Successfully deleted Fly.io app: {app_name}")
+            return True, "App deleted successfully"
+        elif delete_response.status_code == 404:
+            logger.warning(f"⚠️ Fly.io app not found during deletion: {app_name}")
+            return True, "App not found (may have been already deleted)"
+        elif delete_response.status_code == 403:
+            logger.error(f"❌ Insufficient permissions to delete Fly.io app: {app_name}")
+            return False, "Insufficient permissions to delete app"
+        else:
+            logger.error(f"❌ Failed to delete Fly.io app: {delete_response.status_code} - {delete_response.text}")
+            return False, f"Fly.io API error: {delete_response.status_code}"
+            
+    except Exception as e:
+        logger.error(f"💥 Error deleting Fly.io app: {str(e)}")
+        return False, f"Error deleting app: {str(e)}"
+
 
 def create_github_repo(repo_name, github_token, fly_token):
     """Create a GitHub repository from template and set FLY_API_TOKEN secret"""
@@ -855,3 +956,117 @@ def create_conversation(project_id):
     except Exception as e:
         logger.error(f"💥 Error creating conversation: {str(e)}")
         return jsonify({'error': 'Failed to create conversation'}), 500
+
+
+@projects_bp.route('/api/projects/<slug>', methods=['DELETE'])
+def delete_project(slug):
+    """Delete a project and its associated GitHub repo and Fly.io app"""
+    logger.info(f"🗑️ DELETE /api/projects/{slug} - Deleting project")
+
+    try:
+        # Get UUID from headers
+        user_uuid = request.headers.get('X-User-UUID')
+        if not user_uuid:
+            logger.warning("❌ X-User-UUID header is required")
+            return jsonify({'error': 'X-User-UUID header is required'}), 400
+
+        user_uuid = user_uuid.strip()
+        if not user_uuid:
+            logger.warning("❌ Empty UUID provided in header")
+            return jsonify({'error': 'UUID cannot be empty'}), 400
+
+        # Load projects
+        projects = load_projects()
+        
+        # Find the project to delete
+        project = next((p for p in projects if p.get('slug') == slug), None)
+        if not project:
+            logger.warning(f"❌ Project not found: {slug}")
+            return jsonify({'error': 'Project not found'}), 404
+
+        logger.info(f"🔍 Found project to delete: {project.get('name')} ({slug})")
+
+        # Load user keys for API operations
+        user_keys = load_user_keys(user_uuid)
+        github_token = user_keys.get('github')
+        fly_token = user_keys.get('fly')
+
+        deletion_results = {
+            'project_deleted': False,
+            'github_deleted': False,
+            'fly_deleted': False,
+            'github_error': None,
+            'fly_error': None
+        }
+
+        # Delete GitHub repository if it exists
+        github_url = project.get('github_url')
+        if github_url and github_token:
+            logger.info(f"🗑️ Deleting GitHub repository: {github_url}")
+            github_success, github_message = delete_github_repo(github_url, github_token)
+            deletion_results['github_deleted'] = github_success
+            if not github_success:
+                deletion_results['github_error'] = github_message
+                logger.warning(f"⚠️ GitHub deletion failed: {github_message}")
+        elif github_url and not github_token:
+            deletion_results['github_error'] = "GitHub token not available"
+            logger.warning("⚠️ GitHub token not available for deletion")
+        else:
+            logger.info("ℹ️ No GitHub repository to delete")
+
+        # Delete Fly.io app if it exists
+        if fly_token:
+            logger.info(f"🗑️ Deleting Fly.io app: {slug}")
+            fly_success, fly_message = delete_fly_app(slug, fly_token)
+            deletion_results['fly_deleted'] = fly_success
+            if not fly_success:
+                deletion_results['fly_error'] = fly_message
+                logger.warning(f"⚠️ Fly.io deletion failed: {fly_message}")
+        else:
+            deletion_results['fly_error'] = "Fly.io token not available"
+            logger.warning("⚠️ Fly.io token not available for deletion")
+
+        # Remove project from the list
+        projects = [p for p in projects if p.get('slug') != slug]
+        
+        # Save updated projects list
+        if save_projects(projects):
+            deletion_results['project_deleted'] = True
+            logger.info(f"✅ Project {slug} removed from database")
+        else:
+            logger.error(f"❌ Failed to save projects after deletion")
+            return jsonify({'error': 'Failed to update project database'}), 500
+
+        # Delete associated conversations file
+        try:
+            conversations_file = get_conversations_file(project.get('id'))
+            if conversations_file.exists():
+                conversations_file.unlink()
+                logger.info(f"✅ Deleted conversations file for project {slug}")
+        except Exception as e:
+            logger.warning(f"⚠️ Failed to delete conversations file: {str(e)}")
+
+        # Prepare response
+        response_data = {
+            'message': f'Project "{project.get("name")}" deleted successfully',
+            'project_name': project.get('name'),
+            'project_slug': slug,
+            'deletion_results': deletion_results
+        }
+
+        # Add warnings if some deletions failed
+        warnings = []
+        if deletion_results['github_error']:
+            warnings.append(f"GitHub repository deletion failed: {deletion_results['github_error']}")
+        if deletion_results['fly_error']:
+            warnings.append(f"Fly.io app deletion failed: {deletion_results['fly_error']}")
+        
+        if warnings:
+            response_data['warnings'] = warnings
+
+        logger.info(f"✅ Project deletion completed: {slug}")
+        return jsonify(response_data), 200
+
+    except Exception as e:
+        logger.error(f"💥 Error deleting project: {str(e)}")
+        return jsonify({'error': 'Failed to delete project'}), 500

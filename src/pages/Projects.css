@@ -198,6 +198,7 @@
   transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
   text-decoration: none;
   color: inherit;
+  position: relative;
 }
 
 .project-card:hover {
@@ -210,12 +211,49 @@
 
 .project-header {
   margin-bottom: 1rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.project-title-section {
+  flex: 1;
 }
 
 .project-header h3 {
   color: #333;
   margin-bottom: 0.5rem;
   font-size: 1.25rem;
+}
+
+/* Delete Button */
+.delete-button {
+  background: #fff;
+  border: 1px solid #e9ecef;
+  border-radius: 6px;
+  padding: 0.5rem;
+  cursor: pointer;
+  font-size: 1rem;
+  color: #666;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+}
+
+.delete-button:hover {
+  background: #fee;
+  border-color: #e74c3c;
+  color: #e74c3c;
+  transform: scale(1.05);
+}
+
+.delete-button:active {
+  transform: scale(0.95);
 }
 
 .project-slug {
@@ -249,10 +287,17 @@
   margin-top: 0.5rem;
 }
 
-.view-project {
+.view-project-link {
   color: #667eea;
   font-weight: 500;
   font-size: 0.9rem;
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+.view-project-link:hover {
+  color: #5a6fd8;
+  text-decoration: none;
 }
 
 /* Responsive Design */
@@ -281,5 +326,15 @@
   
   .create-project-section .create-button {
     align-self: stretch;
+  }
+  
+  .project-header {
+    gap: 0.75rem;
+  }
+  
+  .delete-button {
+    width: 32px;
+    height: 32px;
+    font-size: 0.9rem;
   }
 }
