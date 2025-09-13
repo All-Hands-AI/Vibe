@@ -76,12 +76,6 @@ jobs:
           path: backend/coverage.xml
           retention-days: 7
 
-      - name: Comment E2E coverage on PR
-        if: github.event_name == 'pull_request'
-        uses: orgoro/coverage@v3.1
-        with:
-          coverageFile: backend/coverage.xml
-          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Generate E2E test summary
         if: always()
