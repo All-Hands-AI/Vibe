@@ -6,8 +6,8 @@ import sys
 from datetime import datetime
 from routes.basic import basic_bp
 from routes.integrations import integrations_bp
-from routes.projects import projects_bp
-from routes.conversations import conversations_bp
+from routes.apps import apps_bp
+from routes.riffs import riffs_bp
 
 # No-op import to ensure agent-sdk loads properly
 import openhands.sdk  # noqa: F401
@@ -27,8 +27,8 @@ CORS(app)
 # Register blueprints
 app.register_blueprint(basic_bp)
 app.register_blueprint(integrations_bp)
-app.register_blueprint(projects_bp)
-app.register_blueprint(conversations_bp)
+app.register_blueprint(apps_bp)
+app.register_blueprint(riffs_bp)
 
 # Enhanced startup logging
 logger.info("=" * 80)

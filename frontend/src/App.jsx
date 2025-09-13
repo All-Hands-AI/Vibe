@@ -9,9 +9,9 @@ import MatrixRain from './components/MatrixRain'
 import Home from './pages/Home'
 import About from './pages/About'
 import Contact from './pages/Contact'
-import Projects from './pages/Projects'
-import ProjectDetail from './pages/ProjectDetail'
-import ConversationDetail from './pages/ConversationDetail'
+import Apps from './pages/Apps'
+import AppDetail from './pages/AppDetail'
+import RiffDetail from './pages/RiffDetail'
 import { logger } from './utils/logger'
 
 function AppContent() {
@@ -54,9 +54,9 @@ function AppContent() {
         <Header />
         <main className="flex-1 relative z-10">
           <Routes>
-            <Route path="/" element={<Projects />} />
-            <Route path="/projects/:slug" element={<ProjectDetail />} />
-            <Route path="/projects/:slug/conversations/:conversationSlug" element={<ConversationDetail />} />
+            <Route path="/" element={<Apps />} />
+            <Route path="/apps/:slug" element={<AppDetail />} />
+            <Route path="/apps/:slug/riffs/:riffSlug" element={<RiffDetail />} />
             <Route path="/home" element={<Home />} />
             <Route path="/about" element={<About />} />
             <Route path="/contact" element={<Contact />} />

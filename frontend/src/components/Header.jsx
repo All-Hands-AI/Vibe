@@ -24,7 +24,7 @@ function Header() {
                 : 'text-cyber-text border-cyber-border hover:border-neon-green hover:text-neon-green'
             }`}
           >
-            🗂️ Projects
+            🗂️ Apps
           </Link>
           <Link 
             to="/home" 

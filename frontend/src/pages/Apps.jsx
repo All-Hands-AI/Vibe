@@ -3,22 +3,22 @@ import { Link } from 'react-router-dom'
 import { getUserUUID } from '../utils/uuid'
 import ConfirmationModal from '../components/ConfirmationModal'
 
-function Projects() {
-  const [projects, setProjects] = useState([])
+function Apps() {
+  const [apps, setApps] = useState([])
   const [loading, setLoading] = useState(true)
   const [creating, setCreating] = useState(false)
-  const [newProjectName, setNewProjectName] = useState('')
+  const [newAppName, setNewAppName] = useState('')
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
   
   // Delete modal state
   const [deleteModal, setDeleteModal] = useState({
     isOpen: false,
-    project: null,
+    app: null,
     isDeleting: false
   })
 
-  // Create slug from project name for preview
+  // Create slug from app name for preview
   const createSlug = (name) => {
     return name
       .toLowerCase()
@@ -28,13 +28,13 @@ function Projects() {
       .replace(/^-|-$/g, '')
   }
 
-  // Fetch projects from backend
-  const fetchProjects = async () => {
-    console.log('🔄 Fetching projects from backend...')
+  // Fetch apps from backend
+  const fetchApps = async () => {
+    console.log('🔄 Fetching apps from backend...')
     try {
       setLoading(true)
       
-      const url = '/api/projects'
+      const url = '/api/apps'
       console.log('📡 Making request to:', url)
       
       const response = await fetch(url)
@@ -45,42 +45,42 @@ function Projects() {
       if (!response || !response.ok) {
         const errorText = await response?.text() || 'Unknown error'
         console.error('❌ Fetch failed:', errorText)
-        throw new Error(`Failed to fetch projects: ${response?.status} ${errorText}`)
+        throw new Error(`Failed to fetch apps: ${response?.status} ${errorText}`)
       }
       
       const data = await response.json()
       console.log('📊 Received data:', data)
-      console.log('📊 Projects count:', data.projects?.length || 0)
+      console.log('📊 Apps count:', data.apps?.length || 0)
       
-      setProjects(data.projects || [])
-      console.log('✅ Projects loaded successfully')
+      setApps(data.apps || [])
+      console.log('✅ Apps loaded successfully')
     } catch (err) {
-      console.error('❌ Error fetching projects:', err)
+      console.error('❌ Error fetching apps:', err)
       console.error('❌ Error stack:', err.stack)
-      setError('Failed to load projects. Please try again.')
+      setError('Failed to load apps. Please try again.')
     } finally {
       setLoading(false)
-      console.log('🔄 Fetch projects completed')
+      console.log('🔄 Fetch apps completed')
     }
   }
 
-  // Create new project
-  const handleCreateProject = async (e) => {
+  // Create new app
+  const handleCreateApp = async (e) => {
     e.preventDefault()
-    console.log('🆕 Creating new project...')
+    console.log('🆕 Creating new app...')
     
-    if (!newProjectName.trim()) {
-      console.warn('❌ Project name is empty')
-      setError('Project name is required')
+    if (!newAppName.trim()) {
+      console.warn('❌ App name is empty')
+      setError('App name is required')
       return
     }
 
-    const slug = createSlug(newProjectName.trim())
-    console.log('📝 Project details:', { name: newProjectName.trim(), slug })
+    const slug = createSlug(newAppName.trim())
+    console.log('📝 App details:', { name: newAppName.trim(), slug })
     
     if (!slug) {
       console.warn('❌ Invalid slug generated')
-      setError('Please enter a valid project name')
+      setError('Please enter a valid app name')
       return
     }
 
@@ -93,7 +93,7 @@ function Projects() {
       console.log('🆔 User UUID:', uuid)
 
       const requestData = {
-        name: newProjectName.trim()
+        name: newAppName.trim()
       }
       
       const requestOptions = {
@@ -108,7 +108,7 @@ function Projects() {
       console.log('📡 Request options:', requestOptions)
       console.log('📡 Request body:', requestData)
 
-      const response = await fetch('/api/projects', requestOptions)
+      const response = await fetch('/api/apps', requestOptions)
       
       console.log('📡 Create response status:', response?.status)
       console.log('📡 Create response ok:', response?.ok)
@@ -118,50 +118,50 @@ function Projects() {
       console.log('📊 Create response data:', data)
 
       if (!response.ok) {
-        console.error('❌ Create project failed:', data)
-        throw new Error(data.error || 'Failed to create project')
+        console.error('❌ Create app failed:', data)
+        throw new Error(data.error || 'Failed to create app')
       }
 
-      console.log('✅ Project created successfully:', data.project)
-      setSuccess(`Project "${newProjectName}" created successfully!`)
-      setNewProjectName('')
+      console.log('✅ App created successfully:', data.app)
+      setSuccess(`App "${newAppName}" created successfully!`)
+      setNewAppName('')
       
-      // Refresh projects list
-      console.log('🔄 Refreshing projects list...')
-      await fetchProjects()
+      // Refresh apps list
+      console.log('🔄 Refreshing apps list...')
+      await fetchApps()
       
       // Clear success message after 5 seconds
       setTimeout(() => setSuccess(''), 5000)
       
     } catch (err) {
-      console.error('❌ Error creating project:', err)
+      console.error('❌ Error creating app:', err)
       console.error('❌ Error stack:', err.stack)
-      setError(err.message || 'Failed to create project. Please try again.')
+      setError(err.message || 'Failed to create app. Please try again.')
     } finally {
       setCreating(false)
-      console.log('🆕 Create project completed')
+      console.log('🆕 Create app completed')
     }
   }
 
-  // Handle delete project button click
-  const handleDeleteClick = (project, event) => {
-    event.preventDefault() // Prevent navigation to project detail
+  // Handle delete app button click
+  const handleDeleteClick = (app, event) => {
+    event.preventDefault() // Prevent navigation to app detail
     event.stopPropagation() // Stop event bubbling
     
-    console.log('🗑️ Delete button clicked for project:', project.name)
+    console.log('🗑️ Delete button clicked for app:', app.name)
     setDeleteModal({
       isOpen: true,
-      project: project,
+      app: app,
       isDeleting: false
     })
   }
 
   // Handle delete confirmation
   const handleDeleteConfirm = async () => {
-    const project = deleteModal.project
-    if (!project) return
+    const app = deleteModal.app
+    if (!app) return
 
-    console.log('🗑️ Confirming deletion of project:', project.name)
+    console.log('🗑️ Confirming deletion of app:', app.name)
     
     try {
       setDeleteModal(prev => ({ ...prev, isDeleting: true }))
@@ -181,7 +181,7 @@ function Projects() {
       
       console.log('📡 Delete request options:', requestOptions)
 
-      const response = await fetch(`/api/projects/${project.slug}`, requestOptions)
+      const response = await fetch(`/api/apps/${app.slug}`, requestOptions)
       
       console.log('📡 Delete response status:', response?.status)
       console.log('📡 Delete response ok:', response?.ok)
@@ -190,14 +190,14 @@ function Projects() {
       console.log('📊 Delete response data:', data)
 
       if (!response.ok) {
-        console.error('❌ Delete project failed:', data)
-        throw new Error(data.error || 'Failed to delete project')
+        console.error('❌ Delete app failed:', data)
+        throw new Error(data.error || 'Failed to delete app')
       }
 
-      console.log('✅ Project deleted successfully:', data)
+      console.log('✅ App deleted successfully:', data)
       
       // Show success message
-      let successMessage = `Project "${project.name}" deleted successfully!`
+      let successMessage = `App "${app.name}" deleted successfully!`
       if (data.warnings && data.warnings.length > 0) {
         successMessage += ` (Note: ${data.warnings.join(', ')})`
       }
@@ -206,21 +206,21 @@ function Projects() {
       // Close modal
       setDeleteModal({
         isOpen: false,
-        project: null,
+        app: null,
         isDeleting: false
       })
       
-      // Refresh projects list
-      console.log('🔄 Refreshing projects list...')
-      await fetchProjects()
+      // Refresh apps list
+      console.log('🔄 Refreshing apps list...')
+      await fetchApps()
       
       // Clear success message after 8 seconds (longer for delete confirmation)
       setTimeout(() => setSuccess(''), 8000)
       
     } catch (err) {
-      console.error('❌ Error deleting project:', err)
+      console.error('❌ Error deleting app:', err)
       console.error('❌ Error stack:', err.stack)
-      setError(err.message || 'Failed to delete project. Please try again.')
+      setError(err.message || 'Failed to delete app. Please try again.')
       
       // Keep modal open but stop loading state
       setDeleteModal(prev => ({ ...prev, isDeleting: false }))
@@ -234,64 +234,64 @@ function Projects() {
     console.log('❌ Delete cancelled')
     setDeleteModal({
       isOpen: false,
-      project: null,
+      app: null,
       isDeleting: false
     })
   }
 
-  // Load projects on component mount
+  // Load apps on component mount
   useEffect(() => {
-    fetchProjects()
+    fetchApps()
   }, [])
 
   // Clear error when user starts typing
   useEffect(() => {
-    if (error && newProjectName) {
+    if (error && newAppName) {
       setError('')
     }
-  }, [newProjectName, error])
+  }, [newAppName, error])
 
   return (
     <div className="min-h-screen bg-black text-cyber-text">
       <div className="max-w-6xl mx-auto px-8 py-16">
         <header className="text-center mb-16">
-          <h1 className="text-5xl font-bold text-cyber-text mb-4 font-mono">Projects</h1>
-          <p className="text-xl text-cyber-muted font-mono">Manage your OpenVibe projects</p>
+          <h1 className="text-5xl font-bold text-cyber-text mb-4 font-mono">Apps</h1>
+          <p className="text-xl text-cyber-muted font-mono">Manage your OpenVibe apps</p>
         </header>
 
-        {/* Create New Project Form */}
+        {/* Create New App Form */}
         <section className="mb-16">
-          <h2 className="text-3xl font-bold text-cyber-text mb-8 font-mono">Create New Project</h2>
+          <h2 className="text-3xl font-bold text-cyber-text mb-8 font-mono">Create New App</h2>
           <div className="hacker-card max-w-2xl">
-            <form onSubmit={handleCreateProject} className="space-y-6">
+            <form onSubmit={handleCreateApp} className="space-y-6">
               <div>
-                <label htmlFor="projectName" className="block text-sm font-medium text-cyber-text mb-2 font-mono">
-                  <span className="text-cyber-muted">{'>'}</span> Project Name:
+                <label htmlFor="appName" className="block text-sm font-medium text-cyber-text mb-2 font-mono">
+                  <span className="text-cyber-muted">{'>'}</span> App Name:
                 </label>
                 <input
                   type="text"
-                  id="projectName"
-                  value={newProjectName}
-                  onChange={(e) => setNewProjectName(e.target.value)}
-                  placeholder="Enter project name"
+                  id="appName"
+                  value={newAppName}
+                  onChange={(e) => setNewAppName(e.target.value)}
+                  placeholder="Enter app name"
                   disabled={creating}
                   className={`w-full px-4 py-3 bg-black text-cyber-text font-mono border-2 transition-colors duration-200 focus:outline-none focus:border-neon-green ${
                     error ? 'border-red-500' : 'border-cyber-border'
                   }`}
                 />
-                {newProjectName && (
+                {newAppName && (
                   <div className="mt-2 text-sm text-cyber-muted font-mono">
-                    Slug: <code className="bg-cyber-accent px-2 py-1 rounded text-cyber-text">{createSlug(newProjectName)}</code>
+                    Slug: <code className="bg-cyber-accent px-2 py-1 rounded text-cyber-text">{createSlug(newAppName)}</code>
                   </div>
                 )}
               </div>
               
               <button 
                 type="submit" 
-                disabled={creating || !newProjectName.trim()}
+                disabled={creating || !newAppName.trim()}
                 className="btn-hacker-primary w-full disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {creating ? 'Creating...' : 'Create Project'}
+                {creating ? 'Creating...' : 'Create App'}
               </button>
             </form>
 
@@ -309,34 +309,34 @@ function Projects() {
           </div>
         </section>
 
-        {/* Projects List */}
+        {/* Apps List */}
         <section>
-          <h2 className="text-3xl font-bold text-cyber-text mb-8 font-mono">Your Projects</h2>
+          <h2 className="text-3xl font-bold text-cyber-text mb-8 font-mono">Your Apps</h2>
           
           {loading ? (
             <div className="flex flex-col items-center justify-center py-16">
               <div className="w-10 h-10 border-4 border-cyber-border border-t-transparent rounded-full animate-spin mb-4"></div>
-              <p className="text-cyber-muted font-mono">Loading projects...</p>
+              <p className="text-cyber-muted font-mono">Loading apps...</p>
             </div>
-          ) : projects.length === 0 ? (
+          ) : apps.length === 0 ? (
             <div className="text-center py-16">
-              <p className="text-cyber-muted text-lg font-mono">No projects yet. Create your first project above!</p>
+              <p className="text-cyber-muted text-lg font-mono">No apps yet. Create your first app above!</p>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {projects.map((project) => (
-                <div key={project.id} className="hacker-card transition-all duration-300 hover:transform hover:-translate-y-1">
+              {apps.map((app) => (
+                <div key={app.slug} className="hacker-card transition-all duration-300 hover:transform hover:-translate-y-1">
                   <div className="p-6">
                     <div className="flex justify-between items-start mb-4">
                       <div className="flex-1">
-                        <h3 className="text-xl font-semibold text-cyber-text mb-1 font-mono">{project.name}</h3>
-                        <span className="text-sm text-cyber-muted font-mono">{project.slug}</span>
+                        <h3 className="text-xl font-semibold text-cyber-text mb-1 font-mono">{app.name}</h3>
+                        <span className="text-sm text-cyber-muted font-mono">{app.slug}</span>
                       </div>
                       <button 
                         className="text-red-400 hover:text-red-300 text-lg p-2 hover:bg-red-900/20 rounded transition-colors duration-200"
-                        onClick={(e) => handleDeleteClick(project, e)}
-                        title={`Delete project "${project.name}"`}
-                        aria-label={`Delete project "${project.name}"`}
+                        onClick={(e) => handleDeleteClick(app, e)}
+                        title={`Delete app "${app.name}"`}
+                        aria-label={`Delete app "${app.name}"`}
                       >
                         🗑️
                       </button>
@@ -344,10 +344,10 @@ function Projects() {
                     
                     <div className="space-y-3">
                       <p className="text-sm text-cyber-muted font-mono">
-                        Created: {new Date(project.created_at).toLocaleDateString()}
+                        Created: {new Date(app.created_at).toLocaleDateString()}
                       </p>
                       
-                      {project.github_url && (
+                      {app.github_url && (
                         <div className="text-sm text-green-400 bg-green-900/20 px-3 py-1 rounded font-mono">
                           GitHub repository available
                         </div>
@@ -355,10 +355,10 @@ function Projects() {
                       
                       <div className="pt-2">
                         <Link 
-                          to={`/projects/${project.slug}`}
+                          to={`/apps/${app.slug}`}
                           className="inline-flex items-center text-cyber-muted hover:text-neon-green font-medium transition-colors duration-200 font-mono"
                         >
-                          View Project →
+                          View App →
                         </Link>
                       </div>
                     </div>
@@ -375,25 +375,25 @@ function Projects() {
         isOpen={deleteModal.isOpen}
         onClose={handleDeleteCancel}
         onConfirm={handleDeleteConfirm}
-        title="Delete Project"
+        title="Delete App"
         message={
-          deleteModal.project ? (
+          deleteModal.app ? (
             <>
-              Are you sure you want to delete the project <strong>&ldquo;{deleteModal.project.name}&rdquo;</strong>?
+              Are you sure you want to delete the app <strong>&ldquo;{deleteModal.app.name}&rdquo;</strong>?
               <br /><br />
               <strong>This action will permanently delete:</strong>
               <ul style={{ marginTop: '0.5rem', paddingLeft: '1.5rem' }}>
-                <li>The project from OpenVibe</li>
-                {deleteModal.project.github_url && <li>The associated GitHub repository</li>}
+                <li>The app from OpenVibe</li>
+                {deleteModal.app.github_url && <li>The associated GitHub repository</li>}
                 <li>The associated Fly.io application</li>
-                <li>All project conversations and data</li>
+                <li>All app riffs and data</li>
               </ul>
               <br />
               <strong>This action cannot be undone.</strong>
             </>
           ) : ''
         }
-        confirmText="Delete Project"
+        confirmText="Delete App"
         cancelText="Cancel"
         isDestructive={true}
         isLoading={deleteModal.isDeleting}
@@ -402,4 +402,4 @@ function Projects() {
   )
 }
 
-export default Projects
+export default Apps
