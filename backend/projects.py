@@ -89,6 +89,123 @@ def create_slug(name):
     slug = re.sub(r'-+', '-', slug)
     return slug.strip('-')
 
+def check_fly_app_availability(app_name, fly_token):
+    """
+    Check if a Fly.io app name is available or owned by the user.
+    
+    Args:
+        app_name (str): The app name to check
+        fly_token (str): The user's Fly.io API token
+    
+    Returns:
+        tuple: (is_available, message)
+            - (True, "App name is available") if app doesn't exist
+            - (True, "App is owned by user") if app exists and is owned by user
+            - (False, "App exists and is not owned by user") if app exists but not owned by user
+            - (False, error_message) if there's an API error
+    """
+    if not fly_token:
+        return False, "Fly.io API token is required"
+    
+    logger.info(f"🛩️ Checking Fly.io app availability: {app_name}")
+    logger.debug(f"🛩️ Fly token provided: {bool(fly_token)}")
+    logger.debug(f"🛩️ Fly token length: {len(fly_token) if fly_token else 0}")
+    
+    headers = {
+        'Authorization': f'Bearer {fly_token}',
+        'Content-Type': 'application/json',
+        'User-Agent': 'OpenVibe-Backend/1.0'
+    }
+    
+    try:
+        # First, check if the app exists by trying to get its details
+        logger.debug(f"🛩️ Checking if app {app_name} exists...")
+        app_response = requests.get(
+            f'https://api.fly.io/v1/apps/{app_name}',
+            headers=headers,
+            timeout=10
+        )
+        
+        logger.debug(f"🛩️ App check response status: {app_response.status_code}")
+        
+        if app_response.status_code == 404:
+            # App doesn't exist, so it's available
+            logger.info(f"✅ App name '{app_name}' is available")
+            return True, "App name is available"
+        
+        elif app_response.status_code == 200:
+            # App exists, check if it's owned by the current user
+            logger.debug(f"🛩️ App exists, checking ownership...")
+            app_data = app_response.json()
+            logger.debug(f"🛩️ App data: {app_data}")
+            
+            # Get the current user's information to compare ownership
+            user_response = requests.get(
+                'https://api.fly.io/v1/user',
+                headers=headers,
+                timeout=10
+            )
+            
+            if user_response.status_code != 200:
+                logger.error(f"❌ Failed to get user info: {user_response.text}")
+                return False, "Failed to verify user identity with Fly.io"
+            
+            user_data = user_response.json()
+            user_email = user_data.get('email')
+            logger.debug(f"🛩️ Current user email: {user_email}")
+            
+            # Check if the app belongs to the current user's organization
+            app_org = app_data.get('organization', {})
+            app_org_slug = app_org.get('slug') if app_org else None
+            
+            logger.debug(f"🛩️ App organization: {app_org_slug}")
+            
+            # Get user's organizations to check if they own this app
+            orgs_response = requests.get(
+                'https://api.fly.io/v1/orgs',
+                headers=headers,
+                timeout=10
+            )
+            
+            if orgs_response.status_code == 200:
+                user_orgs = orgs_response.json()
+                user_org_slugs = [org.get('slug') for org in user_orgs]
+                logger.debug(f"🛩️ User organizations: {user_org_slugs}")
+                
+                if app_org_slug in user_org_slugs:
+                    logger.info(f"✅ App '{app_name}' is owned by the user")
+                    return True, "App is owned by user"
+                else:
+                    logger.warning(f"❌ App '{app_name}' exists but is not owned by user")
+                    return False, f"App '{app_name}' already exists and is not owned by you"
+            else:
+                logger.error(f"❌ Failed to get user organizations: {orgs_response.text}")
+                return False, "Failed to verify app ownership"
+        
+        elif app_response.status_code == 401:
+            logger.error(f"❌ Unauthorized access to Fly.io API")
+            return False, "Invalid Fly.io API token"
+        
+        elif app_response.status_code == 403:
+            logger.error(f"❌ Forbidden access to Fly.io API")
+            return False, "Insufficient permissions for Fly.io API"
+        
+        else:
+            logger.error(f"❌ Unexpected response from Fly.io API: {app_response.status_code} - {app_response.text}")
+            return False, f"Fly.io API error: {app_response.status_code}"
+    
+    except requests.exceptions.Timeout:
+        logger.error(f"❌ Timeout connecting to Fly.io API")
+        return False, "Timeout connecting to Fly.io API"
+    
+    except requests.exceptions.RequestException as e:
+        logger.error(f"❌ Error connecting to Fly.io API: {str(e)}")
+        return False, f"Error connecting to Fly.io API: {str(e)}"
+    
+    except Exception as e:
+        logger.error(f"💥 Unexpected error checking Fly.io app: {str(e)}")
+        return False, f"Unexpected error: {str(e)}"
+
 
 
 def create_github_repo(repo_name, github_token, fly_token):
@@ -289,6 +406,19 @@ def create_project():
         if not github_token:
             logger.warning(f"❌ GitHub API key not found for user {user_uuid[:8]}")
             return jsonify({'error': 'GitHub API key is required. Please set it up in integrations.'}), 400
+        
+        # Check Fly.io app name availability (only if Fly.io token is provided)
+        if fly_token:
+            logger.info(f"🛩️ Checking Fly.io app availability for: {slug}")
+            is_available, availability_message = check_fly_app_availability(slug, fly_token)
+            
+            if not is_available:
+                logger.error(f"❌ Fly.io app check failed: {availability_message}")
+                return jsonify({'error': availability_message}), 409
+            
+            logger.info(f"✅ Fly.io app check passed: {availability_message}")
+        else:
+            logger.warning(f"⚠️ No Fly.io token provided - skipping app availability check")
         
         # Create GitHub repository
         success, result = create_github_repo(slug, github_token, fly_token)
