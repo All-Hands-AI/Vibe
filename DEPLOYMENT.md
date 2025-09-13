@@ -62,9 +62,10 @@ The workflow will automatically deploy when you:
 
 The deployment workflow:
 1. **Build**: Installs dependencies, runs tests, builds the app
-2. **Deploy**: Deploys to appropriate environment (prod/preview)
-3. **Comment**: Updates PR with deployment status and links
-4. **Cleanup**: Removes preview environments when PRs close
+2. **Volume Setup**: Creates required data volumes if they don't exist
+3. **Deploy**: Deploys to appropriate environment (prod/preview)
+4. **Comment**: Updates PR with deployment status and links
+5. **Cleanup**: Removes preview environments when PRs close
 
 ## Troubleshooting
 
@@ -81,6 +82,11 @@ The deployment workflow:
 **PR comments not appearing**
 - Ensure the GitHub token has proper permissions
 - Check that the workflow has completed successfully
+
+**Volume-related deployment failures**
+- The workflow automatically creates required volumes (`data_volume`)
+- If volumes already exist, the creation step is safely ignored
+- Volumes are created in the `ewr` region with 2 instances for redundancy
 
 ### Manual Commands
 
@@ -102,4 +108,9 @@ flyctl logs -a openvibe
 **List all apps:**
 ```bash
 flyctl apps list
+```
+
+**Create volumes manually:**
+```bash
+flyctl volume create data_volume -r ewr -n 2 -a openvibe
 ```
