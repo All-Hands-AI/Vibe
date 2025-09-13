@@ -11,8 +11,8 @@ import Contact from './pages/Contact'
 import Projects from './pages/Projects'
 import ProjectDetail from './pages/ProjectDetail'
 import ConversationDetail from './pages/ConversationDetail'
+import { LoadingSpinner } from './components/ui'
 import { logger } from './utils/logger'
-import './App.css'
 
 function AppContent() {
   const { isSetupComplete, isLoading, completeSetup } = useSetup()
@@ -25,23 +25,20 @@ function AppContent() {
 
   if (isLoading) {
     return (
-      <div className="loading-screen">
-        <div className="loading-spinner">
-          <div className="spinner"></div>
-          <p>Loading OpenVibe...</p>
-        </div>
+      <div className="fixed inset-0 bg-background-primary flex items-center justify-center z-50">
+        <LoadingSpinner size="lg" text="Loading OpenVibe..." />
       </div>
     )
   }
 
   return (
     <Router>
-      <div className="App">
+      <div className="min-h-screen flex flex-col bg-background-primary text-text-primary">
         {!isSetupComplete && (
           <SetupWindow onSetupComplete={completeSetup} />
         )}
         <Header />
-        <main className="main-content">
+        <main className="flex-1">
           <Routes>
             <Route path="/" element={<Projects />} />
             <Route path="/projects/:slug" element={<ProjectDetail />} />

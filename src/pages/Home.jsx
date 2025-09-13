@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
-import './Home.css'
+import { Container, Card, Button, LoadingSpinner, Alert } from '../components/ui'
+import Layout from '../components/Layout'
 
 function Home() {
   const [backendMessage, setBackendMessage] = useState('')
@@ -36,66 +37,73 @@ function Home() {
   }, [])
 
   return (
-    <div className="home">
-      <section className="hero">
-        <div className="hero-content">
-          <h1>Welcome to OpenVibe</h1>
-          <p>Your React App is Running with Python Backend!</p>
+    <Layout>
+      {/* Hero Section */}
+      <div className="text-center mb-16">
+        <div className="bg-gradient-to-br from-background-secondary to-background-tertiary rounded-2xl p-12 mb-8">
+          <h1 className="text-5xl font-bold text-primary-300 mb-4">Welcome to OpenVibe</h1>
+          <p className="text-xl text-text-secondary mb-8 max-w-2xl mx-auto">
+            Your React App is Running with Python Backend!
+          </p>
           
-          <div className="backend-status">
-            <h3>🔗 Backend Connection Test</h3>
+          {/* Backend Status Card */}
+          <Card variant="primary" className="p-6 mb-8 max-w-lg mx-auto">
+            <h3 className="text-lg font-semibold text-primary-300 mb-4">🔗 Backend Connection Test</h3>
             {loading ? (
-              <p>🔄 Connecting to backend...</p>
+              <LoadingSpinner text="Connecting to backend..." />
             ) : (
-              <div className="api-results">
-                <div className="api-result">
-                  <strong>Hello API:</strong> {backendMessage}
+              <div className="space-y-3">
+                <div className="bg-background-primary/50 rounded-lg p-3">
+                  <span className="text-primary-300 font-medium">Hello API:</span>
+                  <span className="text-text-secondary ml-2">{backendMessage}</span>
                 </div>
-                <div className="api-result">
-                  <strong>Health Check:</strong> {healthStatus}
+                <div className="bg-background-primary/50 rounded-lg p-3">
+                  <span className="text-primary-300 font-medium">Health Check:</span>
+                  <span className="text-text-secondary ml-2">{healthStatus}</span>
                 </div>
               </div>
             )}
-            <button 
-              className="btn btn-test" 
+            <Button 
+              variant="success"
               onClick={testBackendConnection}
               disabled={testLoading}
+              loading={testLoading}
+              className="mt-4"
             >
-              {testLoading ? '🔄 Testing...' : '🧪 Test Backend Again'}
-            </button>
-          </div>
+              🧪 Test Backend Again
+            </Button>
+          </Card>
           
-          <div className="hero-buttons">
-            <button className="btn btn-primary">Get Started</button>
-            <button className="btn btn-secondary">Learn More</button>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <Button size="lg">Get Started</Button>
+            <Button variant="secondary" size="lg">Learn More</Button>
           </div>
         </div>
-      </section>
+      </div>
       
-      <section className="features">
-        <div className="container">
-          <h2>Features</h2>
-          <div className="features-grid">
-            <div className="feature-card">
-              <h3>🐍 Full-Stack</h3>
-              <p>React frontend with Python Flask backend - complete full-stack solution</p>
-            </div>
-            <div className="feature-card">
-              <h3>⚡ Fast</h3>
-              <p>Built with Vite for lightning-fast development and builds</p>
-            </div>
-            <div className="feature-card">
-              <h3>🔧 Modern</h3>
-              <p>Latest React features with hooks, context, and modern JavaScript</p>
-            </div>
-            <div className="feature-card">
-              <h3>🚀 Deploy Ready</h3>
-              <p>Single Docker container with nginx proxy - ready for Fly.io deployment</p>
-            </div>
-          </div>
+      {/* Features Section */}
+      <div>
+        <h2 className="text-3xl font-bold text-primary-300 text-center mb-12">Features</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <Card hover className="p-6 text-center">
+            <h3 className="text-xl font-semibold text-primary-300 mb-3">🐍 Full-Stack</h3>
+            <p className="text-text-secondary">React frontend with Python Flask backend - complete full-stack solution</p>
+          </Card>
+          <Card hover className="p-6 text-center">
+            <h3 className="text-xl font-semibold text-primary-300 mb-3">⚡ Fast</h3>
+            <p className="text-text-secondary">Built with Vite for lightning-fast development and builds</p>
+          </Card>
+          <Card hover className="p-6 text-center">
+            <h3 className="text-xl font-semibold text-primary-300 mb-3">🔧 Modern</h3>
+            <p className="text-text-secondary">Latest React features with hooks, context, and modern JavaScript</p>
+          </Card>
+          <Card hover className="p-6 text-center">
+            <h3 className="text-xl font-semibold text-primary-300 mb-3">🚀 Deploy Ready</h3>
+            <p className="text-text-secondary">Single Docker container with nginx proxy - ready for Fly.io deployment</p>
+          </Card>
         </div>
-      </section>
-    </div>
+      </div>
+    </Layout>
   )
 }
 

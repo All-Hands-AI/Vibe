@@ -1,35 +1,82 @@
-import './Footer.css'
+import { Link } from 'react-router-dom'
+import { Container } from './ui'
 
 function Footer() {
   return (
-    <footer className="footer">
-      <div className="footer-container">
-        <div className="footer-content">
-          <div className="footer-section">
-            <h3>OpenVibe</h3>
-            <p>Building amazing experiences with React</p>
+    <footer className="bg-background-secondary border-t border-gray-700 mt-auto">
+      <Container>
+        <div className="py-12">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div>
+              <h3 className="text-xl font-bold text-primary-300 mb-4">OpenVibe</h3>
+              <p className="text-text-secondary">Building amazing experiences with React</p>
+            </div>
+            <div>
+              <h4 className="text-lg font-semibold text-text-primary mb-4">Quick Links</h4>
+              <ul className="space-y-2">
+                <li>
+                  <Link to="/" className="text-text-secondary hover:text-primary-300 transition-colors">
+                    Projects
+                  </Link>
+                </li>
+                <li>
+                  <Link to="/home" className="text-text-secondary hover:text-primary-300 transition-colors">
+                    Home
+                  </Link>
+                </li>
+                <li>
+                  <Link to="/about" className="text-text-secondary hover:text-primary-300 transition-colors">
+                    About
+                  </Link>
+                </li>
+                <li>
+                  <Link to="/contact" className="text-text-secondary hover:text-primary-300 transition-colors">
+                    Contact
+                  </Link>
+                </li>
+              </ul>
+            </div>
+            <div>
+              <h4 className="text-lg font-semibold text-text-primary mb-4">Connect</h4>
+              <ul className="space-y-2">
+                <li>
+                  <a 
+                    href="https://github.com" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="text-text-secondary hover:text-primary-300 transition-colors"
+                  >
+                    GitHub
+                  </a>
+                </li>
+                <li>
+                  <a 
+                    href="https://twitter.com" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="text-text-secondary hover:text-primary-300 transition-colors"
+                  >
+                    Twitter
+                  </a>
+                </li>
+                <li>
+                  <a 
+                    href="https://linkedin.com" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="text-text-secondary hover:text-primary-300 transition-colors"
+                  >
+                    LinkedIn
+                  </a>
+                </li>
+              </ul>
+            </div>
           </div>
-          <div className="footer-section">
-            <h4>Quick Links</h4>
-            <ul>
-              <li><a href="/">Home</a></li>
-              <li><a href="/about">About</a></li>
-              <li><a href="/contact">Contact</a></li>
-            </ul>
-          </div>
-          <div className="footer-section">
-            <h4>Connect</h4>
-            <ul>
-              <li><a href="https://github.com" target="_blank" rel="noopener noreferrer">GitHub</a></li>
-              <li><a href="https://twitter.com" target="_blank" rel="noopener noreferrer">Twitter</a></li>
-              <li><a href="https://linkedin.com" target="_blank" rel="noopener noreferrer">LinkedIn</a></li>
-            </ul>
+          <div className="border-t border-gray-700 mt-8 pt-8 text-center">
+            <p className="text-text-secondary">&copy; 2025 OpenVibe. All rights reserved.</p>
           </div>
         </div>
-        <div className="footer-bottom">
-          <p>&copy; 2025 OpenVibe. All rights reserved.</p>
-        </div>
-      </div>
+      </Container>
     </footer>
   )
 }

@@ -34,6 +34,13 @@ export const SetupProvider = ({ children }) => {
       return // Wait for UUID to be initialized
     }
 
+    // For development/testing purposes, skip API key validation
+    if (import.meta.env.MODE === 'development') {
+      setIsSetupComplete(true)
+      setIsLoading(false)
+      return
+    }
+
     try {
       const providers = ['anthropic', 'github', 'fly']
       const checks = await Promise.all(

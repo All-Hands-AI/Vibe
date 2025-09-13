@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { getUserUUID } from '../utils/uuid'
-import './Projects.css'
+import { Container, Card, Button, Input, LoadingSpinner, Alert, PageHeader } from '../components/ui'
+import Layout from '../components/Layout'
 
 function Projects() {
   const [projects, setProjects] = useState([])
@@ -149,105 +150,101 @@ function Projects() {
   }, [newProjectName, error])
 
   return (
-    <div className="projects-page">
-      <div className="projects-container">
-        <header className="projects-header">
-          <h1>Projects</h1>
-          <p>Manage your OpenVibe projects</p>
-        </header>
+    <Layout>
+      <PageHeader 
+        title="Projects" 
+        subtitle="Manage your OpenVibe projects"
+      />
 
-        {/* Create New Project Form */}
-        <section className="create-project-section">
-          <h2>Create New Project</h2>
-          <form onSubmit={handleCreateProject} className="create-project-form">
-            <div className="form-group">
-              <label htmlFor="projectName">Project Name</label>
-              <input
-                type="text"
-                id="projectName"
-                value={newProjectName}
-                onChange={(e) => setNewProjectName(e.target.value)}
-                placeholder="Enter project name"
-                disabled={creating}
-                className={error ? 'error' : ''}
-              />
-              {newProjectName && (
-                <div className="slug-preview">
-                  Slug: <code>{createSlug(newProjectName)}</code>
-                </div>
-              )}
-            </div>
-            
-            <button 
-              type="submit" 
-              disabled={creating || !newProjectName.trim()}
-              className="create-button"
-            >
-              {creating ? 'Creating...' : 'Create Project'}
-            </button>
-          </form>
-
-          {error && (
-            <div className="message error-message">
-              {error}
-            </div>
-          )}
-
-          {success && (
-            <div className="message success-message">
-              {success}
-            </div>
-          )}
-        </section>
-
-        {/* Projects List */}
-        <section className="projects-list-section">
-          <h2>Your Projects</h2>
+      {/* Create New Project Form */}
+      <Card className="p-6 mb-8">
+        <h2 className="text-xl font-semibold text-text-primary mb-4">Create New Project</h2>
+        <form onSubmit={handleCreateProject} className="space-y-4">
+          <Input
+            label="Project Name"
+            type="text"
+            value={newProjectName}
+            onChange={(e) => setNewProjectName(e.target.value)}
+            placeholder="Enter project name"
+            disabled={creating}
+            error={error}
+          />
           
-          {loading ? (
-            <div className="loading">
-              <div className="spinner"></div>
-              <p>Loading projects...</p>
+          {newProjectName && (
+            <div className="text-sm text-text-secondary">
+              Slug: <code className="bg-gray-700 px-2 py-1 rounded text-primary-300">{createSlug(newProjectName)}</code>
             </div>
-          ) : projects.length === 0 ? (
-            <div className="empty-state">
-              <p>No projects yet. Create your first project above!</p>
-            </div>
-          ) : (
-            <div className="projects-grid">
-              {projects.map((project) => (
-                <Link 
-                  key={project.id} 
-                  to={`/projects/${project.slug}`}
-                  className="project-card"
-                >
-                  <div className="project-header">
-                    <h3>{project.name}</h3>
-                    <span className="project-slug">{project.slug}</span>
+          )}
+          
+          <Button 
+            type="submit" 
+            disabled={creating || !newProjectName.trim()}
+            loading={creating}
+            className="w-full sm:w-auto"
+          >
+            Create Project
+          </Button>
+        </form>
+
+        {success && (
+          <Alert variant="success" className="mt-4">
+            {success}
+          </Alert>
+        )}
+      </Card>
+
+      {/* Projects List */}
+      <div>
+        <h2 className="text-2xl font-semibold text-text-primary mb-6">Your Projects</h2>
+        
+        {loading ? (
+          <div className="flex justify-center py-12">
+            <LoadingSpinner size="lg" text="Loading projects..." />
+          </div>
+        ) : projects.length === 0 ? (
+          <Card className="p-8 text-center">
+            <p className="text-text-secondary text-lg">No projects yet. Create your first project above!</p>
+          </Card>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {projects.map((project) => (
+              <Link 
+                key={project.id} 
+                to={`/projects/${project.slug}`}
+                className="block"
+              >
+                <Card hover className="p-6 h-full">
+                  <div className="mb-4">
+                    <h3 className="text-xl font-semibold text-text-primary mb-2">{project.name}</h3>
+                    <span className="text-sm text-primary-300 bg-primary-300/10 px-2 py-1 rounded">
+                      {project.slug}
+                    </span>
                   </div>
                   
-                  <div className="project-details">
-                    <p className="project-date">
+                  <div className="space-y-3">
+                    <p className="text-sm text-text-secondary">
                       Created: {new Date(project.created_at).toLocaleDateString()}
                     </p>
                     
                     {project.github_url && (
-                      <div className="github-info">
-                        GitHub repository available
+                      <div className="text-sm text-green-400">
+                        ✓ GitHub repository available
                       </div>
                     )}
                     
-                    <div className="project-actions">
-                      <span className="view-project">View Project →</span>
+                    <div className="pt-2">
+                      <span className="text-primary-300 text-sm font-medium">
+                        View Project →
+                      </span>
                     </div>
                   </div>
-                </Link>
-              ))}
-            </div>
-          )}
-        </section>
+                </Card>
+              </Link>
+            ))}
+          </div>
+        )}
       </div>
-    </div>
+    </Layout>
   )
 }
 
