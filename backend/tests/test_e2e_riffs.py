@@ -147,12 +147,18 @@ class TestRiffsEndpoints:
 
         assert data["error"] == "Riff name cannot be empty"
 
-    def test_create_riff_whitespace_name(self, client, sample_headers, mock_api_keys):
+    def test_create_riff_whitespace_name(self, client, mock_api_keys):
         """Test creating riff with whitespace-only name"""
-        app_slug = self.setup_app_for_riffs(client, sample_headers, mock_api_keys)
+        unique_headers = {
+            "X-User-UUID": "test-riff-whitespace-name-uuid",
+            "Content-Type": "application/json",
+        }
+        app_slug = self.setup_app_for_riffs(
+            client, unique_headers, mock_api_keys, "Whitespace Name App"
+        )
 
         response = client.post(
-            f"/api/apps/{app_slug}/riffs", headers=sample_headers, json={"name": "   "}
+            f"/api/apps/{app_slug}/riffs", headers=unique_headers, json={"name": "   "}
         )
 
         assert response.status_code == 400
@@ -182,30 +188,42 @@ class TestRiffsEndpoints:
 
         assert data["error"] == "X-User-UUID header is required"
 
-    def test_create_riff_duplicate_name(self, client, sample_headers, mock_api_keys):
+    def test_create_riff_duplicate_name(self, client, mock_api_keys):
         """Test creating riff with duplicate name"""
-        app_slug = self.setup_app_for_riffs(client, sample_headers, mock_api_keys)
+        unique_headers = {
+            "X-User-UUID": "test-riff-duplicate-name-uuid",
+            "Content-Type": "application/json",
+        }
+        app_slug = self.setup_app_for_riffs(
+            client, unique_headers, mock_api_keys, "Duplicate Name App"
+        )
 
         riff_data = {"name": "Duplicate Riff"}
 
         # Create first riff
         response1 = client.post(
-            f"/api/apps/{app_slug}/riffs", headers=sample_headers, json=riff_data
+            f"/api/apps/{app_slug}/riffs", headers=unique_headers, json=riff_data
         )
         assert response1.status_code == 201
 
         # Try to create duplicate
         response2 = client.post(
-            f"/api/apps/{app_slug}/riffs", headers=sample_headers, json=riff_data
+            f"/api/apps/{app_slug}/riffs", headers=unique_headers, json=riff_data
         )
         assert response2.status_code == 409
 
         data = response2.get_json()
         assert data["error"] == 'Riff with name "Duplicate Riff" already exists'
 
-    def test_create_and_list_riffs(self, client, sample_headers, mock_api_keys):
+    def test_create_and_list_riffs(self, client, mock_api_keys):
         """Test creating riffs and then listing them"""
-        app_slug = self.setup_app_for_riffs(client, sample_headers, mock_api_keys)
+        unique_headers = {
+            "X-User-UUID": "test-create-and-list-riffs-uuid",
+            "Content-Type": "application/json",
+        }
+        app_slug = self.setup_app_for_riffs(
+            client, unique_headers, mock_api_keys, "Create List App"
+        )
 
         # Create multiple riffs
         riffs_to_create = [
@@ -216,12 +234,12 @@ class TestRiffsEndpoints:
 
         for riff_data in riffs_to_create:
             response = client.post(
-                f"/api/apps/{app_slug}/riffs", headers=sample_headers, json=riff_data
+                f"/api/apps/{app_slug}/riffs", headers=unique_headers, json=riff_data
             )
             assert response.status_code == 201
 
         # List riffs
-        response = client.get(f"/api/apps/{app_slug}/riffs", headers=sample_headers)
+        response = client.get(f"/api/apps/{app_slug}/riffs", headers=unique_headers)
         assert response.status_code == 200
 
         data = response.get_json()
@@ -235,9 +253,15 @@ class TestRiffsEndpoints:
         assert "Riff Two" in riff_names
         assert "Riff Three" in riff_names
 
-    def test_riff_slug_generation(self, client, sample_headers, mock_api_keys):
+    def test_riff_slug_generation(self, client, mock_api_keys):
         """Test that riff slugs are generated correctly from names"""
-        app_slug = self.setup_app_for_riffs(client, sample_headers, mock_api_keys)
+        unique_headers = {
+            "X-User-UUID": "test-riff-slug-generation-uuid",
+            "Content-Type": "application/json",
+        }
+        app_slug = self.setup_app_for_riffs(
+            client, unique_headers, mock_api_keys, "Slug Gen App"
+        )
 
         test_cases = [
             ("Simple Riff", "simple-riff"),
@@ -251,7 +275,7 @@ class TestRiffsEndpoints:
         for riff_name, expected_slug in test_cases:
             response = client.post(
                 f"/api/apps/{app_slug}/riffs",
-                headers=sample_headers,
+                headers=unique_headers,
                 json={"name": riff_name},
             )
             assert response.status_code == 201
@@ -259,14 +283,20 @@ class TestRiffsEndpoints:
             data = response.get_json()
             assert data["riff"]["slug"] == expected_slug
 
-    def test_custom_riff_slug(self, client, sample_headers, mock_api_keys):
+    def test_custom_riff_slug(self, client, mock_api_keys):
         """Test creating riff with custom slug"""
-        app_slug = self.setup_app_for_riffs(client, sample_headers, mock_api_keys)
+        unique_headers = {
+            "X-User-UUID": "test-custom-riff-slug-uuid",
+            "Content-Type": "application/json",
+        }
+        app_slug = self.setup_app_for_riffs(
+            client, unique_headers, mock_api_keys, "Custom Slug App"
+        )
 
         riff_data = {"name": "Custom Slug Riff", "slug": "my-custom-slug"}
 
         response = client.post(
-            f"/api/apps/{app_slug}/riffs", headers=sample_headers, json=riff_data
+            f"/api/apps/{app_slug}/riffs", headers=unique_headers, json=riff_data
         )
 
         assert response.status_code == 201
@@ -278,11 +308,11 @@ class TestRiffsEndpoints:
     def test_different_users_isolated_riffs(self, client, mock_api_keys):
         """Test that riffs are isolated between different users"""
         user1_headers = {
-            "X-User-UUID": "user1-uuid",
+            "X-User-UUID": "test-riff-isolation-user1-uuid",
             "Content-Type": "application/json",
         }
         user2_headers = {
-            "X-User-UUID": "user2-uuid",
+            "X-User-UUID": "test-riff-isolation-user2-uuid",
             "Content-Type": "application/json",
         }
 

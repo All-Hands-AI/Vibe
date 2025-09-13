@@ -208,11 +208,11 @@ class TestIntegrationsEndpoints:
     def test_different_users_isolated_keys(self, client, mock_api_keys):
         """Test that API keys are isolated between different users"""
         user1_headers = {
-            "X-User-UUID": "user1-uuid",
+            "X-User-UUID": "test-integration-isolation-user1-uuid",
             "Content-Type": "application/json",
         }
         user2_headers = {
-            "X-User-UUID": "user2-uuid",
+            "X-User-UUID": "test-integration-isolation-user2-uuid",
             "Content-Type": "application/json",
         }
 
