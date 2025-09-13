@@ -172,19 +172,19 @@ def create_riff(slug):
             if not anthropic_token:
                 logger.warning(f"⚠️ No Anthropic token found for user {user_uuid[:8]}")
                 return jsonify({"error": "Anthropic API key required"}), 400
-            
+
             # Create LLM instance
             try:
                 llm = LLM(api_key=anthropic_token, model="claude-3-haiku-20240307")
-                
+
                 # Create and store the agent loop
                 agent_loop_manager.create_agent_loop(user_uuid, slug, riff_slug, llm)
                 logger.info(f"🤖 Created AgentLoop for riff: {riff_name}")
-                
+
             except Exception as e:
                 logger.error(f"❌ Failed to create LLM instance: {e}")
                 return jsonify({"error": "Failed to initialize LLM"}), 500
-                
+
         except Exception as e:
             logger.error(f"❌ Failed to create AgentLoop: {e}")
             # Don't fail the riff creation if AgentLoop creation fails
@@ -375,7 +375,9 @@ def create_message(slug):
 @riffs_bp.route("/api/apps/<slug>/riffs/<riff_slug>/chat", methods=["POST"])
 def send_message_to_agent(slug, riff_slug):
     """Send a message to the agent and get a response"""
-    logger.info(f"🤖 POST /api/apps/{slug}/riffs/{riff_slug}/chat - Sending message to agent")
+    logger.info(
+        f"🤖 POST /api/apps/{slug}/riffs/{riff_slug}/chat - Sending message to agent"
+    )
 
     try:
         # Get UUID from headers
@@ -413,13 +415,15 @@ def send_message_to_agent(slug, riff_slug):
         # Get the agent loop
         agent_loop = agent_loop_manager.get_agent_loop(user_uuid, slug, riff_slug)
         if not agent_loop:
-            logger.error(f"❌ AgentLoop not found for {user_uuid[:8]}/{slug}/{riff_slug}")
+            logger.error(
+                f"❌ AgentLoop not found for {user_uuid[:8]}/{slug}/{riff_slug}"
+            )
             return jsonify({"error": "Agent not available for this conversation"}), 500
 
         # Create user message
         user_message_id = str(uuid.uuid4())
         user_created_at = datetime.now(timezone.utc).isoformat()
-        
+
         user_message = {
             "id": user_message_id,
             "content": message_content,
@@ -438,13 +442,15 @@ def send_message_to_agent(slug, riff_slug):
 
         # Send message to LLM and get response
         try:
-            logger.info(f"🤖 Sending message to LLM for {user_uuid[:8]}/{slug}/{riff_slug}")
+            logger.info(
+                f"🤖 Sending message to LLM for {user_uuid[:8]}/{slug}/{riff_slug}"
+            )
             llm_response = agent_loop.send_message(message_content)
-            
+
             # Create assistant message
             assistant_message_id = str(uuid.uuid4())
             assistant_created_at = datetime.now(timezone.utc).isoformat()
-            
+
             assistant_message = {
                 "id": assistant_message_id,
                 "content": llm_response,
@@ -463,14 +469,23 @@ def send_message_to_agent(slug, riff_slug):
 
             # Get updated message count and update riff stats
             messages = load_user_messages(user_uuid, slug, riff_slug)
-            update_riff_message_stats(user_uuid, slug, riff_slug, len(messages), assistant_created_at)
+            update_riff_message_stats(
+                user_uuid, slug, riff_slug, len(messages), assistant_created_at
+            )
 
-            logger.info(f"✅ Message exchange completed for {user_uuid[:8]}/{slug}/{riff_slug}")
-            return jsonify({
-                "message": "Message sent successfully",
-                "user_message": user_message,
-                "assistant_message": assistant_message
-            }), 201
+            logger.info(
+                f"✅ Message exchange completed for {user_uuid[:8]}/{slug}/{riff_slug}"
+            )
+            return (
+                jsonify(
+                    {
+                        "message": "Message sent successfully",
+                        "user_message": user_message,
+                        "assistant_message": assistant_message,
+                    }
+                ),
+                201,
+            )
 
         except Exception as e:
             logger.error(f"❌ Error getting LLM response: {e}")
