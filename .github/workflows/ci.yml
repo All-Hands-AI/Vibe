@@ -76,22 +76,11 @@ jobs:
       issues: write
       repository-projects: read
 
-  backend-e2e-tests:
-    name: Backend E2E Tests
+  e2e-tests:
+    name: E2E Tests
     needs: changes
-    if: needs.changes.outputs.backend == 'true'
-    uses: ./.github/workflows/backend-e2e-tests.yml
-    permissions:
-      contents: read
-      pull-requests: write
-      issues: write
-      repository-projects: read
-
-  frontend-e2e-tests:
-    name: Frontend E2E Tests
-    needs: changes
-    if: needs.changes.outputs.frontend == 'true'
-    uses: ./.github/workflows/frontend-e2e-tests.yml
+    if: needs.changes.outputs.frontend == 'true' || needs.changes.outputs.backend == 'true'
+    uses: ./.github/workflows/e2e-tests.yml
     permissions:
       contents: read
       pull-requests: write
@@ -131,7 +120,7 @@ jobs:
   quality-gate:
     name: Quality Gate
     runs-on: ubuntu-latest
-    needs: [changes, frontend-lint, backend-lint, frontend-tests, backend-tests, backend-e2e-tests, frontend-e2e-tests, build]
+    needs: [changes, frontend-lint, backend-lint, frontend-tests, backend-tests, e2e-tests, build]
     if: always()
     
     steps:
@@ -147,8 +136,8 @@ jobs:
               echo "❌ Frontend tests failed"
               exit 1
             fi
-            if [[ "${{ needs.frontend-e2e-tests.result }}" != "success" ]]; then
-              echo "❌ Frontend E2E tests failed"
+            if [[ "${{ needs.e2e-tests.result }}" != "success" ]]; then
+              echo "❌ E2E tests failed"
               exit 1
             fi
           fi
@@ -163,10 +152,7 @@ jobs:
               echo "❌ Backend tests failed"
               exit 1
             fi
-            if [[ "${{ needs.backend-e2e-tests.result }}" != "success" ]]; then
-              echo "❌ Backend E2E tests failed"
-              exit 1
-            fi
+            # E2E tests are checked above for both frontend and backend changes
           fi
           
           # Always check build

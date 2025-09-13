@@ -1,0 +1,252 @@
+name: E2E Tests
+
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+  repository-projects: read
+
+jobs:
+  backend-e2e-tests:
+    name: Backend E2E Tests (MOCK_MODE)
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          version: "latest"
+
+      - name: Create virtual environment
+        run: uv venv
+        working-directory: backend
+
+      - name: Install dependencies
+        run: |
+          source .venv/bin/activate
+          # Install main dependencies
+          uv pip install Flask==3.0.0 Flask-CORS==4.0.0 gunicorn==21.2.0 requests==2.31.0 PyNaCl==1.5.0
+          # Install openhands-sdk
+          uv pip install "openhands-sdk @ git+https://github.com/all-hands-ai/agent-sdk.git@main#subdirectory=openhands/sdk"
+          # Install dev dependencies
+          uv pip install pytest>=7.0.0 pytest-flask>=1.2.0 pytest-cov>=4.0.0 black>=23.0.0 flake8>=6.0.0 mypy>=1.0.0
+        working-directory: backend
+
+      - name: Run Backend E2E tests
+        run: |
+          source .venv/bin/activate
+          python run_e2e_tests.py --coverage
+        working-directory: backend
+        env:
+          MOCK_MODE: true
+
+      - name: Upload Backend E2E coverage reports as artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-e2e-coverage-report
+          path: backend/htmlcov/
+          retention-days: 7
+
+  frontend-e2e-tests:
+    name: Frontend E2E Tests (Playwright)
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          version: "latest"
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: 'frontend/package-lock.json'
+
+      - name: Install frontend dependencies
+        run: npm ci
+        working-directory: frontend
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps
+        working-directory: frontend
+
+      - name: Setup backend for e2e tests
+        run: |
+          cd backend
+          uv venv
+          source .venv/bin/activate
+          # Install main dependencies
+          uv pip install Flask==3.0.0 Flask-CORS==4.0.0 gunicorn==21.2.0 requests==2.31.0 PyNaCl==1.5.0
+          # Install openhands-sdk
+          uv pip install "openhands-sdk @ git+https://github.com/all-hands-ai/agent-sdk.git@main#subdirectory=openhands/sdk"
+
+      - name: Start backend server for e2e tests
+        run: |
+          cd backend
+          source .venv/bin/activate
+          export MOCK_MODE=true
+          export DATA_DIR=/tmp/test-data
+          mkdir -p $DATA_DIR
+          python app.py &
+          echo $! > backend.pid
+          sleep 5
+        env:
+          FLASK_ENV: test
+
+      - name: Start frontend dev server
+        run: |
+          cd frontend
+          npm run dev &
+          echo $! > frontend.pid
+          # Wait for server to be ready
+          timeout 60 bash -c 'until curl -f http://localhost:5173; do sleep 2; done'
+        env:
+          NODE_ENV: test
+
+      - name: Run Playwright tests
+        run: npm run test:e2e
+        working-directory: frontend
+        env:
+          CI: true
+
+      - name: Stop servers
+        if: always()
+        run: |
+          if [ -f backend.pid ]; then
+            kill $(cat backend.pid) || true
+            rm backend.pid
+          fi
+          if [ -f frontend.pid ]; then
+            kill $(cat frontend.pid) || true
+            rm frontend.pid
+          fi
+
+      - name: Upload Playwright report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playwright-report
+          path: frontend/playwright-report/
+          retention-days: 30
+
+      - name: Upload Playwright test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playwright-test-results
+          path: frontend/test-results/
+          retention-days: 30
+
+  e2e-summary:
+    name: E2E Test Summary
+    runs-on: ubuntu-latest
+    needs: [backend-e2e-tests, frontend-e2e-tests]
+    if: always()
+    
+    steps:
+      - name: Comment E2E test results on PR
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            let testSummary = '## 🧪 E2E Test Results\n\n';
+            
+            // Backend E2E results
+            testSummary += '### Backend E2E Tests\n';
+            if ('${{ needs.backend-e2e-tests.result }}' === 'success') {
+              testSummary += '- ✅ Backend E2E tests passed\n';
+              testSummary += '- 🎭 All external APIs mocked (Anthropic, GitHub, Fly.io)\n';
+              testSummary += '- 📊 Coverage report generated\n';
+            } else {
+              testSummary += '- ❌ Backend E2E tests failed\n';
+            }
+            
+            testSummary += '\n### Frontend E2E Tests (Playwright)\n';
+            if ('${{ needs.frontend-e2e-tests.result }}' === 'success') {
+              testSummary += '- ✅ Playwright tests passed\n';
+              testSummary += '- 🌐 Tests run against live frontend and backend\n';
+              testSummary += '- 🌍 Tested on: Chromium, Firefox, WebKit\n';
+              testSummary += '- 📱 Tested on: Desktop and Mobile viewports\n';
+            } else {
+              testSummary += '- ❌ Playwright tests failed\n';
+            }
+            
+            testSummary += '\n📁 **Artifacts:**\n';
+            testSummary += '- `backend-e2e-coverage-report`: Backend E2E coverage\n';
+            testSummary += '- `playwright-report`: Frontend E2E HTML test report\n';
+            testSummary += '- `playwright-test-results`: Screenshots and test results\n';
+            
+            // Find existing comment
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+            
+            const existingComment = comments.find(comment => 
+              comment.body.includes('🧪 E2E Test Results')
+            );
+            
+            if (existingComment) {
+              // Update existing comment
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existingComment.id,
+                body: testSummary
+              });
+            } else {
+              // Create new comment
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: testSummary
+              });
+            }
+
+      - name: Generate test summary
+        if: always()
+        run: |
+          echo "## 🧪 E2E Test Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Backend E2E Tests" >> $GITHUB_STEP_SUMMARY
+          if [[ "${{ needs.backend-e2e-tests.result }}" == "success" ]]; then
+            echo "- ✅ Backend E2E tests completed successfully" >> $GITHUB_STEP_SUMMARY
+            echo "- 🎭 All external APIs mocked (Anthropic, GitHub, Fly.io)" >> $GITHUB_STEP_SUMMARY
+            echo "- 📊 Coverage report generated" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "- ❌ Backend E2E tests failed" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Frontend E2E Tests (Playwright)" >> $GITHUB_STEP_SUMMARY
+          if [[ "${{ needs.frontend-e2e-tests.result }}" == "success" ]]; then
+            echo "- ✅ Playwright tests completed successfully" >> $GITHUB_STEP_SUMMARY
+            echo "- 🌐 Tests run against live frontend and backend" >> $GITHUB_STEP_SUMMARY
+            echo "- 🌍 Tested on: Chromium, Firefox, WebKit" >> $GITHUB_STEP_SUMMARY
+            echo "- 📱 Tested on: Desktop and Mobile viewports" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "- ❌ Playwright tests failed" >> $GITHUB_STEP_SUMMARY
+          fi
