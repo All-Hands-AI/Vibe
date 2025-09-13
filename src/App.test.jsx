@@ -95,6 +95,10 @@ describe('App', () => {
         ok: true,
         json: async () => ({ valid: true, message: 'Fly API key is valid' })
       })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ projects: [], count: 0 })
+      })
 
     render(<App />)
     
@@ -103,9 +107,10 @@ describe('App', () => {
       expect(screen.getByRole('link', { name: 'OpenVibe' })).toBeInTheDocument()
     })
     
-    // Check for home page content (default route)
-    expect(screen.getByText('Welcome to OpenVibe')).toBeInTheDocument()
-    expect(screen.getByText('Your React App is Running with Python Backend!')).toBeInTheDocument()
+    // Check for projects page content (default route is now Projects)
+    expect(screen.getByRole('heading', { name: 'Projects' })).toBeInTheDocument()
+    expect(screen.getByText('Manage your OpenVibe projects')).toBeInTheDocument()
+    expect(screen.getByText('Create New Project')).toBeInTheDocument()
     
     // Check for footer
     expect(screen.getByText('© 2025 OpenVibe. All rights reserved.')).toBeInTheDocument()
@@ -115,6 +120,9 @@ describe('App', () => {
     expect(nav).toBeInTheDocument()
     
     // Use getAllByRole to handle multiple links with same name
+    const projectsLinks = screen.getAllByRole('link', { name: 'Projects' })
+    expect(projectsLinks.length).toBeGreaterThan(0)
+    
     const homeLinks = screen.getAllByRole('link', { name: 'Home' })
     expect(homeLinks.length).toBeGreaterThan(0)
     

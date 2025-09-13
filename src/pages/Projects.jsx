@@ -36,7 +36,7 @@ function Projects() {
       setLoading(true)
       const response = await fetch('/api/projects')
       
-      if (!response.ok) {
+      if (!response || !response.ok) {
         throw new Error('Failed to fetch projects')
       }
       
