@@ -47,7 +47,7 @@ export function useConversation(projectId, conversationId) {
     try {
       console.log('🔄 Loading conversation:', { projectId, conversationId })
       
-      const data = await apiCall(`/projects/${projectId}/conversations/${conversationId}`)
+      const data = await apiCall(`/api/projects/${projectId}/conversations/${conversationId}`)
       console.log('📊 Conversation data:', data)
       
       setConversation(data)
@@ -72,7 +72,7 @@ export function useConversation(projectId, conversationId) {
     try {
       console.log('🔄 Loading events for conversation:', conversationId)
       
-      const data = await apiCall(`/projects/${projectId}/conversations/${conversationId}/events`)
+      const data = await apiCall(`/api/projects/${projectId}/conversations/${conversationId}/events`)
       console.log('📊 Events data:', data)
       
       setEvents(data.events || [])
@@ -105,7 +105,7 @@ export function useConversation(projectId, conversationId) {
     try {
       console.log('📤 Sending message:', messageContent)
       
-      const data = await apiCall(`/projects/${projectId}/conversations/${conversationId}/messages`, {
+      const data = await apiCall(`/api/projects/${projectId}/conversations/${conversationId}/messages`, {
         method: 'POST',
         body: JSON.stringify({
           message: messageContent.trim()

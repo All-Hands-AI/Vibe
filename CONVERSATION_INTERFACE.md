@@ -129,13 +129,13 @@ The interface adapts using Tailwind's responsive utilities:
 
 #### Load Conversation
 ```http
-GET /projects/{projectId}/conversations/{conversationId}
+GET /api/projects/{projectId}/conversations/{conversationId}
 X-User-UUID: {userUUID}
 ```
 
 #### Send Message
 ```http
-POST /projects/{projectId}/conversations/{conversationId}/messages
+POST /api/projects/{projectId}/conversations/{conversationId}/messages
 X-User-UUID: {userUUID}
 Content-Type: application/json
 
@@ -146,7 +146,7 @@ Content-Type: application/json
 
 #### Get Events
 ```http
-GET /projects/{projectId}/conversations/{conversationId}/events
+GET /api/projects/{projectId}/conversations/{conversationId}/events
 X-User-UUID: {userUUID}
 ```
 
