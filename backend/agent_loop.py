@@ -50,9 +50,17 @@ class AgentLoop:
         logger.info(f"💬 Sending message to LLM for {self.get_key()}")
         try:
             # Use the LLM to generate a response
-            response = self.llm.chat([{"role": "user", "content": message}])
+            response = self.llm.completion([{"role": "user", "content": message}])
             logger.info(f"✅ Got LLM response for {self.get_key()}")
-            return response
+
+            # Extract the content from the ModelResponse
+            if response.choices and len(response.choices) > 0:
+                content = response.choices[0].message.content
+                logger.debug(f"📝 Extracted content: {content[:100]}...")
+                return content
+            else:
+                logger.error(f"❌ No choices in LLM response for {self.get_key()}")
+                return "I apologize, but I couldn't generate a response."
         except Exception as e:
             logger.error(f"❌ Error getting LLM response for {self.get_key()}: {e}")
             raise
