@@ -165,6 +165,23 @@ def mock_fly_app_not_found_response():
     return MockResponse(404, {"error": "App not found"})
 
 
+def mock_github_secrets_public_key_response():
+    """Mock GitHub secrets public key API response"""
+    # This is a valid base64-encoded 32-byte public key for NaCl
+    return MockResponse(
+        200,
+        {
+            "key_id": "012345678912345678",
+            "key": "2Sg8iYjAxxmI2LvUXpJjkYrMxURPc8r+dB7TJyvvcDA=",
+        },
+    )
+
+
+def mock_github_secrets_create_response():
+    """Mock GitHub secrets creation response"""
+    return MockResponse(201)
+
+
 def mock_anthropic_messages_response():
     """Mock Anthropic messages API response"""
     return MockResponse(
@@ -211,6 +228,29 @@ def get_mock_response(method: str, url: str, **kwargs) -> MockResponse:
         elif method == "POST" and "/user/repos" in url:
             repo_name = kwargs.get("json", {}).get("name", "mock-repo")
             return mock_github_repo_create_response(repo_name)
+        elif method == "GET" and "/actions/secrets/public-key" in url:
+            return mock_github_secrets_public_key_response()
+        elif method == "PUT" and "/actions/secrets/" in url:
+            return mock_github_secrets_create_response()
+        elif method == "GET" and "/repos/" in url and "/actions/secrets" not in url:
+            # Mock repository existence check - extract repo name from URL
+            repo_name = (
+                url.split("/repos/")[1].split("/")[1]
+                if "/repos/" in url
+                else "mock-repo"
+            )
+            return MockResponse(
+                200,
+                {
+                    "id": 123456,
+                    "name": repo_name,
+                    "full_name": f"mockuser/{repo_name}",
+                    "html_url": f"https://github.com/mockuser/{repo_name}",
+                    "clone_url": f"https://github.com/mockuser/{repo_name}.git",
+                    "private": False,
+                    "default_branch": "main",
+                },
+            )
         else:
             return MockResponse(404, {"message": "Not Found"})
 

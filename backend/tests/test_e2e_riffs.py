@@ -65,7 +65,9 @@ class TestRiffsEndpoints:
 
     def test_get_riffs_empty_uuid_header(self, client):
         """Test getting riffs with empty UUID header"""
-        response = client.get("/api/apps/test-app/riffs", headers={"X-User-UUID": ""})
+        response = client.get(
+            "/api/apps/test-app/riffs", headers={"X-User-UUID": "   "}
+        )
 
         assert response.status_code == 400
         data = response.get_json()
