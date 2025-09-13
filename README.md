@@ -104,7 +104,7 @@ frontend/
 └── tailwind.config.js  # Tailwind CSS configuration
 backend/
 ├── app.py              # Python backend application
-├── projects.py         # Project management logic
+├── apps.py             # App management logic
 ├── keys.py             # API key management
 └── pyproject.toml      # Python dependencies
 ```
