@@ -2,8 +2,9 @@
 Centralized logging utilities for OpenVibe backend.
 
 This module provides a consistent logging interface across the application.
-The logging configuration is centralized in app.py using the simplified format:
-"%(levelname).1s %(message)s" which shows just the first letter of the log level.
+The logging configuration is centralized in app.py using the minimal format:
+"%(message)s" which shows only the message content since Fly.io already
+provides timestamps and log levels in its output.
 
 Usage:
     from utils.logging import get_logger
@@ -20,7 +21,7 @@ def get_logger(name: str) -> logging.Logger:
     Get a logger instance with the specified name.
 
     This function ensures all loggers use the centralized configuration
-    from app.py with the simplified format.
+    from app.py with the minimal format optimized for Fly.io.
 
     Args:
         name: The logger name, typically __name__ from the calling module

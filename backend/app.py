@@ -16,10 +16,11 @@ except ImportError:
     # SDK not available, continue without it (useful for testing)
     pass
 
-# Configure logging for Fly.io - stdout only with simplified formatting
+# Configure logging for Fly.io - stdout only with minimal formatting
+# Fly.io already adds timestamps and log levels, so we only need the message
 logging.basicConfig(
     level=logging.DEBUG,
-    format="%(levelname).1s %(message)s",
+    format="%(message)s",
     stream=sys.stdout,
 )
 
