@@ -523,9 +523,15 @@ def check_riff_ready(slug, riff_slug):
         agent_loop = agent_loop_manager.get_agent_loop(user_uuid, slug, riff_slug)
         is_ready = agent_loop is not None
 
-        logger.info(
-            f"🔍 LLM readiness check for {user_uuid[:8]}:{slug}:{riff_slug} = {is_ready}"
-        )
+        # Additional debugging for flakiness
+        if not is_ready:
+            stats = agent_loop_manager.get_stats()
+            logger.warning(
+                f"🔍 LLM not ready for {user_uuid[:8]}:{slug}:{riff_slug}. "
+                f"Total loops: {stats.get('total_loops', 0)}"
+            )
+        else:
+            logger.info(f"✅ LLM ready for {user_uuid[:8]}:{slug}:{riff_slug}")
 
         return jsonify({"ready": is_ready}), 200
 

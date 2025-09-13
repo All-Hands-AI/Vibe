@@ -91,13 +91,15 @@ function RiffDetail() {
     
     if (appSlug && riffSlug) {
       console.log('🔄 Starting LLM polling for:', { appSlug, riffSlug })
-      stopPollingRef.current = startLLMPolling(appSlug, riffSlug, handleLLMReadyChange, 10000) // Poll every 10 seconds
+      stopPollingRef.current = startLLMPolling(appSlug, riffSlug, handleLLMReadyChange, 30000) // Poll every 30 seconds
     }
   }, [appSlug, riffSlug, handleLLMReadyChange])
 
   const checkInitialLLMReadiness = useCallback(async () => {
     if (appSlug && riffSlug) {
       console.log('🔍 Checking initial LLM readiness for:', { appSlug, riffSlug })
+      // Wait a moment to allow LLM to be created if this is a new riff
+      await new Promise(resolve => setTimeout(resolve, 1000))
       const isReady = await checkLLMReady(appSlug, riffSlug)
       handleLLMReadyChange(isReady)
     }

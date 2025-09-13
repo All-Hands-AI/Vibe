@@ -79,16 +79,30 @@ export async function resetLLM(appSlug, riffSlug) {
 export function startLLMPolling(appSlug, riffSlug, onReadyChange, intervalMs = 5000) {
   let isPolling = true
   let lastReadyState = null
+  let consecutiveErrors = 0
+  const maxConsecutiveErrors = 3
 
   const poll = async () => {
     if (!isPolling) return
 
-    const isReady = await checkLLMReady(appSlug, riffSlug)
-    
-    // Only call callback if readiness state changed
-    if (isReady !== lastReadyState) {
-      lastReadyState = isReady
-      onReadyChange(isReady)
+    try {
+      const isReady = await checkLLMReady(appSlug, riffSlug)
+      consecutiveErrors = 0 // Reset error count on success
+      
+      // Only call callback if readiness state changed
+      if (isReady !== lastReadyState) {
+        lastReadyState = isReady
+        onReadyChange(isReady)
+      }
+    } catch (error) {
+      consecutiveErrors++
+      console.error(`❌ Polling error (${consecutiveErrors}/${maxConsecutiveErrors}):`, error)
+      
+      // If we have too many consecutive errors, assume LLM is not ready
+      if (consecutiveErrors >= maxConsecutiveErrors && lastReadyState !== false) {
+        lastReadyState = false
+        onReadyChange(false)
+      }
     }
 
     if (isPolling) {
