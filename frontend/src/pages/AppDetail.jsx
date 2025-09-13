@@ -248,7 +248,6 @@ function AppDetail() {
           <div className="flex flex-wrap items-baseline justify-between gap-4 mb-6">
             <div>
               <h1 className="text-4xl font-bold text-cyber-text mb-2 font-mono">{app.name}</h1>
-              <span className="text-cyber-muted font-mono text-lg">{app.slug}</span>
             </div>
             <p className="text-cyber-muted font-mono text-sm">
               Created {new Date(app.created_at).toLocaleDateString()}
