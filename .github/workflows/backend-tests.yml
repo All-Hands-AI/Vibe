@@ -6,6 +6,8 @@ on:
 permissions:
   contents: read
   pull-requests: write
+  issues: write
+  repository-projects: read
 
 jobs:
   backend-tests:
@@ -47,7 +49,7 @@ jobs:
       - name: Run pytest with coverage
         run: |
           source .venv/bin/activate
-          pytest --cov=. --cov-report=xml --cov-report=html --cov-report=term-missing -v
+          pytest --cov=. --cov-report=xml:coverage.xml --cov-report=html:htmlcov --cov-report=term-missing -v
         working-directory: backend
         env:
           DATA_DIR: /tmp/test-data
@@ -79,10 +81,10 @@ jobs:
 
       - name: Comment coverage on PR
         if: github.event_name == 'pull_request'
-        uses: py-cov-action/python-coverage-comment-action@v3
+        uses: orgoro/coverage@v3.1
         with:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          COVERAGE_PATH: backend/coverage.xml
+          coverageFile: backend/coverage.xml
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Generate test summary
         if: always()
