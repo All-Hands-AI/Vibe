@@ -1,0 +1,45 @@
+name: Frontend Lint
+
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  frontend-lint:
+    name: Frontend ESLint
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: 'frontend/package-lock.json'
+
+      - name: Install dependencies
+        run: npm ci
+        working-directory: frontend
+
+      - name: Run ESLint
+        run: npm run lint
+        working-directory: frontend
+
+      - name: Run ESLint with JSON output for annotations
+        if: failure()
+        run: npm run lint -- --format json --output-file eslint-results.json
+        working-directory: frontend
+        continue-on-error: true
+
+      - name: Annotate ESLint results
+        if: failure()
+        uses: ataylorme/eslint-annotate-action@v3
+        with:
+          repo-token: "${{ secrets.GITHUB_TOKEN }}"
+          report-json: "frontend/eslint-results.json"
