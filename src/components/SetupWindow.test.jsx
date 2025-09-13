@@ -1,5 +1,5 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
-import { vi } from 'vitest'
+import { vi, beforeEach, describe, test, expect } from 'vitest'
 import SetupWindow from './SetupWindow'
 
 // Mock fetch
@@ -8,14 +8,23 @@ global.fetch = vi.fn()
 describe('SetupWindow', () => {
   beforeEach(() => {
     fetch.mockClear()
+    // Mock the initial status check that happens on component mount
+    fetch.mockResolvedValue({
+      ok: false,
+      json: async () => ({ anthropic: false, github: false, fly: false })
+    })
   })
 
-  test('renders setup window with all required fields', () => {
+  test('renders setup window with all required fields', async () => {
     const mockOnSetupComplete = vi.fn()
     
     render(<SetupWindow onSetupComplete={mockOnSetupComplete} />)
     
-    expect(screen.getByText('🚀 Welcome to OpenVibe!')).toBeInTheDocument()
+    // Wait for initial API call to complete
+    await waitFor(() => {
+      expect(screen.getByText('🚀 Welcome to OpenVibe!')).toBeInTheDocument()
+    })
+    
     expect(screen.getByLabelText(/Anthropic API Key/)).toBeInTheDocument()
     expect(screen.getByLabelText(/GitHub API Key/)).toBeInTheDocument()
     expect(screen.getByLabelText(/Fly.io API Key/)).toBeInTheDocument()
@@ -23,6 +32,13 @@ describe('SetupWindow', () => {
   })
 
   test('validates API key on input blur', async () => {
+    // Mock initial status check
+    fetch.mockResolvedValueOnce({
+      ok: false,
+      json: async () => ({ anthropic: false, github: false, fly: false })
+    })
+    
+    // Mock validation call
     fetch.mockResolvedValueOnce({
       ok: true,
       json: async () => ({ valid: true, message: 'Valid API key' })
@@ -30,6 +46,11 @@ describe('SetupWindow', () => {
 
     const mockOnSetupComplete = vi.fn()
     render(<SetupWindow onSetupComplete={mockOnSetupComplete} />)
+    
+    // Wait for component to load
+    await waitFor(() => {
+      expect(screen.getByLabelText(/Anthropic API Key/)).toBeInTheDocument()
+    })
     
     const anthropicInput = screen.getByLabelText(/Anthropic API Key/)
     
@@ -49,6 +70,13 @@ describe('SetupWindow', () => {
   })
 
   test('shows validation status icons', async () => {
+    // Mock initial status check
+    fetch.mockResolvedValueOnce({
+      ok: false,
+      json: async () => ({ anthropic: false, github: false, fly: false })
+    })
+    
+    // Mock validation call
     fetch.mockResolvedValueOnce({
       ok: true,
       json: async () => ({ valid: true })
@@ -56,6 +84,11 @@ describe('SetupWindow', () => {
 
     const mockOnSetupComplete = vi.fn()
     render(<SetupWindow onSetupComplete={mockOnSetupComplete} />)
+    
+    // Wait for component to load
+    await waitFor(() => {
+      expect(screen.getByLabelText(/Anthropic API Key/)).toBeInTheDocument()
+    })
     
     const anthropicInput = screen.getByLabelText(/Anthropic API Key/)
     
@@ -68,6 +101,13 @@ describe('SetupWindow', () => {
   })
 
   test('shows error message for invalid API key', async () => {
+    // Mock initial status check
+    fetch.mockResolvedValueOnce({
+      ok: false,
+      json: async () => ({ anthropic: false, github: false, fly: false })
+    })
+    
+    // Mock validation call that returns error
     fetch.mockResolvedValueOnce({
       ok: false,
       json: async () => ({ valid: false, error: 'Invalid API key' })
@@ -75,6 +115,11 @@ describe('SetupWindow', () => {
 
     const mockOnSetupComplete = vi.fn()
     render(<SetupWindow onSetupComplete={mockOnSetupComplete} />)
+    
+    // Wait for component to load
+    await waitFor(() => {
+      expect(screen.getByLabelText(/Anthropic API Key/)).toBeInTheDocument()
+    })
     
     const anthropicInput = screen.getByLabelText(/Anthropic API Key/)
     
@@ -88,6 +133,12 @@ describe('SetupWindow', () => {
   })
 
   test('enables submit button when all keys are valid', async () => {
+    // Mock initial status check
+    fetch.mockResolvedValueOnce({
+      ok: false,
+      json: async () => ({ anthropic: false, github: false, fly: false })
+    })
+    
     // Mock successful validation for all services
     fetch
       .mockResolvedValueOnce({
@@ -105,6 +156,11 @@ describe('SetupWindow', () => {
 
     const mockOnSetupComplete = vi.fn()
     render(<SetupWindow onSetupComplete={mockOnSetupComplete} />)
+    
+    // Wait for component to load
+    await waitFor(() => {
+      expect(screen.getByLabelText(/Anthropic API Key/)).toBeInTheDocument()
+    })
     
     const anthropicInput = screen.getByLabelText(/Anthropic API Key/)
     const githubInput = screen.getByLabelText(/GitHub API Key/)
