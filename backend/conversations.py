@@ -33,31 +33,31 @@ else:
 # File-based storage utilities
 DATA_DIR = Path('/data')
 
-def get_conversations_file(project_id):
+def get_conversations_file(project_slug):
     """Get the path to the conversations.json file for a specific project"""
-    return DATA_DIR / f'conversations_{project_id}.json'
+    return DATA_DIR / f'conversations_{project_slug}.json'
 
-def load_conversations(project_id):
+def load_conversations(project_slug):
     """Load conversations for a specific project from file"""
-    conversations_file = get_conversations_file(project_id)
+    conversations_file = get_conversations_file(project_slug)
     logger.debug(f"📁 Loading conversations from: {conversations_file}")
     
     if conversations_file.exists():
         try:
             with open(conversations_file, 'r') as f:
                 conversations = json.load(f)
-                logger.info(f"📁 Successfully loaded {len(conversations)} conversations for project {project_id}")
+                logger.info(f"📁 Successfully loaded {len(conversations)} conversations for project {project_slug}")
                 return conversations
         except (json.JSONDecodeError, IOError) as e:
-            logger.error(f"❌ Failed to load conversations for project {project_id}: {e}")
+            logger.error(f"❌ Failed to load conversations for project {project_slug}: {e}")
             return []
     else:
-        logger.info(f"📁 Conversations file doesn't exist for project {project_id}, returning empty list")
+        logger.info(f"📁 Conversations file doesn't exist for project {project_slug}, returning empty list")
     return []
 
-def save_conversations(project_id, conversations):
+def save_conversations(project_slug, conversations):
     """Save conversations for a specific project to file"""
-    logger.debug(f"💾 Saving {len(conversations)} conversations for project {project_id}")
+    logger.debug(f"💾 Saving {len(conversations)} conversations for project {project_slug}")
     
     try:
         DATA_DIR.mkdir(parents=True, exist_ok=True)
@@ -65,7 +65,7 @@ def save_conversations(project_id, conversations):
         logger.error(f"❌ Failed to create data directory: {e}")
         return False
     
-    conversations_file = get_conversations_file(project_id)
+    conversations_file = get_conversations_file(project_slug)
     
     try:
         # Create backup if file exists
@@ -76,10 +76,10 @@ def save_conversations(project_id, conversations):
         with open(conversations_file, 'w') as f:
             json.dump(conversations, f, indent=2)
         
-        logger.info(f"💾 Successfully saved {len(conversations)} conversations for project {project_id}")
+        logger.info(f"💾 Successfully saved {len(conversations)} conversations for project {project_slug}")
         return True
     except IOError as e:
-        logger.error(f"❌ Failed to save conversations for project {project_id}: {e}")
+        logger.error(f"❌ Failed to save conversations for project {project_slug}: {e}")
         return False
 
 def get_user_api_keys(user_uuid):
@@ -90,8 +90,8 @@ def get_user_api_keys(user_uuid):
         'github': user_keys.get('github'),
     }
 
-@conversations_bp.route('/projects/<project_id>/conversations', methods=['POST'])
-def create_conversation(project_id):
+@conversations_bp.route('/projects/<project_slug>/conversations', methods=['POST'])
+def create_conversation(project_slug):
     """
     Create a new conversation for a project
     
@@ -100,7 +100,7 @@ def create_conversation(project_id):
     - Creates a new branch on GitHub (adopts if already exists)
     - Creates a new PR for the branch (adopts if already exists)
     """
-    logger.info(f"🎯 POST /projects/{project_id}/conversations - Creating new conversation")
+    logger.info(f"🎯 POST /projects/{project_slug}/conversations - Creating new conversation")
     
     # Get UUID from headers
     user_uuid = request.headers.get('X-User-UUID')
@@ -127,7 +127,7 @@ def create_conversation(project_id):
     conversation_id = data.get('conversation_id') or str(uuid.uuid4())
     repo_url = data.get('repo_url')
     
-    logger.info(f"🎯 Creating conversation {conversation_id} for project {project_id}")
+    logger.info(f"🎯 Creating conversation {conversation_id} for project {project_slug}")
     logger.debug(f"📝 Initial message: {initial_message[:100]}...")
     
     # Check if agent manager is available
@@ -149,7 +149,7 @@ def create_conversation(project_id):
     
     # Start the conversation with agent loop manager
     success, message, actual_conversation_id = agent_manager.start_conversation(
-        project_id=project_id,
+        project_slug=project_slug,
         initial_message=initial_message,
         api_key=anthropic_key,
         repo_url=repo_url,
@@ -162,12 +162,12 @@ def create_conversation(project_id):
         return jsonify({'error': f'Failed to start conversation: {message}'}), 500
     
     # Load existing conversations
-    conversations = load_conversations(project_id)
+    conversations = load_conversations(project_slug)
     
     # Create conversation record
     conversation_record = {
         'id': actual_conversation_id,
-        'project_id': project_id,
+        'project_slug': project_slug,
         'user_uuid': user_uuid,
         'initial_message': initial_message,
         'repo_url': repo_url,
@@ -188,7 +188,7 @@ def create_conversation(project_id):
     conversations.append(conversation_record)
     
     # Save conversations
-    if not save_conversations(project_id, conversations):
+    if not save_conversations(project_slug, conversations):
         logger.error(f"❌ Failed to save conversation record")
         return jsonify({'error': 'Failed to save conversation record'}), 500
     
@@ -196,7 +196,7 @@ def create_conversation(project_id):
     
     return jsonify({
         'id': actual_conversation_id,
-        'project_id': project_id,
+        'project_slug': project_slug,
         'status': 'running',
         'message': message,
         'created_at': conversation_record['created_at'],
@@ -204,15 +204,15 @@ def create_conversation(project_id):
         'pr_number': conversation_record['pr_number']
     }), 201
 
-@conversations_bp.route('/projects/<project_id>/conversations', methods=['GET'])
-def list_conversations(project_id):
+@conversations_bp.route('/projects/<project_slug>/conversations', methods=['GET'])
+def list_conversations(project_slug):
     """
     Get list of conversations for a project
     
     GET /projects/{id}/conversations
     - Retrieves list of conversations
     """
-    logger.info(f"📋 GET /projects/{project_id}/conversations - Listing conversations")
+    logger.info(f"📋 GET /projects/{project_slug}/conversations - Listing conversations")
     
     # Get UUID from headers
     user_uuid = request.headers.get('X-User-UUID')
@@ -223,7 +223,7 @@ def list_conversations(project_id):
     user_uuid = user_uuid.strip()
     
     # Load conversations from file
-    conversations = load_conversations(project_id)
+    conversations = load_conversations(project_slug)
     
     # Filter conversations by user (optional - you might want all conversations for a project)
     # user_conversations = [conv for conv in conversations if conv.get('user_uuid') == user_uuid]
@@ -240,22 +240,22 @@ def list_conversations(project_id):
         else:
             conversation['live_status'] = {'status': 'sdk_unavailable', 'is_alive': False}
     
-    logger.info(f"📋 Returning {len(conversations)} conversations for project {project_id}")
+    logger.info(f"📋 Returning {len(conversations)} conversations for project {project_slug}")
     
     return jsonify({
         'conversations': conversations,
         'total': len(conversations)
     })
 
-@conversations_bp.route('/projects/<project_id>/conversations/<conversation_id>', methods=['GET'])
-def get_conversation(conversation_id, project_id):
+@conversations_bp.route('/projects/<project_slug>/conversations/<conversation_id>', methods=['GET'])
+def get_conversation(project_slug):
     """
     Get a specific conversation
     
     GET /projects/{id}/conversations/{id}
     - Retrieves conversation including associated PR number
     """
-    logger.info(f"🔍 GET /projects/{project_id}/conversations/{conversation_id} - Getting conversation")
+    logger.info(f"🔍 GET /projects/{project_slug}/conversations/{conversation_id} - Getting conversation")
     
     # Get UUID from headers
     user_uuid = request.headers.get('X-User-UUID')
@@ -266,7 +266,7 @@ def get_conversation(conversation_id, project_id):
     user_uuid = user_uuid.strip()
     
     # Load conversations from file
-    conversations = load_conversations(project_id)
+    conversations = load_conversations(project_slug)
     
     # Find the conversation
     conversation = None
@@ -293,15 +293,15 @@ def get_conversation(conversation_id, project_id):
     
     return jsonify(conversation)
 
-@conversations_bp.route('/projects/<project_id>/conversations/<conversation_id>', methods=['POST'])
-def modify_conversation(conversation_id, project_id):
+@conversations_bp.route('/projects/<project_slug>/conversations/<conversation_id>', methods=['POST'])
+def modify_conversation(project_slug):
     """
     Modify a conversation
     
     POST /projects/{id}/conversations/{id}
     - Modifies conversation (currently not implemented for running conversations)
     """
-    logger.info(f"✏️ POST /projects/{project_id}/conversations/{conversation_id} - Modifying conversation")
+    logger.info(f"✏️ POST /projects/{project_slug}/conversations/{conversation_id} - Modifying conversation")
     
     # Get UUID from headers
     user_uuid = request.headers.get('X-User-UUID')
@@ -312,15 +312,15 @@ def modify_conversation(conversation_id, project_id):
     # For now, return not implemented
     return jsonify({'error': 'Modifying running conversations is not yet implemented'}), 501
 
-@conversations_bp.route('/projects/<project_id>/conversations/<conversation_id>/messages', methods=['POST'])
-def create_message(conversation_id, project_id):
+@conversations_bp.route('/projects/<project_slug>/conversations/<conversation_id>/messages', methods=['POST'])
+def create_message(project_slug):
     """
     Create a new message in a conversation
     
     POST /projects/{id}/conversations/{id}/messages
     - Creates a new message
     """
-    logger.info(f"💬 POST /projects/{project_id}/conversations/{conversation_id}/messages - Creating message")
+    logger.info(f"💬 POST /projects/{project_slug}/conversations/{conversation_id}/messages - Creating message")
     
     # Get UUID from headers
     user_uuid = request.headers.get('X-User-UUID')
@@ -357,7 +357,7 @@ def create_message(conversation_id, project_id):
         return jsonify({'error': result_message}), 501
     
     # Load conversations and update the message history
-    conversations = load_conversations(project_id)
+    conversations = load_conversations(project_slug)
     
     # Find and update the conversation
     for conversation in conversations:
@@ -370,7 +370,7 @@ def create_message(conversation_id, project_id):
             break
     
     # Save updated conversations
-    save_conversations(project_id, conversations)
+    save_conversations(project_slug, conversations)
     
     logger.info(f"✅ Message sent to conversation {conversation_id}")
     
@@ -380,15 +380,15 @@ def create_message(conversation_id, project_id):
         'timestamp': datetime.utcnow().isoformat()
     }), 201
 
-@conversations_bp.route('/projects/<project_id>/conversations/<conversation_id>/events', methods=['GET'])
-def get_conversation_events(conversation_id, project_id):
+@conversations_bp.route('/projects/<project_slug>/conversations/<conversation_id>/events', methods=['GET'])
+def get_conversation_events(project_slug):
     """
     Get events for a conversation
     
     GET /projects/{id}/conversations/{id}/events
     - Retrieves a list of all events that have happened in this conversation
     """
-    logger.info(f"📊 GET /projects/{project_id}/conversations/{conversation_id}/events - Getting events")
+    logger.info(f"📊 GET /projects/{project_slug}/conversations/{conversation_id}/events - Getting events")
     
     # Get UUID from headers
     user_uuid = request.headers.get('X-User-UUID')

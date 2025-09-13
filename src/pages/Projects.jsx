@@ -325,7 +325,7 @@ function Projects() {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {projects.map((project) => (
-                <div key={project.id} className="hacker-card transition-all duration-300 hover:transform hover:-translate-y-1">
+                <div key={project.slug} className="hacker-card transition-all duration-300 hover:transform hover:-translate-y-1">
                   <div className="p-6">
                     <div className="flex justify-between items-start mb-4">
                       <div className="flex-1">

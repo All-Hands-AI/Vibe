@@ -20,9 +20,9 @@ def get_projects_file():
     """Get the path to the projects.json file"""
     return DATA_DIR / 'projects.json'
 
-def get_conversations_file(project_id):
+def get_conversations_file(project_slug):
     """Get the path to the conversations.json file for a specific project"""
-    return DATA_DIR / f'conversations_{project_id}.json'
+    return DATA_DIR / f'conversations_{project_slug}.json'
 
 def load_projects():
     """Load projects from file"""
@@ -85,9 +85,9 @@ def save_projects(projects):
         logger.debug(f"💾 Error type: {type(e).__name__}")
         return False
 
-def load_conversations(project_id):
+def load_conversations(project_slug):
     """Load conversations for a specific project from file"""
-    conversations_file = get_conversations_file(project_id)
+    conversations_file = get_conversations_file(project_slug)
     logger.debug(f"📁 Loading conversations from: {conversations_file}")
     logger.debug(f"📁 File exists: {conversations_file.exists()}")
     
@@ -100,18 +100,18 @@ def load_conversations(project_id):
                 logger.debug(f"📁 File content length: {len(content)} characters")
                 
                 conversations = json.loads(content)
-                logger.info(f"📁 Successfully loaded {len(conversations)} conversations for project {project_id}")
+                logger.info(f"📁 Successfully loaded {len(conversations)} conversations for project {project_slug}")
                 return conversations
         except (json.JSONDecodeError, IOError) as e:
-            logger.error(f"❌ Failed to load conversations for project {project_id}: {e}")
+            logger.error(f"❌ Failed to load conversations for project {project_slug}: {e}")
             return []
     else:
-        logger.info(f"📁 Conversations file doesn't exist for project {project_id}, returning empty list")
+        logger.info(f"📁 Conversations file doesn't exist for project {project_slug}, returning empty list")
     return []
 
-def save_conversations(project_id, conversations):
+def save_conversations(project_slug, conversations):
     """Save conversations for a specific project to file"""
-    logger.debug(f"💾 Saving {len(conversations)} conversations for project {project_id}")
+    logger.debug(f"💾 Saving {len(conversations)} conversations for project {project_slug}")
     
     try:
         DATA_DIR.mkdir(parents=True, exist_ok=True)
@@ -120,7 +120,7 @@ def save_conversations(project_id, conversations):
         logger.error(f"❌ Failed to create data directory: {e}")
         return False
     
-    conversations_file = get_conversations_file(project_id)
+    conversations_file = get_conversations_file(project_slug)
     logger.debug(f"💾 Conversations file path: {conversations_file}")
     
     try:
@@ -133,11 +133,11 @@ def save_conversations(project_id, conversations):
         with open(conversations_file, 'w') as f:
             json.dump(conversations, f, indent=2)
         
-        logger.info(f"💾 Successfully saved {len(conversations)} conversations for project {project_id}")
+        logger.info(f"💾 Successfully saved {len(conversations)} conversations for project {project_slug}")
         logger.debug(f"💾 File size: {conversations_file.stat().st_size} bytes")
         return True
     except IOError as e:
-        logger.error(f"❌ Failed to save conversations for project {project_id}: {e}")
+        logger.error(f"❌ Failed to save conversations for project {project_slug}: {e}")
         return False
 
 def create_slug(name):
@@ -906,7 +906,6 @@ def create_project():
         
         # Create project record
         project = {
-            'id': len(projects) + 1,
             'name': project_name,
             'slug': slug,
             'github_url': result,
@@ -954,7 +953,7 @@ def get_conversations(project_slug):
             logger.warning(f"❌ Project not found: {project_slug}")
             return jsonify({'error': 'Project not found'}), 404
         
-        conversations = load_conversations(project['id'])  # Use project ID for file storage
+        conversations = load_conversations(project_slug)  # Use project slug for file storage
         # Sort conversations by creation date (newest first)
         conversations.sort(key=lambda x: x.get('created_at', ''), reverse=True)
         
@@ -1015,7 +1014,7 @@ def create_conversation(project_slug):
         logger.info(f"🔄 Creating conversation: {conversation_name} -> {conversation_slug}")
         
         # Load existing conversations
-        conversations = load_conversations(project['id'])  # Use project ID for file storage
+        conversations = load_conversations(project_slug)  # Use project slug for file storage
         
         # Check if conversation with same slug already exists
         existing_conversation = next((c for c in conversations if c.get('slug') == conversation_slug), None)
@@ -1025,11 +1024,10 @@ def create_conversation(project_slug):
         
         # Create conversation record
         conversation = {
-            'id': len(conversations) + 1,
+            'id': conversation_slug,  # Use slug as ID
             'name': conversation_name,
             'slug': conversation_slug,
-            'project_id': project['id'],  # Store project ID for internal use
-            'project_slug': project_slug,  # Also store project slug for reference
+            'project_slug': project_slug,  # Use project slug consistently
             'created_at': datetime.utcnow().isoformat(),
             'created_by': user_uuid,
             'last_message_at': None,
@@ -1040,7 +1038,7 @@ def create_conversation(project_slug):
         conversations.append(conversation)
         
         # Save to file
-        if not save_conversations(project['id'], conversations):
+        if not save_conversations(project_slug, conversations):
             logger.error("❌ Failed to save conversation to file")
             return jsonify({'error': 'Failed to save conversation'}), 500
         
@@ -1136,7 +1134,7 @@ def delete_project(slug):
 
         # Delete associated conversations file
         try:
-            conversations_file = get_conversations_file(project.get('id'))
+            conversations_file = get_conversations_file(project.get('slug'))
             if conversations_file.exists():
                 conversations_file.unlink()
                 logger.info(f"✅ Deleted conversations file for project {slug}")

@@ -44,9 +44,9 @@ logger = logging.getLogger(__name__)
 class ConversationThread:
     """Represents a running conversation thread"""
     
-    def __init__(self, conversation_id: str, project_id: str, thread: threading.Thread):
+    def __init__(self, conversation_id: str, project_slug: str, thread: threading.Thread):
         self.conversation_id = conversation_id
-        self.project_id = project_id
+        self.project_slug = project_slug
         self.thread = thread
         self.created_at = datetime.utcnow()
         self.status = "running"
@@ -66,18 +66,18 @@ class AgentLoopManager:
         
         logger.info(f"🤖 AgentLoopManager initialized with data_dir: {self.data_dir}")
     
-    def _get_conversation_workspace_dir(self, project_id: str, conversation_id: str) -> Path:
+    def _get_conversation_workspace_dir(self, project_slug: str, conversation_id: str) -> Path:
         """Get the workspace directory for a conversation"""
-        return self.data_dir / project_id / "conversations" / conversation_id / "workspace"
+        return self.data_dir / project_slug / "conversations" / conversation_id / "workspace"
     
-    def _get_conversation_state_dir(self, project_id: str, conversation_id: str) -> Path:
+    def _get_conversation_state_dir(self, project_slug: str, conversation_id: str) -> Path:
         """Get the state directory for a conversation"""
-        return self.data_dir / project_id / "conversations" / conversation_id / "state"
+        return self.data_dir / project_slug / "conversations" / conversation_id / "state"
     
-    def _setup_conversation_directories(self, project_id: str, conversation_id: str) -> tuple[Path, Path]:
+    def _setup_conversation_directories(self, project_slug: str, conversation_id: str) -> tuple[Path, Path]:
         """Setup workspace and state directories for a conversation"""
-        workspace_dir = self._get_conversation_workspace_dir(project_id, conversation_id)
-        state_dir = self._get_conversation_state_dir(project_id, conversation_id)
+        workspace_dir = self._get_conversation_workspace_dir(project_slug, conversation_id)
+        state_dir = self._get_conversation_state_dir(project_slug, conversation_id)
         
         workspace_dir.mkdir(parents=True, exist_ok=True)
         state_dir.mkdir(parents=True, exist_ok=True)
@@ -279,7 +279,7 @@ class AgentLoopManager:
                 self.running_conversations[conversation_id].events.append(event)
                 logger.debug(f"📝 Event recorded for conversation {conversation_id}: {type(event).__name__}")
     
-    def _run_conversation_thread(self, conversation_id: str, project_id: str, 
+    def _run_conversation_thread(self, conversation_id: str, project_slug: str, 
                                 initial_message: str, api_key: str,
                                 repo_url: Optional[str] = None, github_token: Optional[str] = None):
         """Run a conversation in a background thread"""
@@ -287,7 +287,7 @@ class AgentLoopManager:
             logger.info(f"🚀 Starting conversation thread {conversation_id}")
             
             # Setup directories
-            workspace_dir, state_dir = self._setup_conversation_directories(project_id, conversation_id)
+            workspace_dir, state_dir = self._setup_conversation_directories(project_slug, conversation_id)
             
             # Create LLM and agent
             llm = self._create_llm(api_key)
@@ -335,7 +335,7 @@ class AgentLoopManager:
                     self.running_conversations[conversation_id].status = "error"
                     self.running_conversations[conversation_id].error = str(e)
     
-    def start_conversation(self, project_id: str, initial_message: str, api_key: str,
+    def start_conversation(self, project_slug: str, initial_message: str, api_key: str,
                           repo_url: Optional[str] = None, github_token: Optional[str] = None,
                           conversation_id: Optional[str] = None) -> tuple[bool, str, str]:
         """
@@ -350,7 +350,7 @@ class AgentLoopManager:
         if not conversation_id:
             conversation_id = str(uuid.uuid4())
         
-        logger.info(f"🎯 Starting conversation {conversation_id} for project {project_id}")
+        logger.info(f"🎯 Starting conversation {conversation_id} for project {project_slug}")
         
         # Create GitHub branch if repo_url and github_token provided
         branch_name = None
@@ -371,7 +371,7 @@ class AgentLoopManager:
         # Start conversation thread
         thread = threading.Thread(
             target=self._run_conversation_thread,
-            args=(conversation_id, project_id, initial_message, api_key, repo_url, github_token),
+            args=(conversation_id, project_slug, initial_message, api_key, repo_url, github_token),
             daemon=True
         )
         
@@ -379,7 +379,7 @@ class AgentLoopManager:
         with self.lock:
             self.running_conversations[conversation_id] = ConversationThread(
                 conversation_id=conversation_id,
-                project_id=project_id,
+                project_slug=project_slug,
                 thread=thread
             )
         
@@ -402,7 +402,7 @@ class AgentLoopManager:
             conv_thread = self.running_conversations[conversation_id]
             return {
                 'conversation_id': conv_thread.conversation_id,
-                'project_id': conv_thread.project_id,
+                'project_slug': conv_thread.project_slug,
                 'status': conv_thread.status,
                 'created_at': conv_thread.created_at.isoformat(),
                 'is_alive': conv_thread.thread.is_alive(),
@@ -442,15 +442,15 @@ class AgentLoopManager:
         # For now, return not implemented
         return False, "Sending messages to existing conversations not yet implemented"
     
-    def list_conversations(self, project_id: Optional[str] = None) -> List[Dict[str, Any]]:
+    def list_conversations(self, project_slug: Optional[str] = None) -> List[Dict[str, Any]]:
         """List all conversations, optionally filtered by project"""
         with self.lock:
             conversations = []
             for conv_id, conv_thread in self.running_conversations.items():
-                if project_id is None or conv_thread.project_id == project_id:
+                if project_slug is None or conv_thread.project_slug == project_slug:
                     conversations.append({
                         'conversation_id': conv_thread.conversation_id,
-                        'project_id': conv_thread.project_id,
+                        'project_slug': conv_thread.project_slug,
                         'status': conv_thread.status,
                         'created_at': conv_thread.created_at.isoformat(),
                         'is_alive': conv_thread.thread.is_alive(),

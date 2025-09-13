@@ -62,11 +62,11 @@ function ProjectDetail() {
   const fetchConversations = useCallback(async () => {
     if (!project) return
     
-    console.log('🔄 Fetching conversations for project:', project.id)
+    console.log('🔄 Fetching conversations for project:', project.slug)
     try {
       setConversationsLoading(true)
       
-      const response = await fetch(`/api/projects/${project.id}/conversations`)
+      const response = await fetch(`/api/projects/${project.slug}/conversations`)
       console.log('📡 Conversations response status:', response?.status)
       
       if (!response || !response.ok) {
@@ -132,7 +132,7 @@ function ProjectDetail() {
       
       console.log('📡 Request options:', requestOptions)
 
-      const response = await fetch(`/api/projects/${project.id}/conversations`, requestOptions)
+      const response = await fetch(`/api/projects/${project.slug}/conversations`, requestOptions)
       
       console.log('📡 Create conversation response status:', response?.status)
 
