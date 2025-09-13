@@ -1,9 +1,11 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useParams, Link, useLocation } from 'react-router-dom'
 import { useSetup } from '../context/SetupContext'
 import { getUserUUID } from '../utils/uuid'
 import BranchStatus from '../components/BranchStatus'
 import ChatWindow from '../components/ChatWindow'
+import LLMErrorModal from '../components/LLMErrorModal'
+import { startLLMPolling, checkLLMReady } from '../utils/llmService'
 
 function RiffDetail() {
   const { slug: appSlug, riffSlug } = useParams()
@@ -13,6 +15,9 @@ function RiffDetail() {
   const [riff, setRiff] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [, setLlmReady] = useState(true)
+  const [showLLMError, setShowLLMError] = useState(false)
+  const stopPollingRef = useRef(null)
 
   // Fetch app and riff details
   const fetchData = useCallback(async () => {
@@ -72,15 +77,69 @@ function RiffDetail() {
     }
   }, [appSlug, riffSlug])
 
+  // Check LLM readiness and handle polling
+  const handleLLMReadyChange = useCallback((isReady) => {
+    console.log('🔍 LLM readiness changed:', isReady)
+    setLlmReady(isReady)
+    setShowLLMError(!isReady)
+  }, [])
+
+  const startPolling = useCallback(() => {
+    if (stopPollingRef.current) {
+      stopPollingRef.current()
+    }
+    
+    if (appSlug && riffSlug) {
+      console.log('🔄 Starting LLM polling for:', { appSlug, riffSlug })
+      stopPollingRef.current = startLLMPolling(appSlug, riffSlug, handleLLMReadyChange, 10000) // Poll every 10 seconds
+    }
+  }, [appSlug, riffSlug, handleLLMReadyChange])
+
+  const checkInitialLLMReadiness = useCallback(async () => {
+    if (appSlug && riffSlug) {
+      console.log('🔍 Checking initial LLM readiness for:', { appSlug, riffSlug })
+      const isReady = await checkLLMReady(appSlug, riffSlug)
+      handleLLMReadyChange(isReady)
+    }
+  }, [appSlug, riffSlug, handleLLMReadyChange])
+
   // Load data on component mount
   useEffect(() => {
     fetchData()
   }, [fetchData])
 
+  // Check LLM readiness when riff data is loaded
+  useEffect(() => {
+    if (riff && app) {
+      checkInitialLLMReadiness()
+      startPolling()
+    }
+    
+    // Cleanup polling on unmount
+    return () => {
+      if (stopPollingRef.current) {
+        stopPollingRef.current()
+      }
+    }
+  }, [riff, app, checkInitialLLMReadiness, startPolling])
+
   // Scroll to top when route changes
   useEffect(() => {
     window.scrollTo(0, 0)
   }, [location.pathname])
+
+  // Handle LLM reset
+  const handleLLMReset = useCallback(() => {
+    console.log('✅ LLM reset completed, restarting polling')
+    setLlmReady(true)
+    setShowLLMError(false)
+    // Restart polling after reset
+    startPolling()
+  }, [startPolling])
+
+  const handleCloseLLMError = useCallback(() => {
+    setShowLLMError(false)
+  }, [])
 
   if (loading) {
     return (
@@ -194,6 +253,15 @@ function RiffDetail() {
           </div>
         </div>
       </div>
+
+      {/* LLM Error Modal */}
+      <LLMErrorModal
+        isOpen={showLLMError}
+        onClose={handleCloseLLMError}
+        appSlug={appSlug}
+        riffSlug={riffSlug}
+        onReset={handleLLMReset}
+      />
     </div>
   )
 }
