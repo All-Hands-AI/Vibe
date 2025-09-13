@@ -39,41 +39,59 @@ if [ -n "$PULL_FROM_BRANCH" ]; then
     log "Branch to watch: $PULL_FROM_BRANCH"
     
     # Install Node.js if not present
+    NODE_AVAILABLE=false
     if ! command -v node &> /dev/null; then
         log "📦 Installing Node.js for development mode..."
-        curl -fsSL https://deb.nodesource.com/setup_20.x | bash - || {
-            log "❌ Failed to add Node.js repository"
-            exit 1
-        }
-        apt-get update -qq && apt-get install -y nodejs || {
-            log "❌ Failed to install Node.js"
-            exit 1
-        }
-        log "✅ Node.js installed: $(node --version)"
+        if curl -fsSL https://deb.nodesource.com/setup_20.x | bash - && apt-get update -qq && apt-get install -y nodejs; then
+            log "✅ Node.js installed: $(node --version)"
+            log "✅ npm version: $(npm --version)"
+            NODE_AVAILABLE=true
+        else
+            log "❌ Failed to install Node.js - will run in backend-only mode"
+            NODE_AVAILABLE=false
+        fi
+    else
+        log "✅ Node.js already available: $(node --version)"
+        NODE_AVAILABLE=true
     fi
     
-    # Install npm dependencies
-    cd /app
-    if [ ! -d "node_modules" ]; then
-        log "📦 Installing npm dependencies..."
-        npm install || {
-            log "❌ Failed to install npm dependencies"
-            exit 1
-        }
-        log "✅ npm dependencies installed"
+    # Install npm dependencies if Node.js is available
+    VITE_AVAILABLE=false
+    if [ "$NODE_AVAILABLE" = true ]; then
+        cd /app
+        if [ ! -d "node_modules" ] || [ ! -f "node_modules/.bin/vite" ]; then
+            log "📦 Installing npm dependencies..."
+            if npm install; then
+                log "✅ npm dependencies installed"
+                log "✅ Vite binary: $(ls -la node_modules/.bin/vite 2>/dev/null || echo 'not found')"
+                VITE_AVAILABLE=true
+            else
+                log "❌ Failed to install npm dependencies - Vite will not be available"
+                VITE_AVAILABLE=false
+            fi
+        else
+            log "✅ npm dependencies already installed"
+            VITE_AVAILABLE=true
+        fi
+    else
+        log "⚠️  Skipping npm dependencies - Node.js not available"
     fi
     
-    # Start git watcher in background
-    log "🔄 Starting git watcher..."
-    /usr/local/bin/git-watcher.sh &
-    GIT_WATCHER_PID=$!
-    log "✅ Git watcher started (PID: $GIT_WATCHER_PID)"
-    
-    # Start service restarter in background
-    log "🔄 Starting service restarter..."
-    /usr/local/bin/service-restarter.sh &
-    SERVICE_RESTARTER_PID=$!
-    log "✅ Service restarter started (PID: $SERVICE_RESTARTER_PID)"
+    # Start git watcher in background (optional)
+    if [ "${DISABLE_GIT_WATCHER:-false}" != "true" ]; then
+        log "🔄 Starting git watcher..."
+        /usr/local/bin/git-watcher.sh &
+        GIT_WATCHER_PID=$!
+        log "✅ Git watcher started (PID: $GIT_WATCHER_PID)"
+        
+        # Start service restarter in background
+        log "🔄 Starting service restarter..."
+        /usr/local/bin/service-restarter.sh &
+        SERVICE_RESTARTER_PID=$!
+        log "✅ Service restarter started (PID: $SERVICE_RESTARTER_PID)"
+    else
+        log "⚠️  Git watcher disabled via DISABLE_GIT_WATCHER=true"
+    fi
     
     # Start Flask backend in background
     log "🐍 Starting Flask backend..."
@@ -85,38 +103,66 @@ if [ -n "$PULL_FROM_BRANCH" ]; then
     FLASK_PID=$!
     log "✅ Flask backend started (PID: $FLASK_PID)"
     
-    # Start Vite dev server in background
-    log "⚡ Starting Vite dev server..."
-    cd /app
-    npm run dev &
-    VITE_PID=$!
-    log "✅ Vite dev server started (PID: $VITE_PID)"
+    # Start Vite dev server in background (if available)
+    VITE_PID=""
+    NGINX_PID=""
+    if [ "$VITE_AVAILABLE" = true ]; then
+        log "⚡ Starting Vite dev server..."
+        cd /app
+        npm run dev &
+        VITE_PID=$!
+        log "✅ Vite dev server started (PID: $VITE_PID)"
+    else
+        log "⚠️  Vite dev server not available - starting nginx for pre-built React app"
+        nginx -g "daemon off;" &
+        NGINX_PID=$!
+        log "✅ Nginx started as fallback (PID: $NGINX_PID)"
+    fi
     
     # Wait a bit for services to start
     sleep 5
     
     # Check services
-    check_service "Vite" "3000" || log "⚠️  Vite dev server may still be starting"
+    if [ "$VITE_AVAILABLE" = true ]; then
+        check_service "Vite" "3000" || log "⚠️  Vite dev server may still be starting"
+    else
+        check_service "Nginx" "80" || log "⚠️  Nginx may still be starting"
+    fi
     check_service "Flask" "8000" || log "⚠️  Flask backend may still be starting"
     
     log "🎉 Development mode services started!"
     log "📝 Access URLs:"
-    log "   - React (Vite): http://localhost:3000"
+    if [ "$VITE_AVAILABLE" = true ]; then
+        log "   - React (Vite): http://localhost:3000"
+    else
+        log "   - React (pre-built): http://localhost:80 (via nginx)"
+    fi
     log "   - API (Flask): http://localhost:8000"
     
     # Keep the container running and monitor processes
     while true; do
         # Check if critical processes are still running
-        if ! kill -0 $VITE_PID 2>/dev/null; then
-            log "❌ Vite process died, restarting..."
-            cd /app && npm run dev &
-            VITE_PID=$!
+        if [ "$VITE_AVAILABLE" = true ] && [ -n "$VITE_PID" ]; then
+            if ! kill -0 $VITE_PID 2>/dev/null; then
+                log "❌ Vite process died, restarting..."
+                cd /app && npm run dev &
+                VITE_PID=$!
+                log "✅ Vite restarted (PID: $VITE_PID)"
+            fi
+        elif [ -n "$NGINX_PID" ]; then
+            if ! kill -0 $NGINX_PID 2>/dev/null; then
+                log "❌ Nginx process died, restarting..."
+                nginx -g "daemon off;" &
+                NGINX_PID=$!
+                log "✅ Nginx restarted (PID: $NGINX_PID)"
+            fi
         fi
         
         if ! kill -0 $FLASK_PID 2>/dev/null; then
             log "❌ Flask process died, restarting..."
             cd /app/backend && python3 -m flask run --host=0.0.0.0 --port=8000 --debug &
             FLASK_PID=$!
+            log "✅ Flask restarted (PID: $FLASK_PID)"
         fi
         
         sleep 30

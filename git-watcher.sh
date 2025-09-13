@@ -24,10 +24,14 @@ pull_changes() {
     log "🔍 Checking for updates on branch $BRANCH"
     
     # Fetch latest changes (with timeout and error handling)
-    timeout 30 git fetch origin "$BRANCH" 2>/dev/null || {
-        log "⚠️  Failed to fetch from origin/$BRANCH (network issue?)"
-        return 1
-    }
+    # Try to fetch the specific branch, fallback to fetching all
+    if ! timeout 30 git fetch origin "$BRANCH" 2>/dev/null; then
+        log "⚠️  Failed to fetch specific branch, trying to fetch all refs..."
+        if ! timeout 30 git fetch origin 2>/dev/null; then
+            log "⚠️  Failed to fetch from origin (network issue or auth problem?)"
+            return 1
+        fi
+    fi
     
     # Check if there are new commits
     LOCAL=$(git rev-parse HEAD 2>/dev/null || echo "unknown")
