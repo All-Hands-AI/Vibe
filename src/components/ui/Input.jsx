@@ -5,8 +5,12 @@ function Input({
   error, 
   className = '', 
   containerClassName = '',
+  id,
   ...props 
 }) {
+  // Generate a unique ID if not provided
+  const inputId = id || `input-${Math.random().toString(36).substr(2, 9)}`
+  
   const baseClasses = 'w-full px-3 py-2 bg-background-secondary border rounded-lg text-text-primary placeholder-text-secondary focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-background-primary transition-colors duration-200'
   
   const stateClasses = error 
@@ -16,11 +20,12 @@ function Input({
   return (
     <div className={`space-y-1 ${containerClassName}`}>
       {label && (
-        <label className="block text-sm font-medium text-text-primary">
+        <label htmlFor={inputId} className="block text-sm font-medium text-text-primary">
           {label}
         </label>
       )}
       <input
+        id={inputId}
         className={`${baseClasses} ${stateClasses} ${className}`}
         {...props}
       />
@@ -36,6 +41,7 @@ Input.propTypes = {
   error: PropTypes.string,
   className: PropTypes.string,
   containerClassName: PropTypes.string,
+  id: PropTypes.string,
 }
 
 export default Input

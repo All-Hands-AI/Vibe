@@ -114,7 +114,7 @@ describe('Projects', () => {
     })
     
     // Check GitHub info and project links
-    expect(screen.getAllByText('GitHub repository available')).toHaveLength(2)
+    expect(screen.getAllByText('✓ GitHub repository available')).toHaveLength(2)
     expect(screen.getAllByText('View Project →')).toHaveLength(2)
   })
 
