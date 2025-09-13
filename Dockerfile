@@ -57,9 +57,8 @@ COPY backend/ /app/backend/
 WORKDIR /app/backend
 
 # Install Python dependencies using uv from pyproject.toml
-RUN uv pip compile pyproject.toml -o requirements.txt && \
-    uv pip install --system --break-system-packages -r requirements.txt && \
-    rm requirements.txt
+# First install the project itself which will handle git dependencies properly
+RUN uv pip install --system --break-system-packages .
 
 # Create data directory for persistent storage
 RUN mkdir -p /data && chown -R www-data:www-data /data
