@@ -9,6 +9,8 @@ import Home from './pages/Home'
 import About from './pages/About'
 import Contact from './pages/Contact'
 import Projects from './pages/Projects'
+import ProjectDetail from './pages/ProjectDetail'
+import ConversationDetail from './pages/ConversationDetail'
 import { logger } from './utils/logger'
 import './App.css'
 
@@ -42,6 +44,8 @@ function AppContent() {
         <main className="main-content">
           <Routes>
             <Route path="/" element={<Projects />} />
+            <Route path="/projects/:slug" element={<ProjectDetail />} />
+            <Route path="/projects/:slug/conversations/:conversationSlug" element={<ConversationDetail />} />
             <Route path="/home" element={<Home />} />
             <Route path="/about" element={<About />} />
             <Route path="/contact" element={<Contact />} />
