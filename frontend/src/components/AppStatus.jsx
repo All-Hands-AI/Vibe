@@ -125,15 +125,40 @@ function AppStatus({ app }) {
     return !prData && branch !== 'main'
   }
 
+  const getBranchUrl = () => {
+    const branch = getBranchName()
+    const githubUrl = app?.github_url
+    if (!githubUrl) return null
+    
+    // If it's main branch, link to repo homepage
+    if (branch === 'main') {
+      return githubUrl
+    }
+    
+    // Otherwise, link to the specific branch
+    return `${githubUrl}/tree/${branch}`
+  }
+
   return (
     <div className="hacker-card">
       <div className="space-y-4">
         {/* Branch Information */}
         <div className="flex items-center gap-3">
           <span className="text-cyber-muted font-mono text-sm min-w-[100px]">Branch:</span>
-          <span className="text-cyber-text font-mono text-sm">
-            🌿 {getBranchName()}
-          </span>
+          {getBranchUrl() ? (
+            <a
+              href={getBranchUrl()}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-cyber-text hover:text-blue-400 font-mono text-sm transition-colors duration-200"
+            >
+              🌿 {getBranchName()}
+            </a>
+          ) : (
+            <span className="text-cyber-text font-mono text-sm">
+              🌿 {getBranchName()}
+            </span>
+          )}
         </div>
 
         {/* PR Information (if exists) */}
@@ -157,6 +182,16 @@ function AppStatus({ app }) {
             <span className="text-cyber-muted font-mono text-sm min-w-[100px]">PR:</span>
             <span className="text-cyber-muted font-mono text-sm">
               ❌ No active pull request found
+            </span>
+          </div>
+        )}
+
+        {/* Last Commit (if available) */}
+        {getLastCommit() && (
+          <div className="flex items-center gap-3">
+            <span className="text-cyber-muted font-mono text-sm min-w-[100px]">Last commit:</span>
+            <span className="text-cyber-text font-mono text-sm">
+              📝 {getLastCommit().substring(0, 7)}
             </span>
           </div>
         )}
@@ -197,15 +232,7 @@ function AppStatus({ app }) {
           )}
         </div>
 
-        {/* Last Commit (if available) */}
-        {getLastCommit() && (
-          <div className="flex items-center gap-3">
-            <span className="text-cyber-muted font-mono text-sm min-w-[100px]">Last commit:</span>
-            <span className="text-cyber-text font-mono text-sm">
-              📝 {getLastCommit().substring(0, 7)}
-            </span>
-          </div>
-        )}
+
 
         {/* PR-specific status (only if PR exists) */}
         {prData && (
@@ -264,15 +291,7 @@ function AppStatus({ app }) {
           </a>
         </div>
 
-        {/* Deployment Status */}
-        {deploymentData?.deployed !== undefined && (
-          <div className="flex items-center gap-3">
-            <span className="text-cyber-muted font-mono text-sm min-w-[100px]">Deployed:</span>
-            <span className={`font-mono text-sm ${deploymentData.deployed ? 'text-green-400' : 'text-red-400'}`}>
-              {deploymentData.deployed ? '🚀 Deployed' : '⏸️ Not Deployed'}
-            </span>
-          </div>
-        )}
+
       </div>
     </div>
   )
@@ -284,6 +303,7 @@ AppStatus.propTypes = {
     slug: PropTypes.string,
     conversation_id: PropTypes.string,
     branch: PropTypes.string,
+    github_url: PropTypes.string,
     github_status: PropTypes.shape({
       branch: PropTypes.string,
       tests_passing: PropTypes.bool,

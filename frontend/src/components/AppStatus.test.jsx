@@ -80,7 +80,6 @@ describe('AppStatus', () => {
     
     expect(screen.getByText('🌿 main')).toBeInTheDocument()
     expect(screen.getByText('✅ Passing')).toBeInTheDocument()
-    expect(screen.getByText('🚀 Deployed')).toBeInTheDocument()
     expect(screen.getByText('🚀 https://my-project-conversation-123.fly.dev')).toBeInTheDocument()
   })
 
