@@ -3,72 +3,41 @@ Key management utilities for OpenVibe backend.
 Handles API key storage, validation, and user-specific key operations.
 """
 
-import json
 import logging
 import requests
-from pathlib import Path
+from storage import get_keys_storage
 
 logger = logging.getLogger(__name__)
 
-# File-based storage utilities
-DATA_DIR = Path('/data')
-
-def get_user_keys_file(uuid):
-    """Get the path to a user's keys.json file"""
-    user_dir = DATA_DIR / uuid
-    return user_dir / 'keys.json'
-
-def ensure_user_directory(uuid):
-    """Ensure user directory exists"""
-    user_dir = DATA_DIR / uuid
-    user_dir.mkdir(parents=True, exist_ok=True)
-    return user_dir
-
 def load_user_keys(uuid):
     """Load user's API keys from file"""
-    keys_file = get_user_keys_file(uuid)
-    logger.debug(f"🔑 Loading keys for user {uuid[:8]}...")
-    logger.debug(f"🔑 Keys file path: {keys_file}")
-    logger.debug(f"🔑 Keys file exists: {keys_file.exists()}")
-    
-    if keys_file.exists():
-        try:
-            logger.debug(f"🔑 File size: {keys_file.stat().st_size} bytes")
-            logger.debug(f"🔑 File permissions: {oct(keys_file.stat().st_mode)[-3:]}")
-            
-            with open(keys_file, 'r') as f:
-                content = f.read()
-                logger.debug(f"🔑 File content length: {len(content)} characters")
-                
-                keys = json.loads(content)
-                logger.debug(f"🔑 Loaded keys for providers: {list(keys.keys())}")
-                logger.info(f"🔑 Successfully loaded keys for user {uuid[:8]}")
-                return keys
-        except (json.JSONDecodeError, IOError) as e:
-            logger.error(f"❌ Failed to load keys for user {uuid}: {e}")
-            logger.debug(f"🔑 Error type: {type(e).__name__}")
-            return {}
-    else:
-        logger.debug(f"🔑 Keys file doesn't exist for user {uuid[:8]}")
-    return {}
+    storage = get_keys_storage(uuid)
+    return storage.load_keys()
 
 def save_user_keys(uuid, keys):
     """Save user's API keys to file"""
-    ensure_user_directory(uuid)
-    keys_file = get_user_keys_file(uuid)
-    try:
-        with open(keys_file, 'w') as f:
-            json.dump(keys, f, indent=2)
-        logger.info(f"💾 Saved keys for user {uuid}")
-        return True
-    except IOError as e:
-        logger.error(f"Failed to save keys for user {uuid}: {e}")
-        return False
+    storage = get_keys_storage(uuid)
+    return storage.save_keys(keys)
 
 def user_has_keys(uuid):
     """Check if user has any keys stored"""
-    keys_file = get_user_keys_file(uuid)
-    return keys_file.exists()
+    storage = get_keys_storage(uuid)
+    return storage.has_keys()
+
+def get_user_key(uuid, provider):
+    """Get API key for specific provider"""
+    storage = get_keys_storage(uuid)
+    return storage.get_key(provider)
+
+def set_user_key(uuid, provider, api_key):
+    """Set API key for specific provider"""
+    storage = get_keys_storage(uuid)
+    return storage.set_key(provider, api_key)
+
+def remove_user_key(uuid, provider):
+    """Remove API key for specific provider"""
+    storage = get_keys_storage(uuid)
+    return storage.remove_key(provider)
 
 def validate_anthropic_key(api_key):
     """Validate Anthropic API key by making a test request"""
