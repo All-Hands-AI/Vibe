@@ -505,8 +505,54 @@ def create_github_repo(repo_name, github_token, fly_token):
         # Check if repo already exists
         check_response = requests.get(f'https://api.github.com/repos/{owner}/{repo_name}', headers=headers, timeout=10)
         if check_response.status_code == 200:
-            logger.warning(f"❌ Repository {owner}/{repo_name} already exists")
-            return False, f"Repository {repo_name} already exists"
+            # Repository already exists, but that's okay - we'll use the existing one
+            repo_data = check_response.json()
+            logger.info(f"✅ Repository {owner}/{repo_name} already exists, using existing repository")
+            
+            # Still try to set the FLY_API_TOKEN secret if provided
+            if fly_token:
+                logger.info(f"🔐 Setting FLY_API_TOKEN secret for existing repo {repo_name}")
+                
+                # Get the repository's public key for encrypting secrets
+                key_response = requests.get(
+                    f'https://api.github.com/repos/{owner}/{repo_name}/actions/secrets/public-key',
+                    headers=headers,
+                    timeout=10
+                )
+                
+                if key_response.status_code == 200:
+                    from base64 import b64encode
+                    from nacl import encoding, public
+                    
+                    public_key_data = key_response.json()
+                    public_key = public.PublicKey(public_key_data['key'].encode('utf-8'), encoding.Base64Encoder())
+                    
+                    # Encrypt the secret
+                    sealed_box = public.SealedBox(public_key)
+                    encrypted = sealed_box.encrypt(fly_token.encode('utf-8'))
+                    encrypted_value = b64encode(encrypted).decode('utf-8')
+                    
+                    # Set the secret
+                    secret_data = {
+                        'encrypted_value': encrypted_value,
+                        'key_id': public_key_data['key_id']
+                    }
+                    
+                    secret_response = requests.put(
+                        f'https://api.github.com/repos/{owner}/{repo_name}/actions/secrets/FLY_API_TOKEN',
+                        headers=headers,
+                        json=secret_data,
+                        timeout=10
+                    )
+                    
+                    if secret_response.status_code in [201, 204]:
+                        logger.info("✅ FLY_API_TOKEN secret set successfully for existing repo")
+                    else:
+                        logger.warning(f"⚠️ Failed to set FLY_API_TOKEN secret for existing repo: {secret_response.text}")
+                else:
+                    logger.warning(f"⚠️ Failed to get public key for secrets on existing repo: {key_response.text}")
+            
+            return True, repo_data['html_url']
         
         # Create repo from template
         create_data = {
