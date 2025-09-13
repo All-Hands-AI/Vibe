@@ -83,6 +83,8 @@ jobs:
           flyctl apps create ${{ steps.deployment-env.outputs.app_name }} --org personal || true
           # Create volumes if they don't exist (ignore errors if they already exist)
           flyctl volume create data_volume -r ewr -n 2 -a ${{ steps.deployment-env.outputs.app_name }} || true
+          # Set environment variable for development mode with git watcher
+          flyctl secrets set PULL_FROM_BRANCH="${{ github.head_ref || github.ref_name }}" -a ${{ steps.deployment-env.outputs.app_name }}
           # Deploy using the feature-specific config
           flyctl deploy --config fly-feature.toml --remote-only
         env:
@@ -107,9 +109,16 @@ jobs:
             **Environment:** `${{ steps.deployment-env.outputs.environment }}`
             **App Name:** `${{ steps.deployment-env.outputs.app_name }}`
             **Status:** ✅ Successfully deployed
+            **Mode:** 🔥 Development mode with hot-reload enabled
             
             ### 🔗 Preview URL
             **[Visit deployment →](${{ steps.deployment-url.outputs.url }})**
+            
+            ### 🛠️ Development Features
+            - **Hot-reload enabled** for React (Vite dev server on port 3000)
+            - **Git watcher active** - automatically pulls from `${{ github.head_ref || github.ref_name }}` branch
+            - **Flask debug mode** for Python backend (port 8000)
+            - **Live updates** when you push changes to this branch
             
             ### 📊 Fly.io Management
             - **[View App Status →](https://fly.io/apps/${{ steps.deployment-env.outputs.app_name }})**
