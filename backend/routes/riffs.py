@@ -6,29 +6,40 @@ from storage import get_riffs_storage, get_apps_storage
 from agent_loop import agent_loop_manager
 from keys import get_user_key
 
-try:
-    from openhands.sdk import LLM
-except ImportError:
-    # SDK not available, create a mock LLM class for testing
-    class LLM:
-        def __init__(self, *args, **kwargs):
-            pass
+import os
 
-        def completion(self, messages):
-            # Mock response for testing
-            class MockChoice:
-                def __init__(self):
-                    self.message = MockMessage()
 
-            class MockMessage:
-                def __init__(self):
-                    self.content = "Hello! This is a mock response from the LLM."
+# Mock LLM class for testing
+class MockLLM:
+    def __init__(self, *args, **kwargs):
+        pass
 
-            class MockResponse:
-                def __init__(self):
-                    self.choices = [MockChoice()]
+    def completion(self, messages):
+        # Mock response for testing
+        class MockChoice:
+            def __init__(self):
+                self.message = MockMessage()
 
-            return MockResponse()
+        class MockMessage:
+            def __init__(self):
+                self.content = "Hello! This is a mock response from the LLM."
+
+        class MockResponse:
+            def __init__(self):
+                self.choices = [MockChoice()]
+
+        return MockResponse()
+
+
+# Use mock LLM in MOCK_MODE, otherwise try to import real LLM
+if os.environ.get("MOCK_MODE", "false").lower() == "true":
+    LLM = MockLLM
+else:
+    try:
+        from openhands.sdk import LLM
+    except ImportError:
+        # SDK not available, fall back to mock
+        LLM = MockLLM
 
 
 from utils.logging import get_logger, log_api_request, log_api_response
