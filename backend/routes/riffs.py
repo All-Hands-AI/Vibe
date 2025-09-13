@@ -4,6 +4,9 @@ import re
 import uuid
 from datetime import datetime, timezone
 from storage import get_riffs_storage, get_apps_storage
+from agent_loop import agent_loop_manager
+from keys import get_user_key
+from openhands.sdk import LLM
 
 logger = logging.getLogger(__name__)
 
@@ -162,6 +165,47 @@ def create_riff(slug):
         if not save_user_riff(user_uuid, slug, riff_slug, riff):
             logger.error("❌ Failed to save riff to file")
             return jsonify({"error": "Failed to save riff"}), 500
+
+        # Create AgentLoop with user's Anthropic token
+        try:
+            anthropic_token = get_user_key(user_uuid, "anthropic")
+            if not anthropic_token:
+                logger.warning(f"⚠️ No Anthropic token found for user {user_uuid[:8]}")
+                return jsonify({"error": "Anthropic API key required"}), 400
+
+            # Create LLM instance
+            try:
+                llm = LLM(api_key=anthropic_token, model="claude-3-haiku-20240307")
+
+                # Create and store the agent loop
+                logger.info(
+                    f"🔧 Creating AgentLoop with key: {user_uuid[:8]}:{slug}:{riff_slug}"
+                )
+                agent_loop_manager.create_agent_loop(user_uuid, slug, riff_slug, llm)
+                logger.info(f"🤖 Created AgentLoop for riff: {riff_name}")
+
+                # Verify it was stored correctly
+                test_retrieval = agent_loop_manager.get_agent_loop(
+                    user_uuid, slug, riff_slug
+                )
+                if test_retrieval:
+                    logger.info(
+                        f"✅ AgentLoop verification successful for {user_uuid[:8]}:{slug}:{riff_slug}"
+                    )
+                else:
+                    logger.error(
+                        f"❌ AgentLoop verification failed for {user_uuid[:8]}:{slug}:{riff_slug}"
+                    )
+
+            except Exception as e:
+                logger.error(f"❌ Failed to create LLM instance: {e}")
+                return jsonify({"error": "Failed to initialize LLM"}), 500
+
+        except Exception as e:
+            logger.error(f"❌ Failed to create AgentLoop: {e}")
+            # Don't fail the riff creation if AgentLoop creation fails
+            # The riff is still created, just without the agent loop
+            logger.warning("⚠️ Riff created but AgentLoop creation failed")
 
         logger.info(f"✅ Riff created successfully: {riff_name}")
         return jsonify({"message": "Riff created successfully", "riff": riff}), 201
@@ -326,10 +370,92 @@ def create_message(slug):
             logger.error("❌ Failed to save message to file")
             return jsonify({"error": "Failed to save message"}), 500
 
-        # Get updated message count for stats
-        messages = load_user_messages(user_uuid, slug, riff_slug)
+        # Check if this is a user message that should trigger LLM response
+        message_type = data.get("type", "text")
+        logger.info(
+            f"🔍 Message type: {message_type}, created_by: {message.get('created_by')}, user_uuid: {user_uuid[:8]}"
+        )
 
-        # Update riff statistics
+        if message_type == "user" or (
+            message_type == "text" and message.get("created_by") == user_uuid
+        ):
+            # Try to get agent loop and generate LLM response
+            logger.info(
+                f"🔍 Looking for AgentLoop with key: {user_uuid[:8]}:{slug}:{riff_slug}"
+            )
+
+            # Debug: Show all available agent loops
+            stats = agent_loop_manager.get_stats()
+            logger.info(f"📊 Current AgentLoop stats: {stats}")
+
+            agent_loop = agent_loop_manager.get_agent_loop(user_uuid, slug, riff_slug)
+            if agent_loop:
+                logger.info(
+                    f"✅ Found AgentLoop for {user_uuid[:8]}:{slug}:{riff_slug}"
+                )
+            else:
+                logger.warning(
+                    f"❌ AgentLoop not found for {user_uuid[:8]}:{slug}:{riff_slug}"
+                )
+                # Debug: Show what keys are actually stored
+                with agent_loop_manager._lock:
+                    stored_keys = list(agent_loop_manager.agent_loops.keys())
+                    logger.info(f"🔑 Available AgentLoop keys: {stored_keys}")
+
+            if agent_loop:
+                try:
+                    logger.info(
+                        f"🤖 Generating LLM response for {user_uuid[:8]}/{slug}/{riff_slug}"
+                    )
+                    llm_response = agent_loop.send_message(content)
+
+                    # Create assistant message
+                    assistant_message_id = str(uuid.uuid4())
+                    assistant_created_at = datetime.now(timezone.utc).isoformat()
+
+                    assistant_message = {
+                        "id": assistant_message_id,
+                        "content": llm_response,
+                        "riff_slug": riff_slug,
+                        "app_slug": slug,
+                        "created_at": assistant_created_at,
+                        "created_by": "assistant",
+                        "type": "assistant",
+                        "metadata": {},
+                    }
+
+                    # Save assistant message
+                    if add_user_message(user_uuid, slug, riff_slug, assistant_message):
+                        logger.info(f"✅ LLM response saved for riff: {riff_slug}")
+                        # Return both messages
+                        messages = load_user_messages(user_uuid, slug, riff_slug)
+                        update_riff_message_stats(
+                            user_uuid,
+                            slug,
+                            riff_slug,
+                            len(messages),
+                            assistant_created_at,
+                        )
+
+                        return (
+                            jsonify(
+                                {
+                                    "message": "Message created successfully with LLM response",
+                                    "user_message": message,
+                                    "assistant_message": assistant_message,
+                                }
+                            ),
+                            201,
+                        )
+                    else:
+                        logger.error("❌ Failed to save assistant message")
+
+                except Exception as e:
+                    logger.error(f"❌ Error getting LLM response: {e}")
+                    # Continue without LLM response - user message was still saved
+
+        # Get updated message count for stats (fallback if no LLM response)
+        messages = load_user_messages(user_uuid, slug, riff_slug)
         update_riff_message_stats(user_uuid, slug, riff_slug, len(messages), created_at)
 
         logger.info(f"✅ Message created successfully for riff: {riff_slug}")
