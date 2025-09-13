@@ -1,0 +1,3 @@
+# Python dependencies for Vercel serverless functions
+# Using only Python standard library modules for this demo
+# No additional packages required
