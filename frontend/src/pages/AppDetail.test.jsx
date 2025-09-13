@@ -39,23 +39,20 @@ describe('AppDetail', () => {
     global.fetch.mockResolvedValueOnce({
       ok: true,
       json: async () => ({
-        app: {
-          id: 1,
-          name: 'Test App',
-          slug: 'test-app',
-          github_url: 'https://github.com/user/test-app',
-          created_at: '2025-01-01T00:00:00.000Z',
-          github_status: {
-            tests_passing: null, // null indicates pending/running
-            last_commit: 'abc1234567890',
-            status: 'pending',
-            total_count: 1
-          },
-          fly_status: {
-            deployed: true,
-            app_url: 'https://test-app.fly.dev',
-            status: 'running'
-          }
+        name: 'Test App',
+        slug: 'test-app',
+        github_url: 'https://github.com/user/test-app',
+        created_at: '2025-01-01T00:00:00.000Z',
+        github_status: {
+          tests_passing: null, // null indicates pending/running
+          last_commit: 'abc1234567890',
+          status: 'pending',
+          total_count: 1
+        },
+        fly_status: {
+          deployed: true,
+          app_url: 'https://test-app.fly.dev',
+          status: 'running'
         }
       })
     })
@@ -86,23 +83,20 @@ describe('AppDetail', () => {
     global.fetch.mockResolvedValueOnce({
       ok: true,
       json: async () => ({
-        app: {
-          id: 1,
-          name: 'Test App',
-          slug: 'test-app',
-          github_url: 'https://github.com/user/test-app',
-          created_at: '2025-01-01T00:00:00.000Z',
-          github_status: {
-            tests_passing: true, // true indicates success
-            last_commit: 'abc1234567890',
-            status: 'success',
-            total_count: 1
-          },
-          fly_status: {
-            deployed: true,
-            app_url: 'https://test-app.fly.dev',
-            status: 'running'
-          }
+        name: 'Test App',
+        slug: 'test-app',
+        github_url: 'https://github.com/user/test-app',
+        created_at: '2025-01-01T00:00:00.000Z',
+        github_status: {
+          tests_passing: true, // true indicates success
+          last_commit: 'abc1234567890',
+          status: 'success',
+          total_count: 1
+        },
+        fly_status: {
+          deployed: true,
+          app_url: 'https://test-app.fly.dev',
+          status: 'running'
         }
       })
     })
@@ -133,23 +127,20 @@ describe('AppDetail', () => {
     global.fetch.mockResolvedValueOnce({
       ok: true,
       json: async () => ({
-        app: {
-          id: 1,
-          name: 'Test App',
-          slug: 'test-app',
-          github_url: 'https://github.com/user/test-app',
-          created_at: '2025-01-01T00:00:00.000Z',
-          github_status: {
-            tests_passing: false, // false indicates failure
-            last_commit: 'abc1234567890',
-            status: 'failure',
-            total_count: 1
-          },
-          fly_status: {
-            deployed: true,
-            app_url: 'https://test-app.fly.dev',
-            status: 'running'
-          }
+        name: 'Test App',
+        slug: 'test-app',
+        github_url: 'https://github.com/user/test-app',
+        created_at: '2025-01-01T00:00:00.000Z',
+        github_status: {
+          tests_passing: false, // false indicates failure
+          last_commit: 'abc1234567890',
+          status: 'failure',
+          total_count: 1
+        },
+        fly_status: {
+          deployed: true,
+          app_url: 'https://test-app.fly.dev',
+          status: 'running'
         }
       })
     })
@@ -180,18 +171,15 @@ describe('AppDetail', () => {
     global.fetch.mockResolvedValueOnce({
       ok: true,
       json: async () => ({
-        app: {
-          id: 1,
-          name: 'Test App',
-          slug: 'test-app',
-          github_url: 'https://github.com/user/test-app',
-          created_at: '2025-01-01T00:00:00.000Z',
-          github_status: null, // null indicates checking
-          fly_status: {
-            deployed: true,
-            app_url: 'https://test-app.fly.dev',
-            status: 'running'
-          }
+        name: 'Test App',
+        slug: 'test-app',
+        github_url: 'https://github.com/user/test-app',
+        created_at: '2025-01-01T00:00:00.000Z',
+        github_status: null, // null indicates checking
+        fly_status: {
+          deployed: true,
+          app_url: 'https://test-app.fly.dev',
+          status: 'running'
         }
       })
     })

@@ -84,14 +84,12 @@ describe('Apps', () => {
     // Mock apps response with data
     const mockApps = [
       {
-        id: 1,
         name: 'Test App',
         slug: 'test-app',
         github_url: 'https://github.com/user/test-app',
         created_at: '2025-01-01T00:00:00.000Z'
       },
       {
-        id: 2,
         name: 'Another App',
         slug: 'another-app',
         github_url: 'https://github.com/user/another-app',
