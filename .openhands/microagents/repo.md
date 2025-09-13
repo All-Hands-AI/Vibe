@@ -54,14 +54,24 @@ This ensures consistent deployment and testing environments for all contributors
 - **JSON files only**: All data persistence must use raw JSON files
 
 ### Data Storage Patterns
-```javascript
-// ✅ CORRECT: File-based JSON storage
-const userData = JSON.parse(fs.readFileSync('/data/users.json', 'utf8'));
-userData.push(newUser);
-fs.writeFileSync('/data/users.json', JSON.stringify(userData, null, 2));
+```python
+# ✅ CORRECT: File-based JSON storage
+import json
+import os
 
-// ❌ WRONG: SQL database usage
-// const result = await db.query('INSERT INTO users...');
+# Read existing data
+with open('/data/users.json', 'r') as f:
+    user_data = json.load(f)
+
+# Add new user
+user_data.append(new_user)
+
+# Write back to file
+with open('/data/users.json', 'w') as f:
+    json.dump(user_data, f, indent=2)
+
+# ❌ WRONG: SQL database usage
+# cursor.execute('INSERT INTO users VALUES (?)', (user_data,))
 ```
 
 ### File Organization
