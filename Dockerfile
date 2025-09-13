@@ -24,7 +24,7 @@ RUN npm run build
 # Build backend
 FROM base AS backend-build
 WORKDIR /app/backend
-COPY backend/package.json ./
+COPY backend/package.json backend/package-lock.json ./
 RUN npm ci --omit=dev
 
 # Final stage for app image
