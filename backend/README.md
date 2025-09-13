@@ -56,3 +56,6 @@ Dependencies are managed using `pyproject.toml` and installed with `uv` for fast
 ## Package Management
 
 This project uses `uv` instead of `pip` for faster dependency resolution and installation. The `pyproject.toml` file contains all project metadata and dependencies.
+
+### Docker Deployment
+In the Docker build process, we use `uv pip compile` to generate a requirements file from `pyproject.toml`, then install dependencies with `uv pip install`. This approach provides the speed benefits of `uv` while avoiding package build complexity for web service deployments.
