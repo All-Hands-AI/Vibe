@@ -1,5 +1,10 @@
 import { useState, useEffect } from 'react';
+import PropTypes from 'prop-types';
 import './SetupWindow.css';
+
+const API_BASE_URL = process.env.NODE_ENV === 'production' 
+  ? '/api' 
+  : 'http://localhost:3001';
 
 const SetupWindow = ({ onSetupComplete }) => {
   const [apiKeys, setApiKeys] = useState({
@@ -25,10 +30,6 @@ const SetupWindow = ({ onSetupComplete }) => {
     github: '',
     fly: ''
   });
-
-  const API_BASE_URL = process.env.NODE_ENV === 'production' 
-    ? '/api' 
-    : 'http://localhost:3001';
 
   // Check if all keys are valid
   const allKeysValid = Object.values(validationStatus).every(status => status === true);
@@ -232,6 +233,10 @@ const SetupWindow = ({ onSetupComplete }) => {
       </div>
     </div>
   );
+};
+
+SetupWindow.propTypes = {
+  onSetupComplete: PropTypes.func.isRequired,
 };
 
 export default SetupWindow;

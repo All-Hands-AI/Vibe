@@ -9,13 +9,13 @@ import About from './pages/About'
 import Contact from './pages/Contact'
 import './App.css'
 
+const API_BASE_URL = process.env.NODE_ENV === 'production' 
+  ? '/api' 
+  : 'http://localhost:3001'
+
 function App() {
   const [isSetupComplete, setIsSetupComplete] = useState(false)
   const [isCheckingSetup, setIsCheckingSetup] = useState(true)
-
-  const API_BASE_URL = process.env.NODE_ENV === 'production' 
-    ? '/api' 
-    : 'http://localhost:3001'
 
   // Check if setup is complete on app load
   useEffect(() => {
