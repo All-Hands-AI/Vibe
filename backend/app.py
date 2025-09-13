@@ -1,22 +1,21 @@
-from flask import Flask, jsonify, request
+from flask import Flask
 from flask_cors import CORS
 import os
 import logging
 import sys
-from datetime import datetime
 from routes.basic import basic_bp
 from routes.integrations import integrations_bp
 from routes.apps import apps_bp
 from routes.riffs import riffs_bp
 
 # No-op import to ensure agent-sdk loads properly
-# import openhands.sdk  # noqa: F401
+import openhands.sdk  # noqa: F401
 
 # Configure logging for Fly.io - stdout only with enhanced formatting
 logging.basicConfig(
     level=logging.DEBUG,
-    format='%(asctime)s - %(name)s - %(levelname)s - [%(filename)s:%(lineno)d] - %(message)s',
-    stream=sys.stdout
+    format="%(asctime)s - %(name)s - %(levelname)s - [%(filename)s:%(lineno)d] - %(message)s",
+    stream=sys.stdout,
 )
 
 logger = logging.getLogger(__name__)
@@ -48,12 +47,15 @@ logger.info(f"📦 Flask app name: {app.name}")
 
 # File system checks
 from pathlib import Path
-data_dir = Path('/data')
+
+data_dir = Path("/data")
 logger.info(f"📁 Data directory status:")
 logger.info(f"  - Path: {data_dir}")
 logger.info(f"  - Exists: {data_dir.exists()}")
 logger.info(f"  - Is directory: {data_dir.is_dir() if data_dir.exists() else 'N/A'}")
-logger.info(f"  - Permissions: {oct(data_dir.stat().st_mode)[-3:] if data_dir.exists() else 'N/A'}")
+logger.info(
+    f"  - Permissions: {oct(data_dir.stat().st_mode)[-3:] if data_dir.exists() else 'N/A'}"
+)
 
 if data_dir.exists():
     try:
@@ -68,8 +70,8 @@ if data_dir.exists():
 
 logger.info("=" * 80)
 
-if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 8000))
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 8000))
     logger.info(f"🚀 Starting Flask server on port {port}")
     logger.info(f"🌐 Server will be accessible at http://0.0.0.0:{port}")
-    app.run(host='0.0.0.0', port=port, debug=False)
+    app.run(host="0.0.0.0", port=port, debug=False)
