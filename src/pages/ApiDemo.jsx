@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react'
 import './ApiDemo.css'
 
 function ApiDemo() {
+  console.log('🎬 ApiDemo component rendering...')
+  
   const [apiResponse, setApiResponse] = useState(null)
   const [vibes, setVibes] = useState([])
   const [loading, setLoading] = useState(false)
@@ -10,19 +12,30 @@ function ApiDemo() {
 
   const addLog = (message, type = 'info') => {
     const timestamp = new Date().toLocaleTimeString()
+    console.log(`[API Demo ${type.toUpperCase()}] ${message}`)
     setConnectionLogs(prev => [...prev, { message, type, timestamp }])
   }
 
   const testBackendConnection = async () => {
+    console.log('🚀 testBackendConnection function called')
     addLog('🔍 Testing backend connection...', 'info')
+    
     try {
+      console.log('📡 About to fetch /api/hello')
       const startTime = Date.now()
       const response = await fetch('/api/hello')
       const endTime = Date.now()
       const responseTime = endTime - startTime
       
+      console.log('📨 Fetch response received:', response)
+      console.log('📊 Response status:', response.status)
+      console.log('⏱️ Response time:', responseTime + 'ms')
+      
       if (response.ok) {
+        console.log('✅ Response is OK, parsing JSON...')
         const data = await response.json()
+        console.log('📄 Parsed JSON data:', data)
+        
         setBackendStatus('connected')
         addLog(`✅ Backend connected successfully! (${responseTime}ms)`, 'success')
         addLog(`📡 Response: ${data.message}`, 'success')
@@ -32,6 +45,7 @@ function ApiDemo() {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`)
       }
     } catch (error) {
+      console.error('❌ Backend connection error:', error)
       setBackendStatus('error')
       addLog(`❌ Backend connection failed: ${error.message}`, 'error')
       return null
@@ -39,24 +53,33 @@ function ApiDemo() {
   }
 
   useEffect(() => {
+    console.log('🎯 useEffect triggered - API Demo page loaded')
     addLog('🚀 API Demo page loaded', 'info')
+    console.log('🔄 About to call testBackendConnection')
     testBackendConnection()
   }, [])
 
   const callHelloApi = async () => {
+    console.log('🔘 callHelloApi function called')
     setLoading(true)
     addLog('📞 Calling Hello API...', 'info')
+    
     try {
+      console.log('📡 Manual Hello API fetch starting...')
       const startTime = Date.now()
       const response = await fetch('/api/hello')
       const endTime = Date.now()
       const responseTime = endTime - startTime
       
+      console.log('📨 Manual Hello API response:', response)
       const data = await response.json()
+      console.log('📄 Manual Hello API data:', data)
+      
       setApiResponse(data)
       setVibes([]) // Clear vibes when showing hello response
       addLog(`✅ Hello API responded in ${responseTime}ms`, 'success')
     } catch (error) {
+      console.error('❌ Manual Hello API error:', error)
       setApiResponse({ error: error.message })
       addLog(`❌ Hello API failed: ${error.message}`, 'error')
     } finally {
@@ -65,19 +88,26 @@ function ApiDemo() {
   }
 
   const callVibesApi = async () => {
+    console.log('🎨 callVibesApi function called')
     setLoading(true)
     addLog('🎨 Calling Vibes API...', 'info')
+    
     try {
+      console.log('📡 Manual Vibes API fetch starting...')
       const startTime = Date.now()
       const response = await fetch('/api/vibes')
       const endTime = Date.now()
       const responseTime = endTime - startTime
       
+      console.log('📨 Manual Vibes API response:', response)
       const data = await response.json()
+      console.log('📄 Manual Vibes API data:', data)
+      
       setVibes(data.vibes || [])
       setApiResponse(data)
       addLog(`✅ Vibes API responded with ${data.vibes?.length || 0} vibes in ${responseTime}ms`, 'success')
     } catch (error) {
+      console.error('❌ Manual Vibes API error:', error)
       setApiResponse({ error: error.message })
       setVibes([])
       addLog(`❌ Vibes API failed: ${error.message}`, 'error')

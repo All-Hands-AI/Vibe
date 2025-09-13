@@ -9,6 +9,8 @@ import ApiDemo from './pages/ApiDemo'
 import './App.css'
 
 function App() {
+  console.log('🏠 App component rendering...')
+  
   return (
     <ThemeProvider>
       <Router>
