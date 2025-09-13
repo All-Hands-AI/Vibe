@@ -7,20 +7,21 @@ import logging
 import sys
 from datetime import datetime
 
-# Configure logging
+# Configure logging for Fly.io - stdout only
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.StreamHandler(sys.stdout),
-        logging.FileHandler('/var/log/backend.log') if os.path.exists('/var/log') else logging.StreamHandler(sys.stdout)
-    ]
+    stream=sys.stdout
 )
 
 logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
 CORS(app)
+
+# Test logging
+logger.info("Flask app starting up...")
+logger.info(f"Environment: {os.environ.get('FLY_APP_NAME', 'local')}")
 
 # Log startup
 logger.info("🚀 OpenVibe Backend starting up...")
