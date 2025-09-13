@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
+import PropTypes from 'prop-types'
 import './SetupWindow.css'
 
 const SetupWindow = ({ onSetupComplete }) => {
@@ -14,13 +15,11 @@ const SetupWindow = ({ onSetupComplete }) => {
     fly: { valid: false, message: '', loading: false }
   })
 
-  const [isValidating, setIsValidating] = useState(false)
-
   // Check if all keys are valid
   const allKeysValid = Object.values(validationStatus).every(status => status.valid)
 
   // Backend URL - in production, backend runs on same domain
-  const BACKEND_URL = process.env.NODE_ENV === 'production' 
+  const BACKEND_URL = import.meta.env.MODE === 'production' 
     ? '' 
     : 'http://localhost:8000'
 
@@ -57,7 +56,7 @@ const SetupWindow = ({ onSetupComplete }) => {
           loading: false
         }
       }))
-    } catch (error) {
+    } catch {
       setValidationStatus(prev => ({
         ...prev,
         [provider]: {
@@ -197,7 +196,7 @@ const SetupWindow = ({ onSetupComplete }) => {
             <button 
               type="submit" 
               className="continue-button"
-              disabled={!allKeysValid || isValidating}
+              disabled={!allKeysValid}
             >
               {allKeysValid ? '✨ Continue to OpenVibe' : '🔑 Enter all API keys to continue'}
             </button>
@@ -215,6 +214,10 @@ const SetupWindow = ({ onSetupComplete }) => {
       </div>
     </div>
   )
+}
+
+SetupWindow.propTypes = {
+  onSetupComplete: PropTypes.func.isRequired
 }
 
 export default SetupWindow

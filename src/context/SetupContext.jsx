@@ -1,4 +1,5 @@
-import { createContext, useContext, useState, useEffect } from 'react'
+import { createContext, useContext, useState, useEffect, useCallback } from 'react'
+import PropTypes from 'prop-types'
 
 const SetupContext = createContext()
 
@@ -15,12 +16,12 @@ export const SetupProvider = ({ children }) => {
   const [isLoading, setIsLoading] = useState(true)
 
   // Backend URL - in production, backend runs on same domain
-  const BACKEND_URL = process.env.NODE_ENV === 'production' 
+  const BACKEND_URL = import.meta.env.MODE === 'production' 
     ? '' 
     : 'http://localhost:8000'
 
   // Check if all API keys are already configured
-  const checkSetupStatus = async () => {
+  const checkSetupStatus = useCallback(async () => {
     try {
       const providers = ['anthropic', 'github', 'fly']
       const checks = await Promise.all(
@@ -45,11 +46,11 @@ export const SetupProvider = ({ children }) => {
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [BACKEND_URL])
 
   useEffect(() => {
     checkSetupStatus()
-  }, [])
+  }, [checkSetupStatus])
 
   const completeSetup = () => {
     setIsSetupComplete(true)
@@ -72,4 +73,8 @@ export const SetupProvider = ({ children }) => {
       {children}
     </SetupContext.Provider>
   )
+}
+
+SetupProvider.propTypes = {
+  children: PropTypes.node.isRequired
 }
