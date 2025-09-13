@@ -941,37 +941,37 @@ def create_project():
         logger.error(f"💥 Error creating project: {str(e)}")
         return jsonify({'error': 'Failed to create project'}), 500
 
-@projects_bp.route('/api/projects/<int:project_id>/conversations', methods=['GET'])
-def get_conversations(project_id):
+@projects_bp.route('/api/projects/<project_slug>/conversations', methods=['GET'])
+def get_conversations(project_slug):
     """Get all conversations for a specific project"""
-    logger.info(f"📋 GET /api/projects/{project_id}/conversations - Fetching conversations")
+    logger.info(f"📋 GET /api/projects/{project_slug}/conversations - Fetching conversations")
     
     try:
         # Verify project exists
         projects = load_projects()
-        project = next((p for p in projects if p.get('id') == project_id), None)
+        project = next((p for p in projects if p.get('slug') == project_slug), None)
         if not project:
-            logger.warning(f"❌ Project not found: {project_id}")
+            logger.warning(f"❌ Project not found: {project_slug}")
             return jsonify({'error': 'Project not found'}), 404
         
-        conversations = load_conversations(project_id)
+        conversations = load_conversations(project['id'])  # Use project ID for file storage
         # Sort conversations by creation date (newest first)
         conversations.sort(key=lambda x: x.get('created_at', ''), reverse=True)
         
-        logger.info(f"📊 Returning {len(conversations)} conversations for project {project_id}")
+        logger.info(f"📊 Returning {len(conversations)} conversations for project {project_slug}")
         return jsonify({
             'conversations': conversations,
             'count': len(conversations),
-            'project_id': project_id
+            'project_slug': project_slug
         })
     except Exception as e:
         logger.error(f"💥 Error fetching conversations: {str(e)}")
         return jsonify({'error': 'Failed to fetch conversations'}), 500
 
-@projects_bp.route('/api/projects/<int:project_id>/conversations', methods=['POST'])
-def create_conversation(project_id):
+@projects_bp.route('/api/projects/<project_slug>/conversations', methods=['POST'])
+def create_conversation(project_slug):
     """Create a new conversation for a specific project"""
-    logger.info(f"🆕 POST /api/projects/{project_id}/conversations - Creating new conversation")
+    logger.info(f"🆕 POST /api/projects/{project_slug}/conversations - Creating new conversation")
     
     try:
         # Get UUID from headers
@@ -987,9 +987,9 @@ def create_conversation(project_id):
         
         # Verify project exists
         projects = load_projects()
-        project = next((p for p in projects if p.get('id') == project_id), None)
+        project = next((p for p in projects if p.get('slug') == project_slug), None)
         if not project:
-            logger.warning(f"❌ Project not found: {project_id}")
+            logger.warning(f"❌ Project not found: {project_slug}")
             return jsonify({'error': 'Project not found'}), 404
         
         # Get request data
@@ -1015,7 +1015,7 @@ def create_conversation(project_id):
         logger.info(f"🔄 Creating conversation: {conversation_name} -> {conversation_slug}")
         
         # Load existing conversations
-        conversations = load_conversations(project_id)
+        conversations = load_conversations(project['id'])  # Use project ID for file storage
         
         # Check if conversation with same slug already exists
         existing_conversation = next((c for c in conversations if c.get('slug') == conversation_slug), None)
@@ -1028,7 +1028,8 @@ def create_conversation(project_id):
             'id': len(conversations) + 1,
             'name': conversation_name,
             'slug': conversation_slug,
-            'project_id': project_id,
+            'project_id': project['id'],  # Store project ID for internal use
+            'project_slug': project_slug,  # Also store project slug for reference
             'created_at': datetime.utcnow().isoformat(),
             'created_by': user_uuid,
             'last_message_at': None,
@@ -1039,7 +1040,7 @@ def create_conversation(project_id):
         conversations.append(conversation)
         
         # Save to file
-        if not save_conversations(project_id, conversations):
+        if not save_conversations(project['id'], conversations):
             logger.error("❌ Failed to save conversation to file")
             return jsonify({'error': 'Failed to save conversation'}), 500
         

@@ -12,18 +12,24 @@ function ConversationDetail() {
   const [conversationId, setConversationId] = useState(null)
   const [isDirectAccess, setIsDirectAccess] = useState(false)
 
-  // Fetch project details to get project ID
+  // Simplified fetch logic - always use slugs, never numerical IDs
   const fetchProject = useCallback(async () => {
+    console.log('🔄 ConversationDetail: Starting fetch with params:', { projectSlug, conversationSlug })
+    
     try {
       setProjectLoading(true)
       setProjectError('')
       
       if (projectSlug) {
         // Normal access via /projects/:slug/conversations/:conversationSlug
-        console.log('🔄 Fetching project details:', projectSlug)
+        console.log('📍 Normal access mode - fetching project by slug:', projectSlug)
         setIsDirectAccess(false)
         
-        const projectResponse = await fetch(`/api/projects/${projectSlug}`)
+        // Get project details
+        const projectUrl = `/api/projects/${projectSlug}`
+        console.log('🌐 Fetching project from URL:', projectUrl)
+        
+        const projectResponse = await fetch(projectUrl)
         console.log('📡 Project response status:', projectResponse?.status)
         
         if (!projectResponse || !projectResponse.ok) {
@@ -36,8 +42,11 @@ function ConversationDetail() {
         console.log('📊 Received project data:', projectData)
         setProject(projectData.project)
         
-        // Now get the conversations for this project to find the conversation ID
-        const conversationsResponse = await fetch(`/api/projects/${projectData.project.id}/conversations`)
+        // Get conversations using project SLUG (not ID)
+        const conversationsUrl = `/api/projects/${projectSlug}/conversations`
+        console.log('🌐 Fetching conversations from URL:', conversationsUrl)
+        
+        const conversationsResponse = await fetch(conversationsUrl)
         console.log('📡 Conversations response status:', conversationsResponse?.status)
         
         if (!conversationsResponse || !conversationsResponse.ok) {
@@ -49,7 +58,7 @@ function ConversationDetail() {
         const conversationsData = await conversationsResponse.json()
         console.log('📊 Received conversations data:', conversationsData)
         
-        // Find the specific conversation by slug or ID
+        // Find conversation by slug or ID
         const foundConversation = conversationsData.conversations.find(
           c => c.slug === conversationSlug || c.id === conversationSlug
         )
@@ -60,14 +69,18 @@ function ConversationDetail() {
         }
         
         setConversationId(foundConversation.id)
-        console.log('✅ Project data loaded successfully, conversation ID:', foundConversation.id)
+        console.log('✅ Found conversation:', { id: foundConversation.id, slug: foundConversation.slug })
+        
       } else {
         // Direct access via /conversations/:conversationSlug
-        console.log('🔄 Direct conversation access, searching across all projects:', conversationSlug)
+        console.log('📍 Direct access mode - searching all projects for conversation:', conversationSlug)
         setIsDirectAccess(true)
         
-        // First, get all projects
-        const projectsResponse = await fetch('/api/projects')
+        // Get all projects
+        const projectsUrl = '/api/projects'
+        console.log('🌐 Fetching all projects from URL:', projectsUrl)
+        
+        const projectsResponse = await fetch(projectsUrl)
         console.log('📡 Projects response status:', projectsResponse?.status)
         
         if (!projectsResponse || !projectsResponse.ok) {
@@ -79,27 +92,39 @@ function ConversationDetail() {
         const projectsData = await projectsResponse.json()
         console.log('📊 Received projects data:', projectsData)
         
-        // Search for the conversation across all projects
+        // Search across all projects using project SLUGS
         let foundConversation = null
         let foundProject = null
         
         for (const proj of projectsData.projects || []) {
+          console.log(`🔍 Searching project: ${proj.name} (slug: ${proj.slug})`)
+          
           try {
-            const conversationsResponse = await fetch(`/api/projects/${proj.id}/conversations`)
+            const conversationsUrl = `/api/projects/${proj.slug}/conversations`
+            console.log('🌐 Fetching conversations from URL:', conversationsUrl)
+            
+            const conversationsResponse = await fetch(conversationsUrl)
             if (conversationsResponse.ok) {
               const conversationsData = await conversationsResponse.json()
+              console.log(`📊 Project ${proj.slug} has ${conversationsData.conversations?.length || 0} conversations`)
+              
               const conversation = conversationsData.conversations.find(
                 c => c.slug === conversationSlug || c.id === conversationSlug
               )
+              
               if (conversation) {
                 foundConversation = conversation
                 foundProject = proj
+                console.log('✅ Found conversation in project:', { 
+                  projectSlug: proj.slug, 
+                  conversationId: conversation.id, 
+                  conversationSlug: conversation.slug 
+                })
                 break
               }
             }
           } catch (err) {
-            console.warn(`⚠️ Failed to fetch conversations for project ${proj.id}:`, err)
-            // Continue searching other projects
+            console.warn(`⚠️ Failed to fetch conversations for project ${proj.slug}:`, err)
           }
         }
         
@@ -110,10 +135,9 @@ function ConversationDetail() {
         
         setProject(foundProject)
         setConversationId(foundConversation.id)
-        console.log('✅ Conversation found via direct access, project:', foundProject.name, 'conversation ID:', foundConversation.id)
       }
     } catch (err) {
-      console.error('❌ Error fetching project data:', err)
+      console.error('❌ Error in fetchProject:', err)
       setProjectError(err.message || 'Failed to load project. Please try again.')
     } finally {
       setProjectLoading(false)
@@ -125,7 +149,7 @@ function ConversationDetail() {
     fetchProject()
   }, [fetchProject])
 
-  // Use the conversation hook once we have the project ID and conversation ID
+  // Use the conversation hook with project SLUG and conversation ID
   const {
     messages,
     events,
@@ -138,7 +162,7 @@ function ConversationDetail() {
     pollingEnabled,
     setPollingEnabled,
     isPolling
-  } = useConversation(project?.id, conversationId)
+  } = useConversation(project?.slug, conversationId)
 
   const loading = projectLoading || conversationLoading
   const error = projectError || conversationError

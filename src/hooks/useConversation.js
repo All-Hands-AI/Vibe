@@ -3,8 +3,10 @@ import { getUserUUID } from '../utils/uuid'
 
 /**
  * Custom hook for managing conversation messages and API interactions
+ * @param {string} projectSlug - Project slug (not numerical ID)
+ * @param {string} conversationId - Conversation ID
  */
-export function useConversation(projectId, conversationId) {
+export function useConversation(projectSlug, conversationId) {
   const [messages, setMessages] = useState([])
   const [events, setEvents] = useState([])
   const [conversation, setConversation] = useState(null)
@@ -42,45 +44,55 @@ export function useConversation(projectId, conversationId) {
 
   // Load conversation details
   const loadConversation = useCallback(async () => {
-    if (!projectId || !conversationId) return
+    if (!projectSlug || !conversationId) {
+      console.log('⚠️ useConversation: Missing required params:', { projectSlug, conversationId })
+      return
+    }
 
     try {
-      console.log('🔄 Loading conversation:', { projectId, conversationId })
+      const conversationUrl = `/api/projects/${projectSlug}/conversations/${conversationId}`
+      console.log('🔄 useConversation: Loading conversation from URL:', conversationUrl)
+      console.log('📋 useConversation: Params:', { projectSlug, conversationId })
       
-      const data = await apiCall(`/api/projects/${projectId}/conversations/${conversationId}`)
-      console.log('📊 Conversation data:', data)
+      const data = await apiCall(conversationUrl)
+      console.log('📊 useConversation: Received conversation data:', data)
       
       setConversation(data)
       
       // Extract messages from conversation data
       if (data.messages && Array.isArray(data.messages)) {
         setMessages(data.messages)
-        console.log('💬 Loaded messages:', data.messages.length)
+        console.log('💬 useConversation: Loaded messages:', data.messages.length)
       }
       
       setError('')
     } catch (err) {
-      console.error('❌ Error loading conversation:', err)
+      console.error('❌ useConversation: Error loading conversation:', err)
       setError(err.message || 'Failed to load conversation')
     }
-  }, [projectId, conversationId, apiCall])
+  }, [projectSlug, conversationId, apiCall])
 
   // Load conversation events
   const loadEvents = useCallback(async () => {
-    if (!projectId || !conversationId) return
+    if (!projectSlug || !conversationId) {
+      console.log('⚠️ useConversation: Missing required params for events:', { projectSlug, conversationId })
+      return
+    }
 
     try {
-      console.log('🔄 Loading events for conversation:', conversationId)
+      const eventsUrl = `/api/projects/${projectSlug}/conversations/${conversationId}/events`
+      console.log('🔄 useConversation: Loading events from URL:', eventsUrl)
+      console.log('📋 useConversation: Events params:', { projectSlug, conversationId })
       
-      const data = await apiCall(`/api/projects/${projectId}/conversations/${conversationId}/events`)
-      console.log('📊 Events data:', data)
+      const data = await apiCall(eventsUrl)
+      console.log('📊 useConversation: Received events data:', data)
       
       setEvents(data.events || [])
       
       // Check if we have new events (for polling)
       const newEventCount = data.events?.length || 0
       if (newEventCount > lastEventCountRef.current) {
-        console.log('🆕 New events detected:', newEventCount - lastEventCountRef.current)
+        console.log('🆕 useConversation: New events detected:', newEventCount - lastEventCountRef.current)
         lastEventCountRef.current = newEventCount
         
         // Reload conversation to get updated messages
@@ -88,31 +100,35 @@ export function useConversation(projectId, conversationId) {
       }
       
     } catch (err) {
-      console.error('❌ Error loading events:', err)
+      console.error('❌ useConversation: Error loading events:', err)
       // Don't set error state for events loading failure
       // as it's not critical for the main functionality
     }
-  }, [projectId, conversationId, apiCall, loadConversation])
+  }, [projectSlug, conversationId, apiCall, loadConversation])
 
   // Send a message
   const sendMessage = useCallback(async (messageContent) => {
-    if (!projectId || !conversationId || !messageContent.trim()) {
+    if (!projectSlug || !conversationId || !messageContent.trim()) {
+      console.error('❌ useConversation: Invalid sendMessage params:', { projectSlug, conversationId, messageContent: messageContent?.length })
       throw new Error('Invalid message or conversation parameters')
     }
 
     setSending(true)
     
     try {
-      console.log('📤 Sending message:', messageContent)
+      const messageUrl = `/api/projects/${projectSlug}/conversations/${conversationId}/messages`
+      console.log('📤 useConversation: Sending message to URL:', messageUrl)
+      console.log('📋 useConversation: Message params:', { projectSlug, conversationId })
+      console.log('💬 useConversation: Message content:', messageContent)
       
-      const data = await apiCall(`/api/projects/${projectId}/conversations/${conversationId}/messages`, {
+      const data = await apiCall(messageUrl, {
         method: 'POST',
         body: JSON.stringify({
           message: messageContent.trim()
         })
       })
       
-      console.log('✅ Message sent successfully:', data)
+      console.log('✅ useConversation: Message sent successfully:', data)
       
       // Add the message to local state immediately for better UX
       const newMessage = {
@@ -130,12 +146,12 @@ export function useConversation(projectId, conversationId) {
       }, 500)
       
     } catch (err) {
-      console.error('❌ Error sending message:', err)
+      console.error('❌ useConversation: Error sending message:', err)
       throw err
     } finally {
       setSending(false)
     }
-  }, [projectId, conversationId, apiCall, loadConversation, loadEvents])
+  }, [projectSlug, conversationId, apiCall, loadConversation, loadEvents])
 
   // Start polling for updates
   const startPolling = useCallback(() => {
@@ -164,16 +180,21 @@ export function useConversation(projectId, conversationId) {
   // Initial load
   useEffect(() => {
     const loadInitialData = async () => {
-      if (!projectId || !conversationId) return
+      if (!projectSlug || !conversationId) {
+        console.log('⚠️ useConversation: Skipping initial load - missing params:', { projectSlug, conversationId })
+        return
+      }
 
+      console.log('🚀 useConversation: Starting initial data load:', { projectSlug, conversationId })
       setLoading(true)
       setError('')
       
       try {
         await loadConversation()
         await loadEvents()
+        console.log('✅ useConversation: Initial data load completed')
       } catch (err) {
-        console.error('❌ Error loading initial data:', err)
+        console.error('❌ useConversation: Error loading initial data:', err)
         setError(err.message || 'Failed to load conversation data')
       } finally {
         setLoading(false)
@@ -181,7 +202,7 @@ export function useConversation(projectId, conversationId) {
     }
 
     loadInitialData()
-  }, [projectId, conversationId, loadConversation, loadEvents])
+  }, [projectSlug, conversationId, loadConversation, loadEvents])
 
   // Start/stop polling based on component visibility and state
   useEffect(() => {
