@@ -24,12 +24,15 @@ jobs:
         with:
           node-version: '18'
           cache: 'npm'
+          cache-dependency-path: 'frontend/package-lock.json'
 
       - name: Install dependencies
         run: npm ci
+        working-directory: frontend
 
       - name: Run ESLint
         run: npm run lint
+        working-directory: frontend
 
   build:
     name: Build
@@ -44,18 +47,21 @@ jobs:
         with:
           node-version: '18'
           cache: 'npm'
+          cache-dependency-path: 'frontend/package-lock.json'
 
       - name: Install dependencies
         run: npm ci
+        working-directory: frontend
 
       - name: Build application
         run: npm run build
+        working-directory: frontend
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
           name: build-files
-          path: dist/
+          path: frontend/dist/
           retention-days: 1
 
   test:
@@ -71,24 +77,29 @@ jobs:
         with:
           node-version: '18'
           cache: 'npm'
+          cache-dependency-path: 'frontend/package-lock.json'
 
       - name: Install dependencies
         run: npm ci
+        working-directory: frontend
 
       - name: Run tests
         run: npm run test:run
+        working-directory: frontend
 
       - name: Install coverage dependency
         run: npm install --save-dev @vitest/coverage-v8
+        working-directory: frontend
 
       - name: Run tests with coverage
         run: npm run test:coverage
+        working-directory: frontend
 
       - name: Upload coverage reports
         uses: actions/upload-artifact@v4
         with:
           name: coverage-report
-          path: coverage/
+          path: frontend/coverage/
           retention-days: 7
 
   quality-gate:
