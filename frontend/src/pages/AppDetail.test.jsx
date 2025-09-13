@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import { BrowserRouter } from 'react-router-dom'
-import ProjectDetail from './ProjectDetail'
+import AppDetail from './AppDetail'
 
 // Mock the uuid utility
 vi.mock('../utils/uuid', () => ({
@@ -13,19 +13,19 @@ vi.mock('react-router-dom', async () => {
   const actual = await vi.importActual('react-router-dom')
   return {
     ...actual,
-    useParams: () => ({ slug: 'test-project' })
+    useParams: () => ({ slug: 'test-app' })
   }
 })
 
-const renderProjectDetail = () => {
+const renderAppDetail = () => {
   return render(
     <BrowserRouter>
-      <ProjectDetail />
+      <AppDetail />
     </BrowserRouter>
   )
 }
 
-describe('ProjectDetail', () => {
+describe('AppDetail', () => {
   beforeEach(() => {
     // Reset all mocks before each test
     vi.clearAllMocks()
@@ -35,14 +35,13 @@ describe('ProjectDetail', () => {
   })
 
   it('displays "Running" status when CI/CD is pending', async () => {
-    // Mock project API response with pending CI/CD status
+    // Mock app API response with pending CI/CD status
     global.fetch.mockResolvedValueOnce({
       ok: true,
       json: async () => ({
-        id: 1,
-        name: 'Test Project',
-        slug: 'test-project',
-        github_url: 'https://github.com/user/test-project',
+        name: 'Test App',
+        slug: 'test-app',
+        github_url: 'https://github.com/user/test-app',
         created_at: '2025-01-01T00:00:00.000Z',
         github_status: {
           tests_passing: null, // null indicates pending/running
@@ -52,25 +51,25 @@ describe('ProjectDetail', () => {
         },
         fly_status: {
           deployed: true,
-          app_url: 'https://test-project.fly.dev',
+          app_url: 'https://test-app.fly.dev',
           status: 'running'
         }
       })
     })
 
-    // Mock conversations API response
+    // Mock riffs API response
     global.fetch.mockResolvedValueOnce({
       ok: true,
       json: async () => ({
-        conversations: []
+        riffs: []
       })
     })
 
-    renderProjectDetail()
+    renderAppDetail()
 
-    // Wait for the project to load
+    // Wait for the app to load
     await waitFor(() => {
-      expect(screen.getByText('Test Project')).toBeInTheDocument()
+      expect(screen.getByText('Test App')).toBeInTheDocument()
     })
 
     // Check that CI/CD status shows "Running"
@@ -80,14 +79,13 @@ describe('ProjectDetail', () => {
   })
 
   it('displays "Passing" status when CI/CD is successful', async () => {
-    // Mock project API response with successful CI/CD status
+    // Mock app API response with successful CI/CD status
     global.fetch.mockResolvedValueOnce({
       ok: true,
       json: async () => ({
-        id: 1,
-        name: 'Test Project',
-        slug: 'test-project',
-        github_url: 'https://github.com/user/test-project',
+        name: 'Test App',
+        slug: 'test-app',
+        github_url: 'https://github.com/user/test-app',
         created_at: '2025-01-01T00:00:00.000Z',
         github_status: {
           tests_passing: true, // true indicates success
@@ -97,25 +95,25 @@ describe('ProjectDetail', () => {
         },
         fly_status: {
           deployed: true,
-          app_url: 'https://test-project.fly.dev',
+          app_url: 'https://test-app.fly.dev',
           status: 'running'
         }
       })
     })
 
-    // Mock conversations API response
+    // Mock riffs API response
     global.fetch.mockResolvedValueOnce({
       ok: true,
       json: async () => ({
-        conversations: []
+        riffs: []
       })
     })
 
-    renderProjectDetail()
+    renderAppDetail()
 
-    // Wait for the project to load
+    // Wait for the app to load
     await waitFor(() => {
-      expect(screen.getByText('Test Project')).toBeInTheDocument()
+      expect(screen.getByText('Test App')).toBeInTheDocument()
     })
 
     // Check that CI/CD status shows "Passing"
@@ -125,14 +123,13 @@ describe('ProjectDetail', () => {
   })
 
   it('displays "Failing" status when CI/CD has failed', async () => {
-    // Mock project API response with failed CI/CD status
+    // Mock app API response with failed CI/CD status
     global.fetch.mockResolvedValueOnce({
       ok: true,
       json: async () => ({
-        id: 1,
-        name: 'Test Project',
-        slug: 'test-project',
-        github_url: 'https://github.com/user/test-project',
+        name: 'Test App',
+        slug: 'test-app',
+        github_url: 'https://github.com/user/test-app',
         created_at: '2025-01-01T00:00:00.000Z',
         github_status: {
           tests_passing: false, // false indicates failure
@@ -142,25 +139,25 @@ describe('ProjectDetail', () => {
         },
         fly_status: {
           deployed: true,
-          app_url: 'https://test-project.fly.dev',
+          app_url: 'https://test-app.fly.dev',
           status: 'running'
         }
       })
     })
 
-    // Mock conversations API response
+    // Mock riffs API response
     global.fetch.mockResolvedValueOnce({
       ok: true,
       json: async () => ({
-        conversations: []
+        riffs: []
       })
     })
 
-    renderProjectDetail()
+    renderAppDetail()
 
-    // Wait for the project to load
+    // Wait for the app to load
     await waitFor(() => {
-      expect(screen.getByText('Test Project')).toBeInTheDocument()
+      expect(screen.getByText('Test App')).toBeInTheDocument()
     })
 
     // Check that CI/CD status shows "Failing"
@@ -170,37 +167,36 @@ describe('ProjectDetail', () => {
   })
 
   it('displays "Checking..." status when github_status is null', async () => {
-    // Mock project API response with no github_status
+    // Mock app API response with no github_status
     global.fetch.mockResolvedValueOnce({
       ok: true,
       json: async () => ({
-        id: 1,
-        name: 'Test Project',
-        slug: 'test-project',
-        github_url: 'https://github.com/user/test-project',
+        name: 'Test App',
+        slug: 'test-app',
+        github_url: 'https://github.com/user/test-app',
         created_at: '2025-01-01T00:00:00.000Z',
         github_status: null, // null indicates checking
         fly_status: {
           deployed: true,
-          app_url: 'https://test-project.fly.dev',
+          app_url: 'https://test-app.fly.dev',
           status: 'running'
         }
       })
     })
 
-    // Mock conversations API response
+    // Mock riffs API response
     global.fetch.mockResolvedValueOnce({
       ok: true,
       json: async () => ({
-        conversations: []
+        riffs: []
       })
     })
 
-    renderProjectDetail()
+    renderAppDetail()
 
-    // Wait for the project to load
+    // Wait for the app to load
     await waitFor(() => {
-      expect(screen.getByText('Test Project')).toBeInTheDocument()
+      expect(screen.getByText('Test App')).toBeInTheDocument()
     })
 
     // Check that CI/CD status shows "Checking..."

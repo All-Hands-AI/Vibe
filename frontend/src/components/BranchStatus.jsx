@@ -1,20 +1,20 @@
 import { useState, useEffect } from 'react'
 import PropTypes from 'prop-types'
 
-function BranchStatus({ project }) {
+function BranchStatus({ app }) {
   const [branchName, setBranchName] = useState('main')
   const [failingChecks, setFailingChecks] = useState([])
 
   useEffect(() => {
     // Extract branch name from GitHub status or default to 'main'
-    if (project?.github_status?.branch) {
-      setBranchName(project.github_status.branch)
+    if (app?.github_status?.branch) {
+      setBranchName(app.github_status.branch)
     }
 
     // Extract failing checks from GitHub status
-    if (project?.github_status?.failing_checks) {
-      setFailingChecks(project.github_status.failing_checks)
-    } else if (project?.github_status?.tests_passing === false) {
+    if (app?.github_status?.failing_checks) {
+      setFailingChecks(app.github_status.failing_checks)
+    } else if (app?.github_status?.tests_passing === false) {
       // If we don't have detailed failing checks but know tests are failing,
       // create a generic failing check entry
       setFailingChecks([
@@ -22,13 +22,13 @@ function BranchStatus({ project }) {
           name: 'CI Tests',
           status: 'failure',
           conclusion: 'failure',
-          details_url: project.github_url ? `${project.github_url}/actions` : null
+          details_url: app.github_url ? `${app.github_url}/actions` : null
         }
       ])
     } else {
       setFailingChecks([])
     }
-  }, [project])
+  }, [app])
 
   const getStatusIcon = (status) => {
     switch (status) {
@@ -84,14 +84,14 @@ function BranchStatus({ project }) {
       <div className="mb-4">
         <h4 className="text-lg font-medium text-cyber-text mb-3 font-mono">CI/CD Status</h4>
         <div className="mb-3">
-          <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium font-mono border ${getStatusColor(project?.github_status?.tests_passing)}`}>
-            {getStatusIcon(project?.github_status?.tests_passing)} {getStatusText(project?.github_status?.tests_passing)}
+          <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium font-mono border ${getStatusColor(app?.github_status?.tests_passing)}`}>
+            {getStatusIcon(app?.github_status?.tests_passing)} {getStatusText(app?.github_status?.tests_passing)}
           </span>
         </div>
         
-        {project?.github_status?.last_commit && (
+        {app?.github_status?.last_commit && (
           <p className="text-cyber-muted text-sm font-mono mb-3">
-            Last commit: <code className="bg-cyber-accent px-1 py-0.5 rounded text-xs">{project.github_status.last_commit.substring(0, 7)}</code>
+            Last commit: <code className="bg-cyber-accent px-1 py-0.5 rounded text-xs">{app.github_status.last_commit.substring(0, 7)}</code>
           </p>
         )}
       </div>
@@ -133,7 +133,7 @@ function BranchStatus({ project }) {
 }
 
 BranchStatus.propTypes = {
-  project: PropTypes.shape({
+  app: PropTypes.shape({
     github_url: PropTypes.string,
     github_status: PropTypes.shape({
       branch: PropTypes.string,

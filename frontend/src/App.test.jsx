@@ -97,7 +97,7 @@ describe('App', () => {
       })
       .mockResolvedValueOnce({
         ok: true,
-        json: async () => ({ projects: [], count: 0 })
+        json: async () => ({ apps: [], count: 0 })
       })
 
     render(<App />)
@@ -107,10 +107,10 @@ describe('App', () => {
       expect(screen.getByRole('link', { name: /OpenVibe/ })).toBeInTheDocument()
     })
     
-    // Check for projects page content (default route is now Projects)
-    expect(screen.getByRole('heading', { name: 'Projects' })).toBeInTheDocument()
-    expect(screen.getByText('Manage your OpenVibe projects')).toBeInTheDocument()
-    expect(screen.getByText('Create New Project')).toBeInTheDocument()
+    // Check for apps page content (default route is now Apps)
+    expect(screen.getByRole('heading', { name: 'Apps' })).toBeInTheDocument()
+    expect(screen.getByText('Manage your OpenVibe apps')).toBeInTheDocument()
+    expect(screen.getByText('Create New App')).toBeInTheDocument()
     
     // Check for footer - copyright text is split across elements
     expect(screen.getByText('©')).toBeInTheDocument()
@@ -122,8 +122,8 @@ describe('App', () => {
     expect(nav).toBeInTheDocument()
     
     // Use getAllByRole to handle multiple links with same name
-    const projectsLinks = screen.getAllByRole('link', { name: '🗂️ Projects' })
-    expect(projectsLinks.length).toBeGreaterThan(0)
+    const appsLinks = screen.getAllByRole('link', { name: '🗂️ Apps' })
+    expect(appsLinks.length).toBeGreaterThan(0)
     
     const homeLinks = screen.getAllByRole('link', { name: '🏠 Home' })
     expect(homeLinks.length).toBeGreaterThan(0)

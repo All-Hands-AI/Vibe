@@ -10,50 +10,50 @@ from keys import load_user_keys
 
 logger = logging.getLogger(__name__)
 
-# Create Blueprint for projects
-projects_bp = Blueprint('projects', __name__)
+# Create Blueprint for apps
+apps_bp = Blueprint('apps', __name__)
 
 # File-based storage utilities
 DATA_DIR = Path('/data')
 
-def get_projects_file():
-    """Get the path to the projects.json file"""
-    return DATA_DIR / 'projects.json'
+def get_apps_file():
+    """Get the path to the apps.json file"""
+    return DATA_DIR / 'apps.json'
 
-def get_conversations_file(project_id):
-    """Get the path to the conversations.json file for a specific project"""
-    return DATA_DIR / f'conversations_{project_id}.json'
+def get_riffs_file(app_slug):
+    """Get the path to the riffs.json file for a specific app"""
+    return DATA_DIR / f'riffs_{app_slug}.json'
 
-def load_projects():
-    """Load projects from file"""
-    projects_file = get_projects_file()
-    logger.debug(f"📁 Loading projects from: {projects_file}")
-    logger.debug(f"📁 File exists: {projects_file.exists()}")
+def load_apps():
+    """Load apps from file"""
+    apps_file = get_apps_file()
+    logger.debug(f"📁 Loading apps from: {apps_file}")
+    logger.debug(f"📁 File exists: {apps_file.exists()}")
     
-    if projects_file.exists():
+    if apps_file.exists():
         try:
-            logger.debug(f"📁 File size: {projects_file.stat().st_size} bytes")
-            logger.debug(f"📁 File permissions: {oct(projects_file.stat().st_mode)[-3:]}")
+            logger.debug(f"📁 File size: {apps_file.stat().st_size} bytes")
+            logger.debug(f"📁 File permissions: {oct(apps_file.stat().st_mode)[-3:]}")
             
-            with open(projects_file, 'r') as f:
+            with open(apps_file, 'r') as f:
                 content = f.read()
                 logger.debug(f"📁 File content length: {len(content)} characters")
                 logger.debug(f"📁 File content preview: {content[:200]}...")
                 
-                projects = json.loads(content)
-                logger.info(f"📁 Successfully loaded {len(projects)} projects")
-                return projects
+                apps = json.loads(content)
+                logger.info(f"📁 Successfully loaded {len(apps)} apps")
+                return apps
         except (json.JSONDecodeError, IOError) as e:
-            logger.error(f"❌ Failed to load projects: {e}")
+            logger.error(f"❌ Failed to load apps: {e}")
             logger.debug(f"📁 Error type: {type(e).__name__}")
             return []
     else:
-        logger.info(f"📁 Projects file doesn't exist, returning empty list")
+        logger.info(f"📁 Apps file doesn't exist, returning empty list")
     return []
 
-def save_projects(projects):
-    """Save projects to file"""
-    logger.debug(f"💾 Saving {len(projects)} projects")
+def save_apps(apps):
+    """Save apps to file"""
+    logger.debug(f"💾 Saving {len(apps)} apps")
     logger.debug(f"💾 Data directory: {DATA_DIR}")
     logger.debug(f"💾 Data directory exists: {DATA_DIR.exists()}")
     
@@ -64,29 +64,29 @@ def save_projects(projects):
         logger.error(f"❌ Failed to create data directory: {e}")
         return False
     
-    projects_file = get_projects_file()
-    logger.debug(f"💾 Projects file path: {projects_file}")
+    apps_file = get_apps_file()
+    logger.debug(f"💾 Apps file path: {apps_file}")
     
     try:
         # Create backup if file exists
-        if projects_file.exists():
-            backup_file = projects_file.with_suffix('.json.backup')
+        if apps_file.exists():
+            backup_file = apps_file.with_suffix('.json.backup')
             logger.debug(f"💾 Creating backup: {backup_file}")
-            projects_file.rename(backup_file)
+            apps_file.rename(backup_file)
         
-        with open(projects_file, 'w') as f:
-            json.dump(projects, f, indent=2)
+        with open(apps_file, 'w') as f:
+            json.dump(apps, f, indent=2)
         
-        logger.info(f"💾 Successfully saved {len(projects)} projects")
-        logger.debug(f"💾 File size: {projects_file.stat().st_size} bytes")
+        logger.info(f"💾 Successfully saved {len(apps)} apps")
+        logger.debug(f"💾 File size: {apps_file.stat().st_size} bytes")
         return True
     except IOError as e:
-        logger.error(f"❌ Failed to save projects: {e}")
+        logger.error(f"❌ Failed to save apps: {e}")
         logger.debug(f"💾 Error type: {type(e).__name__}")
         return False
 
 def create_slug(name):
-    """Convert project name to slug format"""
+    """Convert app name to slug format"""
     # Convert to lowercase and replace spaces/special chars with hyphens
     slug = re.sub(r'[^a-zA-Z0-9\s-]', '', name.lower())
     slug = re.sub(r'\s+', '-', slug.strip())
@@ -376,13 +376,13 @@ def get_fly_status(project_slug, fly_token):
         
         # Check if app exists and get status
         app_response = requests.get(
-            f'https://api.machines.dev/v1/apps/{project_slug}',
+            f'https://api.machines.dev/v1/apps/{app_slug}',
             headers=headers,
             timeout=10
         )
         
         if app_response.status_code == 404:
-            logger.info(f"⚠️ Fly.io app not found: {project_slug}")
+            logger.info(f"⚠️ Fly.io app not found: {app_slug}")
             return {
                 'deployed': False,
                 'app_url': None,
@@ -396,7 +396,7 @@ def get_fly_status(project_slug, fly_token):
         app_status = app_data.get('status', 'unknown')
         
         # Construct app URL
-        app_url = f"https://{project_slug}.fly.dev"
+        app_url = f"https://{app_slug}.fly.dev"
         
         logger.info(f"✅ Fly.io status retrieved: {app_status}")
         
@@ -600,7 +600,7 @@ def create_github_repo(repo_name, github_token, fly_token):
         # Create repo from template
         create_data = {
             'name': repo_name,
-            'description': f'OpenVibe project: {repo_name}',
+            'description': f'OpenVibe app: {repo_name}',
             'private': False,
             'include_all_branches': False
         }
@@ -671,29 +671,29 @@ def create_github_repo(repo_name, github_token, fly_token):
         logger.error(f"💥 GitHub repo creation error: {str(e)}")
         return False, f"Error creating repository: {str(e)}"
 
-@projects_bp.route('/api/projects', methods=['GET'])
-def get_projects():
-    """Get all projects, ordered alphabetically"""
-    logger.info("📋 GET /api/projects - Fetching all projects")
+@apps_bp.route('/api/apps', methods=['GET'])
+def get_apps():
+    """Get all apps, ordered alphabetically"""
+    logger.info("📋 GET /api/apps - Fetching all apps")
     
     try:
-        projects = load_projects()
-        # Sort projects alphabetically by name
-        projects.sort(key=lambda x: x.get('name', '').lower())
+        apps = load_apps()
+        # Sort apps alphabetically by name
+        apps.sort(key=lambda x: x.get('name', '').lower())
         
-        logger.info(f"📊 Returning {len(projects)} projects")
+        logger.info(f"📊 Returning {len(apps)} apps")
         return jsonify({
-            'projects': projects,
-            'count': len(projects)
+            'apps': apps,
+            'count': len(apps)
         })
     except Exception as e:
-        logger.error(f"💥 Error fetching projects: {str(e)}")
-        return jsonify({'error': 'Failed to fetch projects'}), 500
+        logger.error(f"💥 Error fetching apps: {str(e)}")
+        return jsonify({'error': 'Failed to fetch apps'}), 500
 
-@projects_bp.route('/api/projects/<slug>', methods=['GET'])
-def get_project(slug):
-    """Get a specific project by slug with status information"""
-    logger.info(f"📋 GET /api/projects/{slug} - Fetching project details")
+@apps_bp.route('/api/apps/<slug>', methods=['GET'])
+def get_app(slug):
+    """Get a specific app by slug with status information"""
+    logger.info(f"📋 GET /api/apps/{slug} - Fetching app details")
     
     try:
         # Get UUID from headers for API keys
@@ -701,15 +701,15 @@ def get_project(slug):
         if user_uuid:
             user_uuid = user_uuid.strip()
         
-        projects = load_projects()
+        apps = load_apps()
         
-        # Find project by slug
-        project = next((p for p in projects if p.get('slug') == slug), None)
-        if not project:
-            logger.warning(f"❌ Project not found: {slug}")
-            return jsonify({'error': 'Project not found'}), 404
+        # Find app by slug
+        app = next((a for a in apps if a.get('slug') == slug), None)
+        if not app:
+            logger.warning(f"❌ App not found: {slug}")
+            return jsonify({'error': 'App not found'}), 404
         
-        logger.info(f"📊 Found project: {project['name']}")
+        logger.info(f"📊 Found app: {app['name']}")
         
         # Get user's API keys if UUID is provided
         github_status = None
@@ -722,32 +722,32 @@ def get_project(slug):
                 fly_token = user_keys.get('fly')
                 
                 # Get GitHub status if token is available
-                if github_token and project.get('github_url'):
-                    github_status = get_github_status(project['github_url'], github_token)
+                if github_token and app.get('github_url'):
+                    github_status = get_github_status(app['github_url'], github_token)
                 
                 # Get Fly.io status if token is available
-                if fly_token and project.get('slug'):
-                    fly_status = get_fly_status(project['slug'], fly_token)
+                if fly_token and app.get('slug'):
+                    fly_status = get_fly_status(app['slug'], fly_token)
                     
             except Exception as e:
                 logger.warning(f"⚠️ Error getting status information: {str(e)}")
         
-        # Add status information to project
-        project_with_status = project.copy()
+        # Add status information to app
+        app_with_status = app.copy()
         if github_status:
-            project_with_status['github_status'] = github_status
+            app_with_status['github_status'] = github_status
         if fly_status:
-            project_with_status['fly_status'] = fly_status
+            app_with_status['fly_status'] = fly_status
         
-        return jsonify(project_with_status)
+        return jsonify(app_with_status)
     except Exception as e:
-        logger.error(f"💥 Error fetching project: {str(e)}")
-        return jsonify({'error': 'Failed to fetch project'}), 500
+        logger.error(f"💥 Error fetching app: {str(e)}")
+        return jsonify({'error': 'Failed to fetch app'}), 500
 
-@projects_bp.route('/api/projects', methods=['POST'])
-def create_project():
-    """Create a new project with GitHub repo and Fly.io app"""
-    logger.info("🆕 POST /api/projects - Creating new project")
+@apps_bp.route('/api/apps', methods=['POST'])
+def create_app():
+    """Create a new app with GitHub repo and Fly.io app"""
+    logger.info("🆕 POST /api/apps - Creating new app")
     
     try:
         # Get UUID from headers
@@ -764,33 +764,33 @@ def create_project():
         # Get request data
         data = request.get_json()
         if not data or 'name' not in data:
-            logger.warning("❌ Project name is required")
-            return jsonify({'error': 'Project name is required'}), 400
+            logger.warning("❌ App name is required")
+            return jsonify({'error': 'App name is required'}), 400
         
-        project_name = data['name'].strip()
-        if not project_name:
-            logger.warning("❌ Project name cannot be empty")
-            return jsonify({'error': 'Project name cannot be empty'}), 400
+        app_name = data['name'].strip()
+        if not app_name:
+            logger.warning("❌ App name cannot be empty")
+            return jsonify({'error': 'App name cannot be empty'}), 400
         
         # Create slug from name (use provided slug if available, otherwise generate)
-        project_slug = data.get('slug', create_slug(project_name)).strip()
-        if not project_slug:
-            project_slug = create_slug(project_name)
+        app_slug = data.get('slug', create_slug(app_name)).strip()
+        if not app_slug:
+            app_slug = create_slug(app_name)
         
-        if not project_slug:
-            logger.warning("❌ Invalid project name - cannot create slug")
-            return jsonify({'error': 'Invalid project name'}), 400
+        if not app_slug:
+            logger.warning("❌ Invalid app name - cannot create slug")
+            return jsonify({'error': 'Invalid app name'}), 400
         
-        logger.info(f"🔄 Creating project: {project_name} -> {project_slug}")
+        logger.info(f"🔄 Creating app: {app_name} -> {app_slug}")
         
-        # Load existing projects
-        projects = load_projects()
+        # Load existing apps
+        apps = load_apps()
         
-        # Check if project with same slug already exists
-        existing_project = next((p for p in projects if p.get('slug') == project_slug), None)
-        if existing_project:
-            logger.warning(f"❌ Project with slug '{project_slug}' already exists")
-            return jsonify({'error': f'Project with name "{project_name}" already exists'}), 409
+        # Check if app with same slug already exists
+        existing_app = next((p for p in apps if p.get('slug') == app_slug), None)
+        if existing_app:
+            logger.warning(f"❌ App with slug '{app_slug}' already exists")
+            return jsonify({'error': f'App with name "{app_name}" already exists'}), 409
         
         # Get user's API keys
         user_keys = load_user_keys(user_uuid)
@@ -806,8 +806,8 @@ def create_project():
             return jsonify({'error': 'Fly.io API key is required. Please set it in integrations first.'}), 400
         
         # Create GitHub repository
-        logger.info(f"🐙 Creating GitHub repository: {project_slug}")
-        github_success, github_result = create_github_repo(project_slug, github_token, fly_token)
+        logger.info(f"🐙 Creating GitHub repository: {app_slug}")
+        github_success, github_result = create_github_repo(app_slug, github_token, fly_token)
         
         if not github_success:
             logger.error(f"❌ GitHub repo creation failed: {github_result}")
@@ -817,53 +817,52 @@ def create_project():
         logger.info(f"✅ GitHub repository created: {github_url}")
         
         # Create Fly.io app
-        logger.info(f"🛩️ Creating Fly.io app: {project_slug}")
-        fly_success, fly_result = create_fly_app(project_slug, fly_token)
+        logger.info(f"🛩️ Creating Fly.io app: {app_slug}")
+        fly_success, fly_result = create_fly_app(app_slug, fly_token)
         
         if not fly_success:
             logger.error(f"❌ Fly.io app creation failed: {fly_result}")
-            # Don't fail the entire project creation if Fly.io fails
+            # Don't fail the entire app creation if Fly.io fails
             # The user can manually create the app later
-            logger.warning(f"⚠️ Continuing with project creation despite Fly.io failure")
+            logger.warning(f"⚠️ Continuing with app creation despite Fly.io failure")
             fly_app_name = None
         else:
-            fly_app_name = project_slug
+            fly_app_name = app_slug
             logger.info(f"✅ Fly.io app created: {fly_app_name}")
         
-        # Create project record
-        project = {
-            'id': len(projects) + 1,
-            'name': project_name,
-            'slug': project_slug,
+        # Create app record
+        app = {
+            'name': app_name,
+            'slug': app_slug,
             'github_url': github_url,
             'fly_app_name': fly_app_name,
             'created_at': datetime.utcnow().isoformat(),
             'created_by': user_uuid
         }
         
-        # Add to projects list
-        projects.append(project)
+        # Add to apps list
+        apps.append(app)
         
         # Save to file
-        if not save_projects(projects):
-            logger.error("❌ Failed to save project to file")
-            return jsonify({'error': 'Failed to save project'}), 500
+        if not save_apps(apps):
+            logger.error("❌ Failed to save app to file")
+            return jsonify({'error': 'Failed to save app'}), 500
         
-        logger.info(f"✅ Project created successfully: {project_name}")
+        logger.info(f"✅ App created successfully: {app_name}")
         return jsonify({
-            'message': 'Project created successfully',
-            'project': project,
+            'message': 'App created successfully',
+            'app': app,
             'warnings': [] if fly_success else [f'Fly.io app creation failed: {fly_result}']
         }), 201
         
     except Exception as e:
-        logger.error(f"💥 Error creating project: {str(e)}")
-        return jsonify({'error': 'Failed to create project'}), 500
+        logger.error(f"💥 Error creating app: {str(e)}")
+        return jsonify({'error': 'Failed to create app'}), 500
 
-@projects_bp.route('/api/projects/<slug>', methods=['DELETE'])
-def delete_project(slug):
-    """Delete a project and its associated GitHub repo and Fly.io app"""
-    logger.info(f"🗑️ DELETE /api/projects/{slug} - Deleting project")
+@apps_bp.route('/api/apps/<slug>', methods=['DELETE'])
+def delete_app(slug):
+    """Delete a app and its associated GitHub repo and Fly.io app"""
+    logger.info(f"🗑️ DELETE /api/apps/{slug} - Deleting app")
     
     try:
         # Get UUID from headers
@@ -877,16 +876,16 @@ def delete_project(slug):
             logger.warning("❌ Empty UUID provided in header")
             return jsonify({'error': 'UUID cannot be empty'}), 400
         
-        # Load projects
-        projects = load_projects()
+        # Load apps
+        apps = load_apps()
         
-        # Find project by slug
-        project = next((p for p in projects if p.get('slug') == slug), None)
-        if not project:
-            logger.warning(f"❌ Project not found: {slug}")
-            return jsonify({'error': 'Project not found'}), 404
+        # Find app by slug
+        app = next((p for p in apps if p.get('slug') == slug), None)
+        if not app:
+            logger.warning(f"❌ App not found: {slug}")
+            return jsonify({'error': 'App not found'}), 404
         
-        logger.info(f"🔍 Found project to delete: {project['name']}")
+        logger.info(f"🔍 Found app to delete: {app['name']}")
         
         # Get user's API keys
         user_keys = load_user_keys(user_uuid)
@@ -901,9 +900,9 @@ def delete_project(slug):
         }
         
         # Delete GitHub repository if URL exists and token is available
-        if project.get('github_url') and github_token:
-            logger.info(f"🐙 Deleting GitHub repository: {project['github_url']}")
-            github_success, github_message = delete_github_repo(project['github_url'], github_token)
+        if app.get('github_url') and github_token:
+            logger.info(f"🐙 Deleting GitHub repository: {app['github_url']}")
+            github_success, github_message = delete_github_repo(app['github_url'], github_token)
             deletion_results['github_success'] = github_success
             if not github_success:
                 deletion_results['github_error'] = github_message
@@ -914,9 +913,9 @@ def delete_project(slug):
             logger.info("⚠️ Skipping GitHub deletion (no URL or token)")
         
         # Delete Fly.io app if name exists and token is available
-        if project.get('fly_app_name') and fly_token:
-            logger.info(f"🛩️ Deleting Fly.io app: {project['fly_app_name']}")
-            fly_success, fly_message = delete_fly_app(project['fly_app_name'], fly_token)
+        if app.get('fly_app_name') and fly_token:
+            logger.info(f"🛩️ Deleting Fly.io app: {app['fly_app_name']}")
+            fly_success, fly_message = delete_fly_app(app['fly_app_name'], fly_token)
             deletion_results['fly_success'] = fly_success
             if not fly_success:
                 deletion_results['fly_error'] = fly_message
@@ -926,30 +925,30 @@ def delete_project(slug):
         else:
             logger.info("⚠️ Skipping Fly.io deletion (no app name or token)")
         
-        # Remove project from list
-        projects = [p for p in projects if p.get('slug') != slug]
+        # Remove app from list
+        apps = [p for p in apps if p.get('slug') != slug]
         
-        # Save updated projects list
-        if save_projects(projects):
-            logger.info(f"✅ Project {slug} removed from database")
+        # Save updated apps list
+        if save_apps(apps):
+            logger.info(f"✅ App {slug} removed from database")
         else:
-            logger.error(f"❌ Failed to save projects after deletion")
-            return jsonify({'error': 'Failed to update project database'}), 500
+            logger.error(f"❌ Failed to save apps after deletion")
+            return jsonify({'error': 'Failed to update app database'}), 500
         
-        # Delete associated conversations file
+        # Delete associated riffs file
         try:
-            conversations_file = get_conversations_file(project.get('id'))
-            if conversations_file.exists():
-                conversations_file.unlink()
-                logger.info(f"✅ Deleted conversations file for project {slug}")
+            riffs_file = get_riffs_file(slug)
+            if riffs_file.exists():
+                riffs_file.unlink()
+                logger.info(f"✅ Deleted riffs file for app {slug}")
         except Exception as e:
-            logger.warning(f"⚠️ Failed to delete conversations file: {str(e)}")
+            logger.warning(f"⚠️ Failed to delete riffs file: {str(e)}")
         
         # Prepare response
         response_data = {
-            'message': f'Project "{project.get("name")}" deleted successfully',
-            'project_name': project.get('name'),
-            'project_slug': slug,
+            'message': f'App "{app.get("name")}" deleted successfully',
+            'app_name': app.get('name'),
+            'app_slug': slug,
             'deletion_results': deletion_results
         }
         
@@ -963,9 +962,9 @@ def delete_project(slug):
         if warnings:
             response_data['warnings'] = warnings
         
-        logger.info(f"✅ Project deletion completed: {slug}")
+        logger.info(f"✅ App deletion completed: {slug}")
         return jsonify(response_data)
         
     except Exception as e:
-        logger.error(f"💥 Error deleting project: {str(e)}")
-        return jsonify({'error': 'Failed to delete project'}), 500
+        logger.error(f"💥 Error deleting app: {str(e)}")
+        return jsonify({'error': 'Failed to delete app'}), 500

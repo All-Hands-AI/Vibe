@@ -4,21 +4,21 @@ import BranchStatus from './BranchStatus'
 
 describe('BranchStatus', () => {
   it('displays default branch name when no branch is provided', () => {
-    const project = {
+    const app = {
       github_status: {
         tests_passing: true,
         last_commit: 'abc1234567890'
       }
     }
 
-    render(<BranchStatus project={project} />)
+    render(<BranchStatus app={app} />)
     
     expect(screen.getByText('main')).toBeInTheDocument()
     expect(screen.getByText('✅ Passing')).toBeInTheDocument()
   })
 
   it('displays custom branch name when provided', () => {
-    const project = {
+    const app = {
       github_status: {
         branch: 'feature/new-feature',
         tests_passing: true,
@@ -26,13 +26,13 @@ describe('BranchStatus', () => {
       }
     }
 
-    render(<BranchStatus project={project} />)
+    render(<BranchStatus app={app} />)
     
     expect(screen.getByText('feature/new-feature')).toBeInTheDocument()
   })
 
   it('displays failing status with generic failing check when tests are failing', () => {
-    const project = {
+    const app = {
       github_url: 'https://github.com/user/repo',
       github_status: {
         tests_passing: false,
@@ -40,7 +40,7 @@ describe('BranchStatus', () => {
       }
     }
 
-    render(<BranchStatus project={project} />)
+    render(<BranchStatus app={app} />)
     
     expect(screen.getByText('❌ Failing')).toBeInTheDocument()
     expect(screen.getByText('Failing Checks')).toBeInTheDocument()
@@ -48,7 +48,7 @@ describe('BranchStatus', () => {
   })
 
   it('displays specific failing checks when provided', () => {
-    const project = {
+    const app = {
       github_status: {
         tests_passing: false,
         last_commit: 'abc1234567890',
@@ -69,7 +69,7 @@ describe('BranchStatus', () => {
       }
     }
 
-    render(<BranchStatus project={project} />)
+    render(<BranchStatus app={app} />)
     
     expect(screen.getByText('Unit Tests')).toBeInTheDocument()
     expect(screen.getByText('Lint Check')).toBeInTheDocument()
@@ -77,35 +77,35 @@ describe('BranchStatus', () => {
   })
 
   it('displays running status when tests are pending', () => {
-    const project = {
+    const app = {
       github_status: {
         tests_passing: null,
         last_commit: 'abc1234567890'
       }
     }
 
-    render(<BranchStatus project={project} />)
+    render(<BranchStatus app={app} />)
     
     expect(screen.getByText('🔄 Running')).toBeInTheDocument()
   })
 
   it('displays last commit hash when provided', () => {
-    const project = {
+    const app = {
       github_status: {
         tests_passing: true,
         last_commit: 'abc1234567890'
       }
     }
 
-    render(<BranchStatus project={project} />)
+    render(<BranchStatus app={app} />)
     
     expect(screen.getByText('abc1234')).toBeInTheDocument()
   })
 
-  it('handles project without github_status gracefully', () => {
-    const project = {}
+  it('handles app without github_status gracefully', () => {
+    const app = {}
 
-    render(<BranchStatus project={project} />)
+    render(<BranchStatus app={app} />)
     
     expect(screen.getByText('main')).toBeInTheDocument()
     expect(screen.getByText('🔄 Checking...')).toBeInTheDocument()
