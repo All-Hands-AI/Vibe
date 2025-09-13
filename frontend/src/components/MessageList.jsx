@@ -1,15 +1,7 @@
-import { useEffect, useRef } from 'react'
 import PropTypes from 'prop-types'
 
-function MessageList({ messages, userUuid }) {
-  const scrollContainerRef = useRef(null)
-
-  // Auto-scroll to bottom when new messages arrive
-  useEffect(() => {
-    if (scrollContainerRef.current) {
-      scrollContainerRef.current.scrollTop = scrollContainerRef.current.scrollHeight
-    }
-  }, [messages])
+function MessageList({ messages, userUuid, scrollContainerRef, onScroll }) {
+  // No auto-scroll here - handled by parent ChatWindow component
 
   const formatTime = (timestamp) => {
     try {
@@ -19,7 +11,7 @@ function MessageList({ messages, userUuid }) {
         minute: '2-digit',
         hour12: false 
       })
-    } catch (e) {
+    } catch {
       return 'Invalid time'
     }
   }
@@ -42,7 +34,7 @@ function MessageList({ messages, userUuid }) {
           year: date.getFullYear() !== today.getFullYear() ? 'numeric' : undefined
         })
       }
-    } catch (e) {
+    } catch {
       return 'Invalid date'
     }
   }
@@ -91,6 +83,7 @@ function MessageList({ messages, userUuid }) {
       ref={scrollContainerRef}
       className="flex-1 overflow-y-auto p-4 space-y-4"
       style={{ maxHeight: '400px' }}
+      onScroll={onScroll}
     >
       {Object.entries(groupedMessages).map(([date, dateMessages]) => (
         <div key={date}>
@@ -186,7 +179,9 @@ MessageList.propTypes = {
       metadata: PropTypes.object
     })
   ).isRequired,
-  userUuid: PropTypes.string.isRequired
+  userUuid: PropTypes.string.isRequired,
+  scrollContainerRef: PropTypes.object,
+  onScroll: PropTypes.func
 }
 
 export default MessageList

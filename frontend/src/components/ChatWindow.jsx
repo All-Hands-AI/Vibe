@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import PropTypes from 'prop-types'
 import MessageList from './MessageList'
 import MessageInput from './MessageInput'
@@ -8,16 +8,33 @@ function ChatWindow({ app, riff, userUuid }) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [sending, setSending] = useState(false)
+  const [previousMessageCount, setPreviousMessageCount] = useState(0)
   const pollingRef = useRef(null)
   const messagesEndRef = useRef(null)
+  const scrollContainerRef = useRef(null)
+  const [userHasScrolled, setUserHasScrolled] = useState(false)
 
   // Scroll to bottom of messages
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }
 
+  // Check if user is near the bottom of the scroll container
+  const isNearBottom = () => {
+    if (!scrollContainerRef.current) return true
+    const { scrollTop, scrollHeight, clientHeight } = scrollContainerRef.current
+    return scrollHeight - scrollTop - clientHeight < 100 // Within 100px of bottom
+  }
+
+  // Handle scroll events to detect if user is manually scrolling
+  const handleScroll = () => {
+    if (!scrollContainerRef.current) return
+    const isAtBottom = isNearBottom()
+    setUserHasScrolled(!isAtBottom)
+  }
+
   // Fetch messages from API
-  const fetchMessages = async () => {
+  const fetchMessages = useCallback(async () => {
     try {
       const response = await fetch(`/api/apps/${app.slug}/riffs/${riff.slug}/messages`, {
         headers: {
@@ -30,7 +47,26 @@ function ChatWindow({ app, riff, userUuid }) {
       }
 
       const data = await response.json()
-      setMessages(data.messages || [])
+      const newMessages = data.messages || []
+      const newMessageCount = newMessages.length
+      
+      // Only update messages if there's actually a change
+      if (JSON.stringify(newMessages) !== JSON.stringify(messages)) {
+        setMessages(newMessages)
+        
+        // Only scroll to bottom if:
+        // 1. This is the initial load, OR
+        // 2. New messages were added AND user hasn't manually scrolled up
+        if (loading || (newMessageCount > previousMessageCount && !userHasScrolled)) {
+          // Use a small delay to ensure DOM is updated
+          setTimeout(() => {
+            scrollToBottom()
+          }, 100)
+        }
+        
+        setPreviousMessageCount(newMessageCount)
+      }
+      
       setError('')
     } catch (err) {
       console.error('Error fetching messages:', err)
@@ -38,7 +74,7 @@ function ChatWindow({ app, riff, userUuid }) {
     } finally {
       setLoading(false)
     }
-  }
+  }, [app.slug, riff.slug, userUuid, messages, loading, previousMessageCount, userHasScrolled])
 
   // Send a new message
   const sendMessage = async (content, type = 'text', metadata = {}) => {
@@ -65,8 +101,9 @@ function ChatWindow({ app, riff, userUuid }) {
       }
 
       // Immediately fetch messages to update the UI
+      // Reset user scroll state since they just sent a message
+      setUserHasScrolled(false)
       await fetchMessages()
-      scrollToBottom()
     } catch (err) {
       console.error('Error sending message:', err)
       setError(err.message || 'Failed to send message')
@@ -76,7 +113,7 @@ function ChatWindow({ app, riff, userUuid }) {
   }
 
   // Start polling for new messages
-  const startPolling = () => {
+  const startPolling = useCallback(() => {
     if (pollingRef.current) {
       clearInterval(pollingRef.current)
     }
@@ -84,15 +121,15 @@ function ChatWindow({ app, riff, userUuid }) {
     pollingRef.current = setInterval(() => {
       fetchMessages()
     }, 2000) // Poll every 2 seconds
-  }
+  }, [fetchMessages])
 
   // Stop polling
-  const stopPolling = () => {
+  const stopPolling = useCallback(() => {
     if (pollingRef.current) {
       clearInterval(pollingRef.current)
       pollingRef.current = null
     }
-  }
+  }, [])
 
   // Initial load and setup polling
   useEffect(() => {
@@ -102,12 +139,14 @@ function ChatWindow({ app, riff, userUuid }) {
     return () => {
       stopPolling()
     }
-  }, [app.slug, riff.slug, userUuid])
+  }, [fetchMessages, startPolling, stopPolling])
 
-  // Scroll to bottom when messages change
+  // Initialize previous message count when messages first load
   useEffect(() => {
-    scrollToBottom()
-  }, [messages])
+    if (messages.length > 0 && previousMessageCount === 0) {
+      setPreviousMessageCount(messages.length)
+    }
+  }, [messages, previousMessageCount])
 
   if (loading) {
     return (
@@ -145,7 +184,12 @@ function ChatWindow({ app, riff, userUuid }) {
 
       {/* Messages Area */}
       <div className="flex-1 overflow-hidden">
-        <MessageList messages={messages} userUuid={userUuid} />
+        <MessageList 
+          messages={messages} 
+          userUuid={userUuid}
+          scrollContainerRef={scrollContainerRef}
+          onScroll={handleScroll}
+        />
         <div ref={messagesEndRef} />
       </div>
 

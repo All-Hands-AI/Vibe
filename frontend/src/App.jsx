@@ -1,5 +1,5 @@
 import React from 'react'
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
+import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom'
 import { ThemeProvider } from './context/ThemeContext'
 import { SetupProvider, useSetup } from './context/SetupContext'
 import Header from './components/Header'
@@ -13,6 +13,17 @@ import Apps from './pages/Apps'
 import AppDetail from './pages/AppDetail'
 import RiffDetail from './pages/RiffDetail'
 import { logger } from './utils/logger'
+
+// Component to handle scroll to top on route changes
+function ScrollToTop() {
+  const location = useLocation()
+  
+  React.useEffect(() => {
+    window.scrollTo(0, 0)
+  }, [location.pathname])
+  
+  return null
+}
 
 function AppContent() {
   const { isSetupComplete, isLoading, completeSetup } = useSetup()
@@ -46,6 +57,7 @@ function AppContent() {
 
   return (
     <Router>
+      <ScrollToTop />
       <div className="min-h-screen flex flex-col bg-black text-cyber-text transition-colors duration-300 relative">
         <MatrixRain />
         {!isSetupComplete && (

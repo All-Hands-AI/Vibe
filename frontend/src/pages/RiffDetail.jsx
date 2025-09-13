@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { useParams, Link } from 'react-router-dom'
+import { useParams, Link, useLocation } from 'react-router-dom'
 import { useSetup } from '../context/SetupContext'
 import BranchStatus from '../components/BranchStatus'
 import ChatWindow from '../components/ChatWindow'
@@ -7,6 +7,7 @@ import ChatWindow from '../components/ChatWindow'
 function RiffDetail() {
   const { slug: appSlug, riffSlug } = useParams()
   const { userUUID } = useSetup()
+  const location = useLocation()
   const [app, setApp] = useState(null)
   const [riff, setRiff] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -69,6 +70,11 @@ function RiffDetail() {
   useEffect(() => {
     fetchData()
   }, [fetchData])
+
+  // Scroll to top when route changes
+  useEffect(() => {
+    window.scrollTo(0, 0)
+  }, [location.pathname])
 
   if (loading) {
     return (
