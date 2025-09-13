@@ -3,7 +3,6 @@ End-to-end tests for basic endpoints.
 Tests basic functionality like health checks and hello endpoints.
 """
 
-
 from datetime import datetime
 
 

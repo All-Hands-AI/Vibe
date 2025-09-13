@@ -136,7 +136,8 @@ class TestKeyValidation:
             call_args = mock_get.call_args
             assert "https://api.machines.dev/v1/apps" in call_args[0]
             assert "Authorization" in call_args[1]["headers"]
-            assert call_args[1]["headers"]["Authorization"] == "FlyV1 fo1_test-token-1234567890"
+            expected_auth = "FlyV1 fo1_test-token-1234567890"
+            assert call_args[1]["headers"]["Authorization"] == expected_auth
 
     def test_key_validation_error_handling(self):
         """Test key validation handles various error conditions"""
