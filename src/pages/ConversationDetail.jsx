@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useParams, Link } from 'react-router-dom'
-import './ConversationDetail.css'
 
 function ConversationDetail() {
   const { slug: projectSlug, conversationSlug } = useParams()
@@ -69,10 +68,10 @@ function ConversationDetail() {
 
   if (loading) {
     return (
-      <div className="conversation-detail-page">
-        <div className="loading">
-          <div className="spinner"></div>
-          <p>Loading conversation...</p>
+      <div className="min-h-screen bg-gray-900 text-white">
+        <div className="flex flex-col items-center justify-center py-16">
+          <div className="w-10 h-10 border-4 border-gray-600 border-t-primary-300 rounded-full animate-spin mb-4"></div>
+          <p className="text-gray-400">Loading conversation...</p>
         </div>
       </div>
     )
@@ -80,17 +79,21 @@ function ConversationDetail() {
 
   if (error) {
     return (
-      <div className="conversation-detail-page">
-        <div className="error-state">
-          <h2>Error</h2>
-          <p>{error}</p>
-          <div className="error-actions">
-            <Link to="/" className="back-link">← Back to Projects</Link>
-            {project && (
-              <Link to={`/projects/${project.slug}`} className="back-link">
-                ← Back to {project.name}
+      <div className="min-h-screen bg-gray-900 text-white">
+        <div className="max-w-4xl mx-auto px-8 py-16">
+          <div className="text-center">
+            <h2 className="text-3xl font-bold text-red-400 mb-4">Error</h2>
+            <p className="text-gray-300 mb-8">{error}</p>
+            <div className="flex flex-wrap justify-center gap-4">
+              <Link to="/" className="inline-flex items-center text-primary-300 hover:text-primary-400 font-medium transition-colors duration-200">
+                ← Back to Projects
               </Link>
-            )}
+              {project && (
+                <Link to={`/projects/${project.slug}`} className="inline-flex items-center text-primary-300 hover:text-primary-400 font-medium transition-colors duration-200">
+                  ← Back to {project.name}
+                </Link>
+              )}
+            </div>
           </div>
         </div>
       </div>
@@ -99,38 +102,46 @@ function ConversationDetail() {
 
   if (!project || !conversation) {
     return (
-      <div className="conversation-detail-page">
-        <div className="error-state">
-          <h2>Not Found</h2>
-          <p>The conversation could not be found.</p>
-          <Link to="/" className="back-link">← Back to Projects</Link>
+      <div className="min-h-screen bg-gray-900 text-white">
+        <div className="max-w-4xl mx-auto px-8 py-16">
+          <div className="text-center">
+            <h2 className="text-3xl font-bold text-red-400 mb-4">Not Found</h2>
+            <p className="text-gray-300 mb-8">The conversation could not be found.</p>
+            <Link to="/" className="inline-flex items-center text-primary-300 hover:text-primary-400 font-medium transition-colors duration-200">
+              ← Back to Projects
+            </Link>
+          </div>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="conversation-detail-page">
-      <div className="conversation-detail-container">
+    <div className="min-h-screen bg-gray-900 text-white">
+      <div className="max-w-6xl mx-auto px-8 py-8">
         {/* Navigation */}
-        <nav className="conversation-nav">
-          <Link to="/" className="back-link">← Projects</Link>
-          <span className="nav-separator">/</span>
-          <Link to={`/projects/${project.slug}`} className="back-link">
-            {project.name}
-          </Link>
-          <span className="nav-separator">/</span>
-          <span className="current-page">{conversation.name}</span>
+        <nav className="mb-8">
+          <div className="flex items-center space-x-2 text-sm">
+            <Link to="/" className="text-primary-300 hover:text-primary-400 transition-colors duration-200">
+              ← Projects
+            </Link>
+            <span className="text-gray-500">/</span>
+            <Link to={`/projects/${project.slug}`} className="text-primary-300 hover:text-primary-400 transition-colors duration-200">
+              {project.name}
+            </Link>
+            <span className="text-gray-500">/</span>
+            <span className="text-gray-300">{conversation.name}</span>
+          </div>
         </nav>
 
         {/* Conversation Header */}
-        <header className="conversation-header">
-          <div className="conversation-title">
-            <h1>{conversation.name}</h1>
-            <span className="conversation-slug">{conversation.slug}</span>
+        <header className="mb-12">
+          <div className="mb-6">
+            <h1 className="text-4xl font-bold text-white mb-2">{conversation.name}</h1>
+            <span className="text-gray-400 font-mono text-lg">{conversation.slug}</span>
           </div>
           
-          <div className="conversation-meta">
+          <div className="flex flex-wrap items-center gap-6 text-gray-300">
             <p>Created: {new Date(conversation.created_at).toLocaleDateString()}</p>
             {conversation.last_message_at && (
               <p>Last activity: {new Date(conversation.last_message_at).toLocaleDateString()}</p>
@@ -140,45 +151,63 @@ function ConversationDetail() {
         </header>
 
         {/* Conversation Content */}
-        <section className="conversation-content">
-          <div className="conversation-placeholder">
-            <div className="placeholder-icon">💬</div>
-            <h3>Conversation Interface</h3>
-            <p>This is where the conversation interface would be implemented.</p>
-            <p>Features to add:</p>
-            <ul>
-              <li>Message history display</li>
-              <li>Message input and sending</li>
-              <li>Real-time updates</li>
-              <li>File attachments</li>
-              <li>Message search and filtering</li>
-            </ul>
+        <section className="mb-12">
+          <div className="bg-gray-850 rounded-lg border border-gray-700 p-12 text-center">
+            <div className="text-6xl mb-6">💬</div>
+            <h3 className="text-2xl font-bold text-primary-300 mb-4">Conversation Interface</h3>
+            <p className="text-gray-300 mb-6">This is where the conversation interface would be implemented.</p>
+            <div className="text-left max-w-md mx-auto">
+              <p className="text-gray-300 mb-4 font-semibold">Features to add:</p>
+              <ul className="space-y-2 text-gray-400">
+                <li className="flex items-center">
+                  <span className="w-2 h-2 bg-primary-300 rounded-full mr-3"></span>
+                  Message history display
+                </li>
+                <li className="flex items-center">
+                  <span className="w-2 h-2 bg-primary-300 rounded-full mr-3"></span>
+                  Message input and sending
+                </li>
+                <li className="flex items-center">
+                  <span className="w-2 h-2 bg-primary-300 rounded-full mr-3"></span>
+                  Real-time updates
+                </li>
+                <li className="flex items-center">
+                  <span className="w-2 h-2 bg-primary-300 rounded-full mr-3"></span>
+                  File attachments
+                </li>
+                <li className="flex items-center">
+                  <span className="w-2 h-2 bg-primary-300 rounded-full mr-3"></span>
+                  Message search and filtering
+                </li>
+              </ul>
+            </div>
           </div>
         </section>
 
         {/* Conversation Actions */}
-        <section className="conversation-actions">
-          <div className="actions-grid">
-            <div className="action-card">
-              <h4>Export Conversation</h4>
-              <p>Download this conversation as a file</p>
-              <button className="action-button" disabled>
+        <section>
+          <h2 className="text-2xl font-bold text-primary-300 mb-6">Actions</h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="bg-gray-850 p-6 rounded-lg border border-gray-700">
+              <h4 className="text-lg font-semibold text-white mb-2">Export Conversation</h4>
+              <p className="text-gray-400 mb-4">Download this conversation as a file</p>
+              <button className="w-full px-4 py-2 bg-gray-600 text-gray-400 rounded-md cursor-not-allowed" disabled>
                 Export (Coming Soon)
               </button>
             </div>
             
-            <div className="action-card">
-              <h4>Share Conversation</h4>
-              <p>Generate a shareable link</p>
-              <button className="action-button" disabled>
+            <div className="bg-gray-850 p-6 rounded-lg border border-gray-700">
+              <h4 className="text-lg font-semibold text-white mb-2">Share Conversation</h4>
+              <p className="text-gray-400 mb-4">Generate a shareable link</p>
+              <button className="w-full px-4 py-2 bg-gray-600 text-gray-400 rounded-md cursor-not-allowed" disabled>
                 Share (Coming Soon)
               </button>
             </div>
             
-            <div className="action-card">
-              <h4>Archive Conversation</h4>
-              <p>Move to archived conversations</p>
-              <button className="action-button danger" disabled>
+            <div className="bg-gray-850 p-6 rounded-lg border border-gray-700">
+              <h4 className="text-lg font-semibold text-white mb-2">Archive Conversation</h4>
+              <p className="text-gray-400 mb-4">Move to archived conversations</p>
+              <button className="w-full px-4 py-2 bg-red-600/20 text-red-400 border border-red-500 rounded-md cursor-not-allowed" disabled>
                 Archive (Coming Soon)
               </button>
             </div>

@@ -12,7 +12,6 @@ import Projects from './pages/Projects'
 import ProjectDetail from './pages/ProjectDetail'
 import ConversationDetail from './pages/ConversationDetail'
 import { logger } from './utils/logger'
-import './App.css'
 
 function AppContent() {
   const { isSetupComplete, isLoading, completeSetup } = useSetup()
@@ -25,10 +24,10 @@ function AppContent() {
 
   if (isLoading) {
     return (
-      <div className="loading-screen">
-        <div className="loading-spinner">
-          <div className="spinner"></div>
-          <p>Loading OpenVibe...</p>
+      <div className="fixed inset-0 bg-gray-900 dark:bg-gray-950 flex items-center justify-center z-50">
+        <div className="text-center">
+          <div className="w-10 h-10 border-4 border-gray-600 border-t-primary-300 rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-400 text-base">Loading OpenVibe...</p>
         </div>
       </div>
     )
@@ -36,12 +35,12 @@ function AppContent() {
 
   return (
     <Router>
-      <div className="App">
+      <div className="min-h-screen flex flex-col bg-gray-900 text-white dark:bg-gray-950 transition-colors duration-300">
         {!isSetupComplete && (
           <SetupWindow onSetupComplete={completeSetup} />
         )}
         <Header />
-        <main className="main-content">
+        <main className="flex-1">
           <Routes>
             <Route path="/" element={<Projects />} />
             <Route path="/projects/:slug" element={<ProjectDetail />} />
