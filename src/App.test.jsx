@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import App from './App'
 
@@ -9,37 +9,90 @@ describe('App', () => {
   beforeEach(() => {
     // Reset fetch mock before each test
     fetch.mockClear()
-    
-    // Mock successful API responses
+  })
+
+  it('shows loading screen initially', () => {
+    // Mock API calls that will fail (no setup)
     fetch
       .mockResolvedValueOnce({
         ok: true,
-        json: async () => ({ message: 'Hello from the API!', endpoint: '/api/hello' })
+        json: async () => ({ valid: false, message: 'Anthropic API key not set' })
       })
       .mockResolvedValueOnce({
         ok: true,
-        json: async () => ({ status: 'healthy', service: 'OpenVibe Backend' })
+        json: async () => ({ valid: false, message: 'GitHub API key not set' })
       })
-  })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ valid: false, message: 'Fly API key not set' })
+      })
 
-  it('renders the main layout components', () => {
     render(<App />)
     
-    // Check for header logo specifically
-    expect(screen.getByRole('link', { name: 'OpenVibe' })).toBeInTheDocument()
+    // Should show loading screen initially
+    expect(screen.getByText('Loading OpenVibe...')).toBeInTheDocument()
+  })
+
+  it('shows setup window when API keys are not configured', async () => {
+    // Mock API calls that will fail (no setup)
+    fetch
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ valid: false, message: 'Anthropic API key not set' })
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ valid: false, message: 'GitHub API key not set' })
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ valid: false, message: 'Fly API key not set' })
+      })
+
+    render(<App />)
     
-    // Check for home page content (default route) - updated text
+    // Wait for setup window to appear
+    await waitFor(() => {
+      expect(screen.getByText('🚀 Welcome to OpenVibe')).toBeInTheDocument()
+    })
+    
+    expect(screen.getByText('Please configure your API keys to get started')).toBeInTheDocument()
+    expect(screen.getByLabelText(/Anthropic API Key/)).toBeInTheDocument()
+    expect(screen.getByLabelText(/GitHub API Key/)).toBeInTheDocument()
+    expect(screen.getByLabelText(/Fly.io API Key/)).toBeInTheDocument()
+  })
+
+  it('renders main app when all API keys are configured', async () => {
+    // Mock successful API responses (all keys valid)
+    fetch
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ valid: true, message: 'Anthropic API key is valid' })
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ valid: true, message: 'GitHub API key is valid' })
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ valid: true, message: 'Fly API key is valid' })
+      })
+
+    render(<App />)
+    
+    // Wait for main app to load
+    await waitFor(() => {
+      expect(screen.getByRole('link', { name: 'OpenVibe' })).toBeInTheDocument()
+    })
+    
+    // Check for home page content (default route)
     expect(screen.getByText('Welcome to OpenVibe')).toBeInTheDocument()
     expect(screen.getByText('Your React App is Running with Python Backend!')).toBeInTheDocument()
     
     // Check for footer
     expect(screen.getByText('© 2025 OpenVibe. All rights reserved.')).toBeInTheDocument()
-  })
-
-  it('has proper navigation structure', () => {
-    render(<App />)
     
-    // Check navigation links in header specifically
+    // Check navigation links in header
     const nav = screen.getByRole('navigation')
     expect(nav).toBeInTheDocument()
     
@@ -55,6 +108,21 @@ describe('App', () => {
   })
 
   it('renders with theme provider', () => {
+    // Mock API calls that will fail (no setup)
+    fetch
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ valid: false, message: 'Anthropic API key not set' })
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ valid: false, message: 'GitHub API key not set' })
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ valid: false, message: 'Fly API key not set' })
+      })
+
     const { container } = render(<App />)
     
     // Check that theme class is applied

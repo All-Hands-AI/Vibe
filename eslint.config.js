@@ -31,7 +31,7 @@ export default [
       'react/jsx-no-target-blank': 'off',
       'react-refresh/only-export-components': [
         'warn',
-        { allowConstantExport: true, allowExportNames: ['useTheme'] },
+        { allowConstantExport: true, allowExportNames: ['useTheme', 'useSetup'] },
       ],
     },
   },
@@ -42,6 +42,15 @@ export default [
       globals: {
         ...globals.browser,
         ...globals.node,
+        describe: 'readonly',
+        it: 'readonly',
+        test: 'readonly',
+        expect: 'readonly',
+        beforeEach: 'readonly',
+        afterEach: 'readonly',
+        beforeAll: 'readonly',
+        afterAll: 'readonly',
+        vi: 'readonly',
       },
       parserOptions: {
         ecmaVersion: 'latest',
