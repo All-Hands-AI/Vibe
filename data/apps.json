@@ -1,0 +1,15 @@
+[
+  {
+    "slug": "test-app",
+    "name": "Test Application",
+    "description": "A test application for demonstrating the chat functionality",
+    "created_at": "2025-09-13T19:00:00.000Z",
+    "github_url": "https://github.com/example/test-app",
+    "github_status": {
+      "branch": "main",
+      "tests_passing": true,
+      "last_commit": "abc123def456",
+      "failing_checks": []
+    }
+  }
+]

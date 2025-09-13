@@ -1,8 +1,12 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useParams, Link } from 'react-router-dom'
+import { useSetup } from '../context/SetupContext'
+import BranchStatus from '../components/BranchStatus'
+import ChatWindow from '../components/ChatWindow'
 
 function RiffDetail() {
   const { slug: appSlug, riffSlug } = useParams()
+  const { userUUID } = useSetup()
   const [app, setApp] = useState(null)
   const [riff, setRiff] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -150,39 +154,33 @@ function RiffDetail() {
           </div>
         </header>
 
-        {/* Riff Content */}
-        <section className="mb-12">
-          <div className="hacker-card rounded-lg border border-gray-700 p-12 text-center">
-            <div className="text-6xl mb-6">💬</div>
-            <h3 className="text-2xl font-bold text-cyber-muted mb-4">Riff Interface</h3>
-            <p className="text-cyber-muted mb-6">This is where the riff interface would be implemented.</p>
-            <div className="text-left max-w-md mx-auto">
-              <p className="text-cyber-muted mb-4 font-semibold">Features to add:</p>
-              <ul className="space-y-2 text-cyber-muted">
-                <li className="flex items-center">
-                  <span className="w-2 h-2 bg-cyber-muted rounded-full mr-3"></span>
-                  Message history display
-                </li>
-                <li className="flex items-center">
-                  <span className="w-2 h-2 bg-cyber-muted rounded-full mr-3"></span>
-                  Message input and sending
-                </li>
-                <li className="flex items-center">
-                  <span className="w-2 h-2 bg-cyber-muted rounded-full mr-3"></span>
-                  Real-time updates
-                </li>
-                <li className="flex items-center">
-                  <span className="w-2 h-2 bg-cyber-muted rounded-full mr-3"></span>
-                  File attachments
-                </li>
-                <li className="flex items-center">
-                  <span className="w-2 h-2 bg-cyber-muted rounded-full mr-3"></span>
-                  Message search and filtering
-                </li>
-              </ul>
+        {/* Main Content Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-12">
+          {/* Branch Status */}
+          <div className="lg:col-span-1">
+            <BranchStatus app={app} />
+          </div>
+
+          {/* Chat Window */}
+          <div className="lg:col-span-2">
+            <div className="h-[600px]">
+              {userUUID ? (
+                <ChatWindow 
+                  app={app} 
+                  riff={riff} 
+                  userUuid={userUUID} 
+                />
+              ) : (
+                <div className="flex items-center justify-center h-full border border-gray-700 rounded-lg">
+                  <div className="text-center">
+                    <div className="w-8 h-8 border-4 border-gray-600 border-t-cyber-muted rounded-full animate-spin mx-auto mb-4"></div>
+                    <p className="text-cyber-muted">Initializing chat...</p>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
-        </section>
+        </div>
 
         {/* Riff Actions */}
         <section>
