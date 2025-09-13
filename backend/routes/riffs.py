@@ -178,8 +178,24 @@ def create_riff(slug):
                 llm = LLM(api_key=anthropic_token, model="claude-3-haiku-20240307")
 
                 # Create and store the agent loop
+                logger.info(
+                    f"🔧 Creating AgentLoop with key: {user_uuid[:8]}:{slug}:{riff_slug}"
+                )
                 agent_loop_manager.create_agent_loop(user_uuid, slug, riff_slug, llm)
                 logger.info(f"🤖 Created AgentLoop for riff: {riff_name}")
+
+                # Verify it was stored correctly
+                test_retrieval = agent_loop_manager.get_agent_loop(
+                    user_uuid, slug, riff_slug
+                )
+                if test_retrieval:
+                    logger.info(
+                        f"✅ AgentLoop verification successful for {user_uuid[:8]}:{slug}:{riff_slug}"
+                    )
+                else:
+                    logger.error(
+                        f"❌ AgentLoop verification failed for {user_uuid[:8]}:{slug}:{riff_slug}"
+                    )
 
             except Exception as e:
                 logger.error(f"❌ Failed to create LLM instance: {e}")
@@ -356,11 +372,36 @@ def create_message(slug):
 
         # Check if this is a user message that should trigger LLM response
         message_type = data.get("type", "text")
+        logger.info(
+            f"🔍 Message type: {message_type}, created_by: {message.get('created_by')}, user_uuid: {user_uuid[:8]}"
+        )
+
         if message_type == "user" or (
             message_type == "text" and message.get("created_by") == user_uuid
         ):
             # Try to get agent loop and generate LLM response
+            logger.info(
+                f"🔍 Looking for AgentLoop with key: {user_uuid[:8]}:{slug}:{riff_slug}"
+            )
+
+            # Debug: Show all available agent loops
+            stats = agent_loop_manager.get_stats()
+            logger.info(f"📊 Current AgentLoop stats: {stats}")
+
             agent_loop = agent_loop_manager.get_agent_loop(user_uuid, slug, riff_slug)
+            if agent_loop:
+                logger.info(
+                    f"✅ Found AgentLoop for {user_uuid[:8]}:{slug}:{riff_slug}"
+                )
+            else:
+                logger.warning(
+                    f"❌ AgentLoop not found for {user_uuid[:8]}:{slug}:{riff_slug}"
+                )
+                # Debug: Show what keys are actually stored
+                with agent_loop_manager._lock:
+                    stored_keys = list(agent_loop_manager.agent_loops.keys())
+                    logger.info(f"🔑 Available AgentLoop keys: {stored_keys}")
+
             if agent_loop:
                 try:
                     logger.info(

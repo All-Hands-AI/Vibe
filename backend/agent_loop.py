@@ -85,7 +85,9 @@ class AgentLoopManager:
 
     def _get_key(self, user_uuid: str, app_slug: str, riff_slug: str) -> str:
         """Generate a unique key for the agent loop"""
-        return f"{user_uuid}:{app_slug}:{riff_slug}"
+        key = f"{user_uuid}:{app_slug}:{riff_slug}"
+        logger.debug(f"🔑 Generated key: {key}")
+        return key
 
     def create_agent_loop(
         self, user_uuid: str, app_slug: str, riff_slug: str, llm
@@ -113,6 +115,7 @@ class AgentLoopManager:
 
             logger.info(f"✅ Created and stored AgentLoop for {key}")
             logger.info(f"📊 Total agent loops: {len(self.agent_loops)}")
+            logger.info(f"🔑 All stored keys: {list(self.agent_loops.keys())}")
 
             return agent_loop
 
@@ -139,6 +142,14 @@ class AgentLoopManager:
                 logger.info(f"✅ Retrieved AgentLoop for {key}")
             else:
                 logger.warning(f"❌ AgentLoop not found for {key}")
+                logger.info(f"🔑 Available keys: {list(self.agent_loops.keys())}")
+                logger.info(f"🔍 Searching for key: '{key}'")
+                # Check for partial matches to help debug
+                for stored_key in self.agent_loops.keys():
+                    if user_uuid in stored_key:
+                        logger.info(
+                            f"🔍 Found partial match with user_uuid: '{stored_key}'"
+                        )
 
             return agent_loop
 
