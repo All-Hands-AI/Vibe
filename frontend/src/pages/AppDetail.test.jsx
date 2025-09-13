@@ -69,7 +69,7 @@ describe('AppDetail', () => {
 
     // Wait for the app to load
     await waitFor(() => {
-      expect(screen.getByText('Test App')).toBeInTheDocument()
+      expect(screen.getByRole('heading', { name: 'Test App' })).toBeInTheDocument()
     })
 
     // Check that CI/CD status shows "Running" (there are two instances - CI and Deploy)
@@ -113,7 +113,7 @@ describe('AppDetail', () => {
 
     // Wait for the app to load
     await waitFor(() => {
-      expect(screen.getByText('Test App')).toBeInTheDocument()
+      expect(screen.getByRole('heading', { name: 'Test App' })).toBeInTheDocument()
     })
 
     // Check that AppStatus shows branch and deployment status
@@ -158,7 +158,7 @@ describe('AppDetail', () => {
 
     // Wait for the app to load
     await waitFor(() => {
-      expect(screen.getByText('Test App')).toBeInTheDocument()
+      expect(screen.getByRole('heading', { name: 'Test App' })).toBeInTheDocument()
     })
 
     // Check that AppStatus shows branch and deployment status
@@ -198,7 +198,7 @@ describe('AppDetail', () => {
 
     // Wait for the app to load
     await waitFor(() => {
-      expect(screen.getByText('Test App')).toBeInTheDocument()
+      expect(screen.getByRole('heading', { name: 'Test App' })).toBeInTheDocument()
     })
 
     // Check that AppStatus shows branch and deployment status

@@ -200,7 +200,7 @@ function RiffDetail() {
         <nav className="mb-8">
           <div className="flex items-center space-x-2 text-sm">
             <Link to="/" className="text-cyber-muted hover:text-neon-green transition-colors duration-200">
-              ← Apps
+              Apps
             </Link>
             <span className="text-gray-500">/</span>
             <Link to={`/apps/${app.slug}`} className="text-cyber-muted hover:text-neon-green transition-colors duration-200">
@@ -212,18 +212,14 @@ function RiffDetail() {
         </nav>
 
         {/* Riff Header */}
-        <header className="mb-12">
-          <div className="mb-6">
-            <h1 className="text-4xl font-bold text-cyber-text mb-2">{riff.name}</h1>
-            <span className="text-cyber-muted font-mono text-lg">{riff.slug}</span>
-          </div>
-          
-          <div className="flex flex-wrap items-center gap-6 text-cyber-muted">
-            <p>Created: {new Date(riff.created_at).toLocaleDateString()}</p>
-            {riff.last_message_at && (
-              <p>Last activity: {new Date(riff.last_message_at).toLocaleDateString()}</p>
-            )}
-            <p>Messages: {riff.message_count || 0}</p>
+        <header className="mb-6">
+          <div className="flex flex-wrap items-baseline justify-between gap-4 mb-6">
+            <div>
+              <h1 className="text-4xl font-bold text-cyber-text mb-2 font-mono">{riff.name}</h1>
+            </div>
+            <p className="text-cyber-muted font-mono text-sm">
+              Created {new Date(riff.created_at).toLocaleDateString()}
+            </p>
           </div>
         </header>
 

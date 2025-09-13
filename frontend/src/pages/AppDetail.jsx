@@ -238,9 +238,13 @@ function AppDetail() {
       <div className="max-w-6xl mx-auto px-8 py-8">
         {/* Navigation */}
         <nav className="mb-8">
-          <Link to="/" className="inline-flex items-center text-cyber-muted hover:text-neon-green font-medium transition-colors duration-200 font-mono">
-            ← Back to Apps
-          </Link>
+          <div className="flex items-center space-x-2 text-sm">
+            <Link to="/" className="text-cyber-muted hover:text-neon-green transition-colors duration-200">
+              Apps
+            </Link>
+            <span className="text-gray-500">/</span>
+            <span className="text-cyber-muted">{app.name}</span>
+          </div>
         </nav>
 
         {/* App Header */}
@@ -255,101 +259,106 @@ function AppDetail() {
           </div>
         </header>
 
-        {/* App Status */}
-        <div className="mb-12">
-          <AppStatus app={app} />
-        </div>
+        {/* Main Content Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* App Status */}
+          <div className="lg:col-span-1">
+            <AppStatus app={app} />
+          </div>
 
-        {/* Riffs Section */}
-        <section>
-          {/* Create New Riff */}
-          <div className="mb-12">
-            <h3 className="text-xl font-semibold text-cyber-text mb-4">Create New Riff</h3>
-            <div className="hacker-card p-6 rounded-lg border border-gray-700 max-w-2xl">
-              <form onSubmit={handleCreateRiff} className="space-y-6">
-                <div>
-                  <input
-                    type="text"
-                    value={newRiffName}
-                    onChange={(e) => setNewRiffName(e.target.value)}
-                    placeholder="Enter riff name"
-                    disabled={creating}
-                    className={`w-full px-4 py-3 bg-gray-700 text-cyber-text rounded-md border transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-cyber-muted focus:border-transparent ${
-                      error ? 'border-red-500' : 'border-gray-600'
-                    }`}
-                  />
-                  {newRiffName && (
-                    <div className="mt-2 text-sm text-cyber-muted">
-                      Slug: <code className="bg-gray-700 px-2 py-1 rounded text-cyber-muted">{createSlug(newRiffName)}</code>
+          {/* Riffs Section */}
+          <div className="lg:col-span-2">
+            <section>
+              {/* Create New Riff */}
+              <div className="mb-12">
+                <h3 className="text-xl font-semibold text-cyber-text mb-4">Create New Riff</h3>
+                <div className="hacker-card p-6 rounded-lg border border-gray-700">
+                  <form onSubmit={handleCreateRiff} className="space-y-6">
+                    <div>
+                      <input
+                        type="text"
+                        value={newRiffName}
+                        onChange={(e) => setNewRiffName(e.target.value)}
+                        placeholder="Enter riff name"
+                        disabled={creating}
+                        className={`w-full px-4 py-3 bg-gray-700 text-cyber-text rounded-md border transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-cyber-muted focus:border-transparent ${
+                          error ? 'border-red-500' : 'border-gray-600'
+                        }`}
+                      />
+                      {newRiffName && (
+                        <div className="mt-2 text-sm text-cyber-muted">
+                          Slug: <code className="bg-gray-700 px-2 py-1 rounded text-cyber-muted">{createSlug(newRiffName)}</code>
+                        </div>
+                      )}
+                    </div>
+                    
+                    <button 
+                      type="submit" 
+                      disabled={creating || !newRiffName.trim()}
+                      className="w-full px-6 py-3 bg-cyber-muted text-gray-900 rounded-md font-semibold hover:bg-neon-green disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 hover:transform hover:-translate-y-0.5"
+                    >
+                      {creating ? 'Creating...' : 'Create Riff'}
+                    </button>
+                  </form>
+
+                  {error && (
+                    <div className="mt-4 p-4 bg-red-900/20 border border-red-500 rounded-md text-red-400">
+                      {error}
+                    </div>
+                  )}
+
+                  {success && (
+                    <div className="mt-4 p-4 bg-green-900/20 border border-green-500 rounded-md text-green-400">
+                      {success}
                     </div>
                   )}
                 </div>
+              </div>
+
+              {/* Riffs List */}
+              <div>
+                <h3 className="text-xl font-semibold text-cyber-text mb-4">All Riffs</h3>
                 
-                <button 
-                  type="submit" 
-                  disabled={creating || !newRiffName.trim()}
-                  className="w-full px-6 py-3 bg-cyber-muted text-gray-900 rounded-md font-semibold hover:bg-neon-green disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 hover:transform hover:-translate-y-0.5"
-                >
-                  {creating ? 'Creating...' : 'Create Riff'}
-                </button>
-              </form>
-
-              {error && (
-                <div className="mt-4 p-4 bg-red-900/20 border border-red-500 rounded-md text-red-400">
-                  {error}
-                </div>
-              )}
-
-              {success && (
-                <div className="mt-4 p-4 bg-green-900/20 border border-green-500 rounded-md text-green-400">
-                  {success}
-                </div>
-              )}
-            </div>
+                {riffsLoading ? (
+                  <div className="flex flex-col items-center justify-center py-16">
+                    <div className="w-10 h-10 border-4 border-gray-600 border-t-cyber-muted rounded-full animate-spin mb-4"></div>
+                    <p className="text-cyber-muted">Loading riffs...</p>
+                  </div>
+                ) : riffs.length === 0 ? (
+                  <div className="text-center py-16">
+                    <p className="text-cyber-muted text-lg">No riffs yet. Create your first riff above!</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {riffs.map((riff) => (
+                      <Link 
+                        key={riff.slug} 
+                        to={`/apps/${app.slug}/riffs/${riff.slug}`}
+                        className="block hacker-card rounded-lg border border-gray-700 hover:border-cyber-muted transition-all duration-300 hover:transform hover:-translate-y-1 p-6"
+                      >
+                        <div className="mb-4">
+                          <h4 className="text-xl font-semibold text-cyber-text mb-1">{riff.name}</h4>
+                          <span className="text-sm text-cyber-muted font-mono">{riff.slug}</span>
+                        </div>
+                        
+                        <div className="space-y-2">
+                          <p className="text-sm text-cyber-muted">
+                            Created: {new Date(riff.created_at).toLocaleDateString()}
+                          </p>
+                          {riff.last_message_at && (
+                            <p className="text-sm text-cyber-muted">
+                              Last activity: {new Date(riff.last_message_at).toLocaleDateString()}
+                            </p>
+                          )}
+                        </div>
+                      </Link>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </section>
           </div>
-
-          {/* Riffs List */}
-          <div>
-            <h3 className="text-xl font-semibold text-cyber-text mb-4">All Riffs</h3>
-            
-            {riffsLoading ? (
-              <div className="flex flex-col items-center justify-center py-16">
-                <div className="w-10 h-10 border-4 border-gray-600 border-t-cyber-muted rounded-full animate-spin mb-4"></div>
-                <p className="text-cyber-muted">Loading riffs...</p>
-              </div>
-            ) : riffs.length === 0 ? (
-              <div className="text-center py-16">
-                <p className="text-cyber-muted text-lg">No riffs yet. Create your first riff above!</p>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {riffs.map((riff) => (
-                  <Link 
-                    key={riff.slug} 
-                    to={`/apps/${app.slug}/riffs/${riff.slug}`}
-                    className="block hacker-card rounded-lg border border-gray-700 hover:border-cyber-muted transition-all duration-300 hover:transform hover:-translate-y-1 p-6"
-                  >
-                    <div className="mb-4">
-                      <h4 className="text-xl font-semibold text-cyber-text mb-1">{riff.name}</h4>
-                      <span className="text-sm text-cyber-muted font-mono">{riff.slug}</span>
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <p className="text-sm text-cyber-muted">
-                        Created: {new Date(riff.created_at).toLocaleDateString()}
-                      </p>
-                      {riff.last_message_at && (
-                        <p className="text-sm text-cyber-muted">
-                          Last activity: {new Date(riff.last_message_at).toLocaleDateString()}
-                        </p>
-                      )}
-                    </div>
-                  </Link>
-                ))}
-              </div>
-            )}
-          </div>
-        </section>
+        </div>
       </div>
     </div>
   )
