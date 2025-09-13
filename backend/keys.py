@@ -27,13 +27,29 @@ def ensure_user_directory(uuid):
 def load_user_keys(uuid):
     """Load user's API keys from file"""
     keys_file = get_user_keys_file(uuid)
+    logger.debug(f"🔑 Loading keys for user {uuid[:8]}...")
+    logger.debug(f"🔑 Keys file path: {keys_file}")
+    logger.debug(f"🔑 Keys file exists: {keys_file.exists()}")
+    
     if keys_file.exists():
         try:
+            logger.debug(f"🔑 File size: {keys_file.stat().st_size} bytes")
+            logger.debug(f"🔑 File permissions: {oct(keys_file.stat().st_mode)[-3:]}")
+            
             with open(keys_file, 'r') as f:
-                return json.load(f)
+                content = f.read()
+                logger.debug(f"🔑 File content length: {len(content)} characters")
+                
+                keys = json.loads(content)
+                logger.debug(f"🔑 Loaded keys for providers: {list(keys.keys())}")
+                logger.info(f"🔑 Successfully loaded keys for user {uuid[:8]}")
+                return keys
         except (json.JSONDecodeError, IOError) as e:
-            logger.error(f"Failed to load keys for user {uuid}: {e}")
+            logger.error(f"❌ Failed to load keys for user {uuid}: {e}")
+            logger.debug(f"🔑 Error type: {type(e).__name__}")
             return {}
+    else:
+        logger.debug(f"🔑 Keys file doesn't exist for user {uuid[:8]}")
     return {}
 
 def save_user_keys(uuid, keys):

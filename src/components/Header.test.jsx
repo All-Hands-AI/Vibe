@@ -19,6 +19,7 @@ describe('Header', () => {
   it('renders navigation links', () => {
     render(<HeaderWithRouter />)
     
+    expect(screen.getByText('Projects')).toBeInTheDocument()
     expect(screen.getByText('Home')).toBeInTheDocument()
     expect(screen.getByText('About')).toBeInTheDocument()
     expect(screen.getByText('Contact')).toBeInTheDocument()
@@ -30,8 +31,11 @@ describe('Header', () => {
     const nav = screen.getByRole('navigation')
     expect(nav).toBeInTheDocument()
     
+    const projectsLink = screen.getByRole('link', { name: 'Projects' })
+    expect(projectsLink).toHaveAttribute('href', '/')
+    
     const homeLink = screen.getByRole('link', { name: 'Home' })
-    expect(homeLink).toHaveAttribute('href', '/')
+    expect(homeLink).toHaveAttribute('href', '/home')
     
     const aboutLink = screen.getByRole('link', { name: 'About' })
     expect(aboutLink).toHaveAttribute('href', '/about')

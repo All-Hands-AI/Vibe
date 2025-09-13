@@ -6,9 +6,16 @@ export default defineConfig({
   plugins: [react()],
   server: {
     host: '0.0.0.0',
-    port: 12000,
+    port: 12003,
     allowedHosts: true,
-    cors: true
+    cors: true,
+    proxy: {
+      '/api': {
+        target: 'http://localhost:8000',
+        changeOrigin: true,
+        secure: false
+      }
+    }
   },
   test: {
     globals: true,

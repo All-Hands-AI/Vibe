@@ -8,11 +8,12 @@ from keys import (
     load_user_keys, save_user_keys, user_has_keys,
     validate_api_key, get_supported_providers, is_valid_provider
 )
+from projects import projects_bp
 
-# Configure logging for Fly.io - stdout only
+# Configure logging for Fly.io - stdout only with enhanced formatting
 logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    level=logging.DEBUG,
+    format='%(asctime)s - %(name)s - %(levelname)s - [%(filename)s:%(lineno)d] - %(message)s',
     stream=sys.stdout
 )
 
@@ -21,15 +22,44 @@ logger = logging.getLogger(__name__)
 app = Flask(__name__)
 CORS(app)
 
-# Test logging
-logger.info("Flask app starting up...")
-logger.info(f"Environment: {os.environ.get('FLY_APP_NAME', 'local')}")
+# Register blueprints
+app.register_blueprint(projects_bp)
 
-# Log startup
+# Enhanced startup logging
+logger.info("=" * 80)
 logger.info("🚀 OpenVibe Backend starting up...")
-logger.info(f"Python version: {sys.version}")
-logger.info(f"Flask app name: {app.name}")
-logger.info(f"Environment: {os.environ.get('FLASK_ENV', 'production')}")
+logger.info("=" * 80)
+
+# Environment information
+logger.info(f"🌍 Environment Variables:")
+logger.info(f"  - FLY_APP_NAME: {os.environ.get('FLY_APP_NAME', 'local')}")
+logger.info(f"  - FLASK_ENV: {os.environ.get('FLASK_ENV', 'production')}")
+logger.info(f"  - PORT: {os.environ.get('PORT', '8000')}")
+logger.info(f"  - PWD: {os.environ.get('PWD', 'unknown')}")
+
+# System information
+logger.info(f"🐍 Python version: {sys.version}")
+logger.info(f"📦 Flask app name: {app.name}")
+
+# File system checks
+from pathlib import Path
+data_dir = Path('/data')
+logger.info(f"📁 Data directory status:")
+logger.info(f"  - Path: {data_dir}")
+logger.info(f"  - Exists: {data_dir.exists()}")
+logger.info(f"  - Is directory: {data_dir.is_dir() if data_dir.exists() else 'N/A'}")
+logger.info(f"  - Permissions: {oct(data_dir.stat().st_mode)[-3:] if data_dir.exists() else 'N/A'}")
+
+if data_dir.exists():
+    try:
+        subdirs = list(data_dir.iterdir())
+        logger.info(f"  - Subdirectories: {len(subdirs)}")
+        for subdir in subdirs[:5]:  # Show first 5 subdirs
+            logger.info(f"    - {subdir.name}")
+        if len(subdirs) > 5:
+            logger.info(f"    - ... and {len(subdirs) - 5} more")
+    except Exception as e:
+        logger.error(f"  - Error reading directory: {e}")
 
 # Store API keys in memory (in production, use a secure storage solution)
 api_keys = {
@@ -39,6 +69,7 @@ api_keys = {
 }
 
 logger.info(f"📊 API keys storage initialized: {list(api_keys.keys())}")
+logger.info("=" * 80)
 
 @app.route('/')
 def hello_world():
@@ -74,18 +105,27 @@ def api_hello():
 def set_api_key(provider):
     """Set API key for a provider"""
     logger.info(f"🔑 POST /integrations/{provider} - Setting API key")
+    logger.debug(f"📥 Request headers: {dict(request.headers)}")
+    logger.debug(f"📥 Request remote addr: {request.remote_addr}")
+    logger.debug(f"📥 Request user agent: {request.headers.get('User-Agent', 'Unknown')}")
     
     if not is_valid_provider(provider):
         logger.warning(f"❌ Invalid provider requested: {provider}")
+        logger.debug(f"📋 Valid providers: {get_supported_providers()}")
         return jsonify({'error': 'Invalid provider'}), 400
     
     # Get UUID from headers
     user_uuid = request.headers.get('X-User-UUID')
+    logger.debug(f"🆔 Raw UUID from header: '{user_uuid}'")
+    
     if not user_uuid:
         logger.warning("❌ X-User-UUID header is required")
+        logger.debug(f"📋 Available headers: {list(request.headers.keys())}")
         return jsonify({'error': 'X-User-UUID header is required'}), 400
     
     user_uuid = user_uuid.strip()
+    logger.debug(f"🆔 Cleaned UUID: '{user_uuid}' (length: {len(user_uuid)})")
+    
     if not user_uuid:
         logger.warning("❌ Empty UUID provided in header")
         return jsonify({'error': 'UUID cannot be empty'}), 400
@@ -170,7 +210,6 @@ def check_api_key(provider):
     
     logger.info(f"📊 {provider} API key check result for user {user_uuid[:8]}: {result}")
     return jsonify(result)
-
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 8000))
