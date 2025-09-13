@@ -4,6 +4,7 @@ Manages agent conversations using openhands-sdk Agent and Conversation.
 """
 
 import sys
+import os
 import threading
 from typing import Dict, Optional, Callable
 from threading import Lock
@@ -13,12 +14,13 @@ from utils.logging import get_logger
 sys.path.insert(0, ".venv/lib/python3.12/site-packages")
 
 from openhands.sdk import Agent, Conversation, LLM, Message, TextContent, AgentContext
+from openhands.tools import FileEditorTool, BashTool, TaskTrackerTool
 
 logger = get_logger(__name__)
 
 
 def create_test_agent(llm, tools):
-    """Create an agent that prefixes all responses with 'howdy!' for testing"""
+    """Create an agent with development tools that prefixes all responses with 'howdy!' for testing"""
     # Create agent context with custom system message suffix
     agent_context = AgentContext(
         system_message_suffix="IMPORTANT: Always prefix your response with 'howdy!' followed by a space, then respond normally to the user's request."
@@ -57,10 +59,22 @@ class AgentLoop:
         self.llm = llm
         self.message_callback = message_callback
 
-        # Create Agent with only built-in tools (no bash or file tools)
-        tools: list = (
-            []
-        )  # Empty tools list - agent will only have built-in tools like 'finish' and 'think'
+        # Create Agent with comprehensive tools for development
+        # Set up working directories relative to the project structure
+        project_root = os.path.dirname(
+            os.path.dirname(os.path.abspath(__file__))
+        )  # Go up from backend/ to project root
+        data_dir = os.path.join(project_root, "data")
+
+        tools: list = [
+            FileEditorTool.create(),
+            BashTool.create(
+                working_dir=data_dir
+            ),  # Set working directory to project's data folder
+            TaskTrackerTool.create(
+                save_dir=data_dir
+            ),  # Save task tracking data to data directory
+        ]  # Include FileEditor, Bash, and TaskTracker tools for full development capabilities
 
         # Use custom agent for testing - it will always reply with "howdy!"
         self.agent = create_test_agent(llm, tools)
