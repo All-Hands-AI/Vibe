@@ -217,7 +217,7 @@ def get_mock_response(method: str, url: str, **kwargs) -> MockResponse:
 
     # GitHub API mocks
     if "api.github.com" in url:
-        if "/user" in url and method == "GET":
+        if url.endswith("/user") and method == "GET":
             return mock_github_user_response()
         elif "/commits/" in url and method == "GET":
             return mock_github_commits_response("mockuser", "mockrepo")
