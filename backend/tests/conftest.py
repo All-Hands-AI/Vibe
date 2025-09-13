@@ -8,7 +8,6 @@ import os
 import tempfile
 import shutil
 from pathlib import Path
-from unittest.mock import patch
 import requests
 
 
@@ -26,19 +25,19 @@ def setup_mock_mode():
 def mock_requests(monkeypatch):
     """Mock all requests for external APIs"""
     from mocks import get_mock_response
-    
+
     def mock_get(url, **kwargs):
         return get_mock_response("GET", url, **kwargs)
-    
+
     def mock_post(url, **kwargs):
         return get_mock_response("POST", url, **kwargs)
-    
+
     def mock_delete(url, **kwargs):
         return get_mock_response("DELETE", url, **kwargs)
-    
+
     def mock_put(url, **kwargs):
         return get_mock_response("PUT", url, **kwargs)
-    
+
     # Patch requests methods
     monkeypatch.setattr(requests, "get", mock_get)
     monkeypatch.setattr(requests, "post", mock_post)
@@ -51,16 +50,16 @@ def temp_data_dir():
     """Create a temporary data directory for each test"""
     temp_dir = tempfile.mkdtemp()
     original_data_dir = os.environ.get("DATA_DIR")
-    
+
     # Set the temporary directory as the data directory
     os.environ["DATA_DIR"] = temp_dir
-    
+
     # Create the data directory structure
     data_path = Path(temp_dir)
     data_path.mkdir(exist_ok=True)
-    
+
     yield temp_dir
-    
+
     # Cleanup
     shutil.rmtree(temp_dir, ignore_errors=True)
     if original_data_dir:
@@ -74,10 +73,10 @@ def client(temp_data_dir):
     """Create a test client for the Flask application with temporary data directory"""
     # Import app after mocking is set up
     from app import app
-    
+
     app.config["TESTING"] = True
     app.config["WTF_CSRF_ENABLED"] = False
-    
+
     with app.test_client() as client:
         with app.app_context():
             yield client
@@ -92,10 +91,7 @@ def sample_user_uuid():
 @pytest.fixture
 def sample_headers(sample_user_uuid):
     """Provide sample headers with user UUID"""
-    return {
-        "X-User-UUID": sample_user_uuid,
-        "Content-Type": "application/json"
-    }
+    return {"X-User-UUID": sample_user_uuid, "Content-Type": "application/json"}
 
 
 @pytest.fixture
@@ -104,7 +100,7 @@ def mock_api_keys():
     return {
         "anthropic": "mock-anthropic-key-12345",
         "github": "mock-github-token-67890",
-        "fly": "mock-fly-token-abcdef"
+        "fly": "mock-fly-token-abcdef",
     }
 
 
@@ -116,15 +112,11 @@ def sample_app_data():
         "slug": "test-app",
         "description": "A test application",
         "github_url": "https://github.com/testuser/test-app",
-        "fly_app_name": "test-app-fly"
+        "fly_app_name": "test-app-fly",
     }
 
 
 @pytest.fixture
 def sample_riff_data():
     """Provide sample riff data for testing"""
-    return {
-        "name": "Test Riff",
-        "slug": "test-riff",
-        "description": "A test riff"
-    }
+    return {"name": "Test Riff", "slug": "test-riff", "description": "A test riff"}

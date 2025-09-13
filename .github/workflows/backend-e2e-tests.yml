@@ -1,0 +1,102 @@
+name: Backend E2E Tests
+
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+  repository-projects: read
+
+jobs:
+  backend-e2e-tests:
+    name: Backend E2E Tests (MOCK_MODE)
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          version: "latest"
+
+      - name: Create virtual environment
+        run: uv venv
+        working-directory: backend
+
+      - name: Install dependencies
+        run: |
+          source .venv/bin/activate
+          # Install main dependencies
+          uv pip install Flask==3.0.0 Flask-CORS==4.0.0 gunicorn==21.2.0 requests==2.31.0 PyNaCl==1.5.0
+          # Install openhands-sdk
+          uv pip install "openhands-sdk @ git+https://github.com/all-hands-ai/agent-sdk.git@main#subdirectory=openhands/sdk"
+          # Install dev dependencies
+          uv pip install pytest>=7.0.0 pytest-flask>=1.2.0 pytest-cov>=4.0.0 black>=23.0.0 flake8>=6.0.0 mypy>=1.0.0
+        working-directory: backend
+
+      - name: Run E2E tests with test runner
+        run: |
+          source .venv/bin/activate
+          python run_e2e_tests.py --coverage
+        working-directory: backend
+        env:
+          MOCK_MODE: true
+
+      - name: Upload E2E test coverage reports to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          directory: backend/
+          flags: backend-e2e
+          name: backend-e2e-coverage
+          fail_ci_if_error: false
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+
+      - name: Upload E2E coverage reports as artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-e2e-coverage-report
+          path: backend/htmlcov/
+          retention-days: 7
+
+      - name: Upload E2E test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-e2e-test-results
+          path: backend/coverage.xml
+          retention-days: 7
+
+      - name: Comment E2E coverage on PR
+        if: github.event_name == 'pull_request'
+        uses: orgoro/coverage@v3.1
+        with:
+          coverageFile: backend/coverage.xml
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Generate E2E test summary
+        if: always()
+        run: |
+          echo "## Backend E2E Test Results" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ E2E tests completed in MOCK_MODE" >> $GITHUB_STEP_SUMMARY
+          echo "- 🎭 All external APIs mocked (Anthropic, GitHub, Fly.io)" >> $GITHUB_STEP_SUMMARY
+          echo "- 📊 Coverage report generated" >> $GITHUB_STEP_SUMMARY
+          if [ -f "backend/coverage.xml" ]; then
+            echo "- 📈 Coverage details available in artifacts" >> $GITHUB_STEP_SUMMARY
+          fi
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Test Coverage" >> $GITHUB_STEP_SUMMARY
+          echo "- **Basic Endpoints**: Health checks, hello endpoints" >> $GITHUB_STEP_SUMMARY
+          echo "- **API Key Management**: Setting, validating, retrieving keys" >> $GITHUB_STEP_SUMMARY
+          echo "- **Apps Management**: Creation, listing, deletion" >> $GITHUB_STEP_SUMMARY
+          echo "- **Riffs Management**: Creation within apps, listing" >> $GITHUB_STEP_SUMMARY
+          echo "- **Key Validation**: Mock and real mode validation logic" >> $GITHUB_STEP_SUMMARY

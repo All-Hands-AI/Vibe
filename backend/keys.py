@@ -10,13 +10,17 @@ from storage import get_keys_storage
 
 logger = logging.getLogger(__name__)
 
+
 def is_mock_mode():
     """Check if we're running in mock mode"""
     return os.environ.get("MOCK_MODE", "false").lower() == "true"
 
+
 # Log mock mode status at module load
 if is_mock_mode():
-    logger.info("🎭 MOCK_MODE enabled - all API keys will be accepted without validation")
+    logger.info(
+        "🎭 MOCK_MODE enabled - all API keys will be accepted without validation"
+    )
 
 
 def load_user_keys(uuid):
@@ -61,15 +65,15 @@ def validate_anthropic_key(api_key):
     if not api_key:
         logger.info("🤖 Validating Anthropic API key (empty/None)")
         return False
-    
+
     logger.info(f"🤖 Validating Anthropic API key (length: {len(api_key)})")
-    
+
     # In mock mode, accept any non-empty key
     if is_mock_mode():
         is_valid = bool(api_key and api_key.strip())
         logger.info(f"🎭 MOCK_MODE: Anthropic key validation result: {is_valid}")
         return is_valid
-    
+
     try:
         headers = {
             "x-api-key": api_key,
@@ -103,15 +107,15 @@ def validate_github_key(api_key):
     if not api_key:
         logger.info("🐙 Validating GitHub API key (empty/None)")
         return False
-    
+
     logger.info(f"🐙 Validating GitHub API key (length: {len(api_key)})")
-    
+
     # In mock mode, accept any non-empty key
     if is_mock_mode():
         is_valid = bool(api_key and api_key.strip())
         logger.info(f"🎭 MOCK_MODE: GitHub key validation result: {is_valid}")
         return is_valid
-    
+
     try:
         headers = {
             "Authorization": f"token {api_key}",
@@ -136,15 +140,15 @@ def validate_fly_key(api_key):
     if not api_key:
         logger.info("🪰 Validating Fly.io API key (empty/None)")
         return False
-    
+
     logger.info(f"🪰 Validating Fly.io API key (length: {len(api_key)})")
-    
+
     # In mock mode, accept any non-empty key
     if is_mock_mode():
         is_valid = bool(api_key and api_key.strip())
         logger.info(f"🎭 MOCK_MODE: Fly.io key validation result: {is_valid}")
         return is_valid
-    
+
     try:
         # First, validate the token format
         if not api_key or len(api_key.strip()) < 10:
