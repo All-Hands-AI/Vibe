@@ -6,24 +6,35 @@ function LLMErrorModal({ isOpen, onClose, appSlug, riffSlug, onReset }) {
   const [isResetting, setIsResetting] = useState(false)
   const [resetError, setResetError] = useState('')
 
-  const handleReset = async () => {
+  const handleReset = async (e) => {
+    console.log('🔄 Reset button clicked')
+    
+    // Prevent form submission if this button is inside a form
+    e?.preventDefault()
+    e?.stopPropagation()
+    
     setIsResetting(true)
     setResetError('')
 
     try {
-      const success = await resetLLM(appSlug, riffSlug)
-      if (success) {
+      console.log(`🔄 Starting LLM reset for ${appSlug}/${riffSlug}`)
+      const result = await resetLLM(appSlug, riffSlug)
+      console.log('🔄 Reset result:', result)
+      
+      if (result.success) {
         console.log('✅ LLM reset successful')
         onReset?.()
         onClose()
       } else {
-        setResetError('Failed to reset LLM. Please try again.')
+        console.error('❌ LLM reset failed:', result.error)
+        setResetError(result.error || 'Failed to reset LLM. Please try again.')
       }
     } catch (error) {
       console.error('❌ Error resetting LLM:', error)
-      setResetError('An error occurred while resetting. Please try again.')
+      setResetError(`An error occurred while resetting: ${error.message}`)
     } finally {
       setIsResetting(false)
+      console.log('🔄 Reset operation completed')
     }
   }
 
@@ -69,6 +80,7 @@ function LLMErrorModal({ isOpen, onClose, appSlug, riffSlug, onReset }) {
             Cancel
           </button>
           <button
+            type="button"
             onClick={handleReset}
             disabled={isResetting}
             className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded transition-colors duration-200 disabled:opacity-50 flex items-center"

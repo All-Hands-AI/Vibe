@@ -39,7 +39,7 @@ export async function checkLLMReady(appSlug, riffSlug) {
  * Reset the LLM for a specific riff
  * @param {string} appSlug - The app slug
  * @param {string} riffSlug - The riff slug
- * @returns {Promise<boolean>} - True if reset was successful, false otherwise
+ * @returns {Promise<{success: boolean, error?: string}>} - Result with success status and optional error message
  */
 export async function resetLLM(appSlug, riffSlug) {
   try {
@@ -55,16 +55,40 @@ export async function resetLLM(appSlug, riffSlug) {
     })
 
     if (!response.ok) {
-      console.error('❌ Failed to reset LLM:', response.status)
-      return false
+      let errorMessage = `Reset failed with status ${response.status}`
+      try {
+        const errorData = await response.json()
+        if (errorData.error) {
+          errorMessage = errorData.error
+        }
+      } catch {
+        // If we can't parse JSON, use the status text
+        errorMessage = `Reset failed: ${response.status} ${response.statusText}`
+      }
+      console.error('❌ Failed to reset LLM:', errorMessage)
+      return { success: false, error: errorMessage }
     }
 
     const data = await response.json()
     console.log('✅ LLM reset successfully:', data.message)
-    return true
+    
+    // Verify that the LLM is actually ready after reset
+    console.log('🔍 Verifying LLM readiness after reset...')
+    const isReady = await checkLLMReady(appSlug, riffSlug)
+    
+    if (!isReady) {
+      console.error('❌ LLM reset succeeded but LLM is still not ready')
+      return { 
+        success: false, 
+        error: 'Reset completed but LLM is still not ready. Please try again or check your API keys.' 
+      }
+    }
+    
+    console.log('✅ LLM reset and verification successful')
+    return { success: true }
   } catch (error) {
     console.error('❌ Error resetting LLM:', error)
-    return false
+    return { success: false, error: `Network error: ${error.message}` }
   }
 }
 
