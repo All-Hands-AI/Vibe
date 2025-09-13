@@ -35,7 +35,7 @@ RUN npm prune --omit=dev
 
 
 # Final stage for app image - using Ubuntu to support both nginx and python
-FROM ubuntu:22.04
+FROM ubuntu:24.04
 
 # Install nginx, python, uv, git, and supervisor
 RUN apt-get update -qq && \
