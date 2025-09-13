@@ -7,6 +7,7 @@ from .base_storage import BaseStorage
 from .keys_storage import KeysStorage
 from .apps_storage import AppsStorage
 from .riffs_storage import RiffsStorage
+from .messages_storage import MessagesStorage
 
 
 # Convenience functions for backward compatibility and easy access
@@ -25,12 +26,19 @@ def get_riffs_storage(user_uuid: str) -> RiffsStorage:
     return RiffsStorage(user_uuid)
 
 
+def get_messages_storage(user_uuid: str) -> MessagesStorage:
+    """Get MessagesStorage instance for user"""
+    return MessagesStorage(user_uuid)
+
+
 __all__ = [
     "BaseStorage",
     "KeysStorage",
     "AppsStorage",
     "RiffsStorage",
+    "MessagesStorage",
     "get_keys_storage",
     "get_apps_storage",
     "get_riffs_storage",
+    "get_messages_storage",
 ]
