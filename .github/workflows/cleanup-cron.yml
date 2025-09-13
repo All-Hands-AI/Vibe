@@ -1,0 +1,262 @@
+name: Cleanup Old Deployments
+
+on:
+  schedule:
+    # Run daily at 2 AM UTC
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+    inputs:
+      max_age_days:
+        description: 'Maximum age in days for deployments to keep'
+        required: false
+        default: '7'
+        type: string
+      dry_run:
+        description: 'Dry run - only show what would be deleted'
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+  issues: write
+
+env:
+  FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+
+jobs:
+  cleanup:
+    name: Cleanup old feature deployments
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Fly CLI
+        uses: superfly/flyctl-actions/setup-flyctl@master
+
+      - name: Set cleanup parameters
+        id: params
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "max_age_days=${{ github.event.inputs.max_age_days }}" >> $GITHUB_OUTPUT
+            echo "dry_run=${{ github.event.inputs.dry_run }}" >> $GITHUB_OUTPUT
+          else
+            echo "max_age_days=7" >> $GITHUB_OUTPUT
+            echo "dry_run=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Find and cleanup old deployments
+        id: cleanup
+        run: |
+          max_age_days="${{ steps.params.outputs.max_age_days }}"
+          dry_run="${{ steps.params.outputs.dry_run }}"
+          
+          echo "🔍 Looking for deployments older than $max_age_days days..."
+          echo "Dry run mode: $dry_run"
+          
+          # Get current timestamp
+          current_time=$(date +%s)
+          cutoff_time=$((current_time - (max_age_days * 24 * 60 * 60)))
+          
+          # Initialize counters
+          total_apps=0
+          old_apps=0
+          deleted_apps=0
+          failed_deletions=0
+          
+          # Create arrays to store app info
+          apps_to_delete=()
+          deletion_results=()
+          
+          # Get list of all apps and filter for openvibe-* pattern (excluding main app)
+          echo "📋 Fetching app list..."
+          flyctl apps list --json > apps.json
+          
+          # Process each app
+          while IFS= read -r app_line; do
+            app_name=$(echo "$app_line" | jq -r '.Name')
+            
+            # Skip if not a feature deployment (must start with openvibe- but not be exactly openvibe)
+            if [[ ! "$app_name" =~ ^openvibe-.+ ]]; then
+              continue
+            fi
+            
+            total_apps=$((total_apps + 1))
+            echo "🔍 Checking app: $app_name"
+            
+            # Get app status and last deployment info
+            app_status=$(flyctl status --app "$app_name" --json 2>/dev/null || echo '{}')
+            
+            if [ "$app_status" = "{}" ]; then
+              echo "⚠️  Could not get status for $app_name, skipping..."
+              continue
+            fi
+            
+            # Try to get the last deployment time
+            last_deployed=$(echo "$app_status" | jq -r '.Allocations[0].CreatedAt // empty' 2>/dev/null || echo "")
+            
+            if [ -z "$last_deployed" ] || [ "$last_deployed" = "null" ]; then
+              # If we can't get deployment time, check if app has any allocations
+              allocation_count=$(echo "$app_status" | jq '.Allocations | length' 2>/dev/null || echo "0")
+              if [ "$allocation_count" = "0" ]; then
+                echo "📅 App $app_name has no allocations, considering it old"
+                old_apps=$((old_apps + 1))
+                apps_to_delete+=("$app_name")
+                continue
+              else
+                echo "⚠️  Could not determine age of $app_name, skipping for safety..."
+                continue
+              fi
+            fi
+            
+            # Convert deployment time to timestamp
+            if command -v gdate >/dev/null 2>&1; then
+              # macOS
+              deploy_time=$(gdate -d "$last_deployed" +%s 2>/dev/null || echo "0")
+            else
+              # Linux
+              deploy_time=$(date -d "$last_deployed" +%s 2>/dev/null || echo "0")
+            fi
+            
+            if [ "$deploy_time" = "0" ]; then
+              echo "⚠️  Could not parse deployment time for $app_name, skipping..."
+              continue
+            fi
+            
+            # Check if app is older than cutoff
+            age_days=$(( (current_time - deploy_time) / 86400 ))
+            echo "📅 App $app_name is $age_days days old"
+            
+            if [ "$deploy_time" -lt "$cutoff_time" ]; then
+              echo "🗑️  App $app_name is older than $max_age_days days (deployed $(date -d "@$deploy_time" '+%Y-%m-%d %H:%M:%S'))"
+              old_apps=$((old_apps + 1))
+              apps_to_delete+=("$app_name")
+            else
+              echo "✅ App $app_name is recent enough to keep"
+            fi
+            
+          done < <(jq -c '.[]' apps.json)
+          
+          echo ""
+          echo "📊 Summary:"
+          echo "  Total feature apps found: $total_apps"
+          echo "  Apps older than $max_age_days days: $old_apps"
+          
+          # Delete old apps
+          if [ ${#apps_to_delete[@]} -gt 0 ]; then
+            echo ""
+            echo "🗑️  Apps to delete:"
+            for app in "${apps_to_delete[@]}"; do
+              echo "  - $app"
+            done
+            
+            if [ "$dry_run" = "true" ]; then
+              echo ""
+              echo "🔍 DRY RUN: Would delete ${#apps_to_delete[@]} apps, but not actually deleting them."
+              deleted_apps=0
+            else
+              echo ""
+              echo "🗑️  Deleting old apps..."
+              for app in "${apps_to_delete[@]}"; do
+                echo "Deleting $app..."
+                if flyctl apps destroy "$app" --yes 2>/dev/null; then
+                  echo "✅ Successfully deleted $app"
+                  deleted_apps=$((deleted_apps + 1))
+                  deletion_results+=("✅ $app - deleted successfully")
+                else
+                  echo "❌ Failed to delete $app"
+                  failed_deletions=$((failed_deletions + 1))
+                  deletion_results+=("❌ $app - deletion failed")
+                fi
+              done
+            fi
+          else
+            echo "✅ No old deployments found to clean up!"
+          fi
+          
+          # Clean up temp file
+          rm -f apps.json
+          
+          # Set outputs for summary
+          echo "total_apps=$total_apps" >> $GITHUB_OUTPUT
+          echo "old_apps=$old_apps" >> $GITHUB_OUTPUT
+          echo "deleted_apps=$deleted_apps" >> $GITHUB_OUTPUT
+          echo "failed_deletions=$failed_deletions" >> $GITHUB_OUTPUT
+          echo "max_age_days=$max_age_days" >> $GITHUB_OUTPUT
+          echo "dry_run=$dry_run" >> $GITHUB_OUTPUT
+          
+          # Store deletion results for the summary
+          if [ ${#deletion_results[@]} -gt 0 ]; then
+            printf '%s\n' "${deletion_results[@]}" > deletion_results.txt
+            echo "deletion_results<<EOF" >> $GITHUB_OUTPUT
+            cat deletion_results.txt >> $GITHUB_OUTPUT
+            echo "EOF" >> $GITHUB_OUTPUT
+          else
+            echo "deletion_results=" >> $GITHUB_OUTPUT
+          fi
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+
+      - name: Create cleanup summary issue
+        if: steps.cleanup.outputs.old_apps != '0' || github.event_name == 'workflow_dispatch'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const totalApps = '${{ steps.cleanup.outputs.total_apps }}';
+            const oldApps = '${{ steps.cleanup.outputs.old_apps }}';
+            const deletedApps = '${{ steps.cleanup.outputs.deleted_apps }}';
+            const failedDeletions = '${{ steps.cleanup.outputs.failed_deletions }}';
+            const maxAgeDays = '${{ steps.cleanup.outputs.max_age_days }}';
+            const dryRun = '${{ steps.cleanup.outputs.dry_run }}';
+            const deletionResults = `${{ steps.cleanup.outputs.deletion_results }}`;
+            
+            const isDryRun = dryRun === 'true';
+            const isManual = context.eventName === 'workflow_dispatch';
+            
+            let title, body;
+            
+            if (isDryRun) {
+              title = `🔍 Deployment Cleanup Dry Run - ${oldApps} apps would be deleted`;
+            } else if (oldApps === '0') {
+              title = `✅ Deployment Cleanup Complete - No old deployments found`;
+            } else {
+              title = `🧹 Deployment Cleanup Complete - ${deletedApps}/${oldApps} apps cleaned up`;
+            }
+            
+            body = `## 🧹 Fly.io Deployment Cleanup Report
+            
+            **Trigger:** ${isManual ? 'Manual' : 'Scheduled (daily)'}
+            **Date:** ${new Date().toISOString().split('T')[0]}
+            **Max Age:** ${maxAgeDays} days
+            **Mode:** ${isDryRun ? '🔍 Dry Run' : '🗑️ Live Cleanup'}
+            
+            ### 📊 Summary
+            - **Total feature apps:** ${totalApps}
+            - **Apps older than ${maxAgeDays} days:** ${oldApps}
+            - **Apps ${isDryRun ? 'that would be deleted' : 'successfully deleted'}:** ${deletedApps}
+            ${failedDeletions !== '0' ? `- **Failed deletions:** ${failedDeletions}` : ''}
+            
+            ${deletionResults ? `### 📋 Detailed Results
+            \`\`\`
+            ${deletionResults}
+            \`\`\`` : ''}
+            
+            ${isDryRun ? `
+            ### ℹ️ Dry Run Mode
+            This was a dry run - no apps were actually deleted. To perform the actual cleanup, run this workflow manually with dry run disabled.
+            ` : ''}
+            
+            ---
+            
+            <sub>Generated by GitHub Actions • [View workflow run](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})</sub>`;
+            
+            // Create an issue for the cleanup report
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: title,
+              body: body,
+              labels: ['deployment', 'cleanup', 'automated']
+            });
