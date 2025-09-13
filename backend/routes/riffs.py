@@ -19,12 +19,12 @@ def create_llm_for_user(user_uuid, app_slug, riff_slug):
     Create and store an LLM object for a specific user, app, and riff.
     This function deduplicates the LLM creation logic used in both
     riff creation and reset operations.
-    
+
     Args:
         user_uuid: User's UUID
         app_slug: App slug identifier
         riff_slug: Riff slug identifier
-        
+
     Returns:
         tuple: (success: bool, error_message: str or None)
     """
@@ -493,7 +493,9 @@ def create_message(slug):
 @riffs_bp.route("/api/apps/<slug>/riffs/<riff_slug>/ready", methods=["GET"])
 def check_riff_ready(slug, riff_slug):
     """Check if an LLM object is ready in memory for a specific riff"""
-    logger.info(f"🔍 GET /api/apps/{slug}/riffs/{riff_slug}/ready - Checking LLM readiness")
+    logger.info(
+        f"🔍 GET /api/apps/{slug}/riffs/{riff_slug}/ready - Checking LLM readiness"
+    )
 
     try:
         # Get UUID from headers
@@ -560,11 +562,17 @@ def reset_riff_llm(slug, riff_slug):
             return jsonify({"error": "Riff not found"}), 404
 
         # Remove existing AgentLoop if it exists
-        existing_removed = agent_loop_manager.remove_agent_loop(user_uuid, slug, riff_slug)
+        existing_removed = agent_loop_manager.remove_agent_loop(
+            user_uuid, slug, riff_slug
+        )
         if existing_removed:
-            logger.info(f"🗑️ Removed existing AgentLoop for {user_uuid[:8]}:{slug}:{riff_slug}")
+            logger.info(
+                f"🗑️ Removed existing AgentLoop for {user_uuid[:8]}:{slug}:{riff_slug}"
+            )
         else:
-            logger.info(f"ℹ️ No existing AgentLoop found for {user_uuid[:8]}:{slug}:{riff_slug}")
+            logger.info(
+                f"ℹ️ No existing AgentLoop found for {user_uuid[:8]}:{slug}:{riff_slug}"
+            )
 
         # Create a brand new LLM object using the reusable function
         success, error_message = create_llm_for_user(user_uuid, slug, riff_slug)
