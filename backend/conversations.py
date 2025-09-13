@@ -13,15 +13,26 @@ import uuid
 from datetime import datetime
 from pathlib import Path
 from keys import load_user_keys
-from agent_loop import AgentLoopManager
-
 logger = logging.getLogger(__name__)
 
 # Create Blueprint for conversations
 conversations_bp = Blueprint('conversations', __name__)
 
 # Global agent loop manager instance
-agent_manager = AgentLoopManager()
+try:
+    from agent_loop import AgentLoopManager, OPENHANDS_AVAILABLE
+    if OPENHANDS_AVAILABLE:
+        agent_manager = AgentLoopManager()
+        AGENT_MANAGER_AVAILABLE = True
+        logger.info("✅ AgentLoopManager initialized successfully")
+    else:
+        agent_manager = None
+        AGENT_MANAGER_AVAILABLE = False
+        logger.warning("⚠️ OpenHands SDK not available - conversation features disabled")
+except Exception as e:
+    logger.warning(f"⚠️ AgentLoopManager not available: {e}")
+    agent_manager = None
+    AGENT_MANAGER_AVAILABLE = False
 
 # File-based storage utilities
 DATA_DIR = Path('/data')
@@ -123,6 +134,14 @@ def create_conversation(project_id):
     logger.info(f"🎯 Creating conversation {conversation_id} for project {project_id}")
     logger.debug(f"📝 Initial message: {initial_message[:100]}...")
     
+    # Check if agent manager is available
+    if not AGENT_MANAGER_AVAILABLE or agent_manager is None:
+        logger.error("❌ OpenHands Agent SDK not available")
+        return jsonify({
+            'error': 'OpenHands Agent SDK not available. Please install the SDK to use conversation features.',
+            'setup_instructions': 'See backend/OPENHANDS_INTEGRATION.md for setup instructions'
+        }), 503
+    
     # Get user API keys
     user_keys = get_user_api_keys(user_uuid)
     anthropic_key = user_keys.get('anthropic')
@@ -213,14 +232,17 @@ def list_conversations(project_id):
     # Filter conversations by user (optional - you might want all conversations for a project)
     # user_conversations = [conv for conv in conversations if conv.get('user_uuid') == user_uuid]
     
-    # Get live status from agent manager
+    # Get live status from agent manager (if available)
     for conversation in conversations:
         conv_id = conversation['id']
-        live_status = agent_manager.get_conversation_status(conv_id)
-        if live_status:
-            conversation['live_status'] = live_status
+        if AGENT_MANAGER_AVAILABLE and agent_manager:
+            live_status = agent_manager.get_conversation_status(conv_id)
+            if live_status:
+                conversation['live_status'] = live_status
+            else:
+                conversation['live_status'] = {'status': 'not_found', 'is_alive': False}
         else:
-            conversation['live_status'] = {'status': 'not_found', 'is_alive': False}
+            conversation['live_status'] = {'status': 'sdk_unavailable', 'is_alive': False}
     
     logger.info(f"📋 Returning {len(conversations)} conversations for project {project_id}")
     
@@ -261,12 +283,15 @@ def get_conversation(conversation_id, project_id):
         logger.warning(f"❌ Conversation {conversation_id} not found")
         return jsonify({'error': 'Conversation not found'}), 404
     
-    # Get live status from agent manager
-    live_status = agent_manager.get_conversation_status(conversation_id)
-    if live_status:
-        conversation['live_status'] = live_status
+    # Get live status from agent manager (if available)
+    if AGENT_MANAGER_AVAILABLE and agent_manager:
+        live_status = agent_manager.get_conversation_status(conversation_id)
+        if live_status:
+            conversation['live_status'] = live_status
+        else:
+            conversation['live_status'] = {'status': 'not_found', 'is_alive': False}
     else:
-        conversation['live_status'] = {'status': 'not_found', 'is_alive': False}
+        conversation['live_status'] = {'status': 'sdk_unavailable', 'is_alive': False}
     
     logger.info(f"✅ Found conversation {conversation_id}")
     
@@ -320,6 +345,14 @@ def create_message(conversation_id, project_id):
         logger.warning("❌ Message content is required")
         return jsonify({'error': 'Message content is required'}), 400
     
+    # Check if agent manager is available
+    if not AGENT_MANAGER_AVAILABLE or agent_manager is None:
+        logger.error("❌ OpenHands Agent SDK not available")
+        return jsonify({
+            'error': 'OpenHands Agent SDK not available. Please install the SDK to use conversation features.',
+            'setup_instructions': 'See backend/OPENHANDS_INTEGRATION.md for setup instructions'
+        }), 503
+    
     # Try to send message to the running conversation
     success, result_message = agent_manager.send_message_to_conversation(conversation_id, message_content)
     
@@ -369,6 +402,14 @@ def get_conversation_events(conversation_id, project_id):
     
     user_uuid = user_uuid.strip()
     
+    # Check if agent manager is available
+    if not AGENT_MANAGER_AVAILABLE or agent_manager is None:
+        logger.error("❌ OpenHands Agent SDK not available")
+        return jsonify({
+            'error': 'OpenHands Agent SDK not available. Please install the SDK to use conversation features.',
+            'setup_instructions': 'See backend/OPENHANDS_INTEGRATION.md for setup instructions'
+        }), 503
+    
     # Get events from agent manager
     events = agent_manager.get_conversation_events(conversation_id)
     
@@ -396,6 +437,11 @@ def cleanup_conversations():
         logger.warning("❌ X-User-UUID header is required")
         return jsonify({'error': 'X-User-UUID header is required'}), 400
     
+    # Check if agent manager is available
+    if not AGENT_MANAGER_AVAILABLE or agent_manager is None:
+        logger.warning("⚠️ OpenHands Agent SDK not available - no cleanup needed")
+        return jsonify({'message': 'OpenHands Agent SDK not available - no active conversations to cleanup'})
+    
     # Cleanup finished conversations
     agent_manager.cleanup_finished_conversations()
     
@@ -418,6 +464,15 @@ def get_all_conversation_status():
     if not user_uuid:
         logger.warning("❌ X-User-UUID header is required")
         return jsonify({'error': 'X-User-UUID header is required'}), 400
+    
+    # Check if agent manager is available
+    if not AGENT_MANAGER_AVAILABLE or agent_manager is None:
+        logger.warning("⚠️ OpenHands Agent SDK not available")
+        return jsonify({
+            'conversations': [],
+            'total': 0,
+            'message': 'OpenHands Agent SDK not available - no active conversations'
+        })
     
     # Get all conversations from agent manager
     all_conversations = agent_manager.list_conversations()

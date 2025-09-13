@@ -54,7 +54,7 @@ class ConversationThread:
         self.thread = thread
         self.created_at = datetime.utcnow()
         self.status = "running"
-        self.events: List[Event] = []
+        self.events: List[Any] = []
         self.error: Optional[str] = None
 
 class AgentLoopManager:
@@ -243,7 +243,7 @@ class AgentLoopManager:
             logger.error(f"💥 Error creating GitHub PR: {str(e)}")
             return False, f"Error creating PR: {str(e)}", None
     
-    def _create_llm(self, api_key: str) -> Optional[LLM]:
+    def _create_llm(self, api_key: str) -> Optional[Any]:
         """Create an LLM instance"""
         if not OPENHANDS_AVAILABLE:
             logger.error("❌ OpenHands SDK not available")
@@ -259,7 +259,7 @@ class AgentLoopManager:
             logger.error(f"💥 Error creating LLM: {str(e)}")
             return None
     
-    def _create_agent(self, llm: LLM, workspace_dir: Path) -> Optional[Agent]:
+    def _create_agent(self, llm: Any, workspace_dir: Path) -> Optional[Any]:
         """Create an agent with tools"""
         if not OPENHANDS_AVAILABLE:
             logger.error("❌ OpenHands SDK not available")
@@ -277,7 +277,7 @@ class AgentLoopManager:
             logger.error(f"💥 Error creating agent: {str(e)}")
             return None
     
-    def _conversation_callback(self, conversation_id: str, event: Event):
+    def _conversation_callback(self, conversation_id: str, event: Any):
         """Callback for conversation events"""
         with self.lock:
             if conversation_id in self.running_conversations:
