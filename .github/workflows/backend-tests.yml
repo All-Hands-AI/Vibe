@@ -11,7 +11,7 @@ permissions:
 
 jobs:
   backend-tests:
-    name: Backend Tests (Pytest)
+    name: Backend Unit Tests (Pytest)
     runs-on: ubuntu-latest
     
     steps:
@@ -46,10 +46,10 @@ jobs:
       - name: Create test data directory
         run: mkdir -p /tmp/test-data
         
-      - name: Run pytest with coverage
+      - name: Run pytest with coverage (excluding E2E tests)
         run: |
           source .venv/bin/activate
-          pytest --cov=. --cov-report=xml:coverage.xml --cov-report=html:htmlcov --cov-report=term-missing -v
+          pytest --cov=. --cov-report=xml:coverage.xml --cov-report=html:htmlcov --cov-report=term-missing -v --ignore=tests/test_e2e_basic.py --ignore=tests/test_e2e_integrations.py --ignore=tests/test_e2e_apps.py --ignore=tests/test_e2e_riffs.py --ignore=tests/test_e2e_key_validation.py
         working-directory: backend
         env:
           DATA_DIR: /tmp/test-data
@@ -58,8 +58,8 @@ jobs:
         uses: codecov/codecov-action@v4
         with:
           directory: backend/
-          flags: backend
-          name: backend-coverage
+          flags: backend-unit
+          name: backend-unit-coverage
           fail_ci_if_error: false
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
@@ -89,9 +89,10 @@ jobs:
       - name: Generate test summary
         if: always()
         run: |
-          echo "## Backend Test Results" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ Pytest tests completed" >> $GITHUB_STEP_SUMMARY
+          echo "## Backend Test Results (Unit Tests)" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Unit tests completed (E2E tests run separately)" >> $GITHUB_STEP_SUMMARY
           echo "- 📊 Coverage report generated" >> $GITHUB_STEP_SUMMARY
+          echo "- 🔗 E2E tests run in dedicated workflow" >> $GITHUB_STEP_SUMMARY
           if [ -f "backend/coverage.xml" ]; then
             echo "- 📈 Coverage details available in artifacts" >> $GITHUB_STEP_SUMMARY
           fi

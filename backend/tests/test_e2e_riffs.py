@@ -14,29 +14,33 @@ class TestRiffsEndpoints:
         assert os.environ.get("MOCK_MODE", "false").lower() == "true"
 
     def setup_app_for_riffs(
-        self, client, sample_headers, mock_api_keys, app_name="Test App"
+        self, client, headers, mock_api_keys, app_name="Test App"
     ):
         """Helper method to set up an app for riff tests"""
         # Set up API keys
         for provider, key in mock_api_keys.items():
             client.post(
                 f"/integrations/{provider}",
-                headers=sample_headers,
+                headers=headers,
                 json={"api_key": key},
             )
 
         # Create an app
         app_data = {"name": app_name}
-        response = client.post("/api/apps", headers=sample_headers, json=app_data)
+        response = client.post("/api/apps", headers=headers, json=app_data)
         assert response.status_code == 201
 
         return response.get_json()["app"]["slug"]
 
-    def test_get_riffs_empty_list(self, client, sample_headers, mock_api_keys):
+    def test_get_riffs_empty_list(self, client, mock_api_keys):
         """Test getting riffs when none exist"""
-        app_slug = self.setup_app_for_riffs(client, sample_headers, mock_api_keys)
+        unique_headers = {
+            "X-User-UUID": "test-riffs-empty-list-uuid",
+            "Content-Type": "application/json"
+        }
+        app_slug = self.setup_app_for_riffs(client, unique_headers, mock_api_keys, "Empty List App")
 
-        response = client.get(f"/api/apps/{app_slug}/riffs", headers=sample_headers)
+        response = client.get(f"/api/apps/{app_slug}/riffs", headers=unique_headers)
 
         assert response.status_code == 200
         data = response.get_json()
@@ -74,14 +78,18 @@ class TestRiffsEndpoints:
 
         assert data["error"] == "UUID cannot be empty"
 
-    def test_create_riff_success(self, client, sample_headers, mock_api_keys):
+    def test_create_riff_success(self, client, mock_api_keys):
         """Test creating a new riff successfully"""
-        app_slug = self.setup_app_for_riffs(client, sample_headers, mock_api_keys)
+        unique_headers = {
+            "X-User-UUID": "test-create-riff-success-uuid",
+            "Content-Type": "application/json"
+        }
+        app_slug = self.setup_app_for_riffs(client, unique_headers, mock_api_keys, "Create Riff App")
 
         riff_data = {"name": "Test Riff", "description": "A test riff"}
 
         response = client.post(
-            f"/api/apps/{app_slug}/riffs", headers=sample_headers, json=riff_data
+            f"/api/apps/{app_slug}/riffs", headers=unique_headers, json=riff_data
         )
 
         assert response.status_code == 201
