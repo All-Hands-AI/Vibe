@@ -157,7 +157,7 @@ function Projects() {
       />
 
       {/* Create New Project Form */}
-      <Card className="p-6 mb-8">
+      <Card className="p-6 mb-8 rounded-lg">
         <h2 className="text-xl font-semibold text-white mb-4">Create New Project</h2>
         <form onSubmit={handleCreateProject} className="space-y-4">
           <Input
