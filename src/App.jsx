@@ -7,6 +7,7 @@ import SetupWindow from './components/SetupWindow'
 import Home from './pages/Home'
 import About from './pages/About'
 import Contact from './pages/Contact'
+import Projects from './pages/Projects'
 import './App.css'
 
 function AppContent() {
@@ -32,7 +33,8 @@ function AppContent() {
         <Header />
         <main className="main-content">
           <Routes>
-            <Route path="/" element={<Home />} />
+            <Route path="/" element={<Projects />} />
+            <Route path="/home" element={<Home />} />
             <Route path="/about" element={<About />} />
             <Route path="/contact" element={<Contact />} />
           </Routes>

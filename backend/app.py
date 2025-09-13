@@ -7,6 +7,7 @@ import logging
 import sys
 from datetime import datetime
 from pathlib import Path
+from projects import projects_bp
 
 # Configure logging for Fly.io - stdout only
 logging.basicConfig(
@@ -19,6 +20,9 @@ logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
 CORS(app)
+
+# Register blueprints
+app.register_blueprint(projects_bp)
 
 # Test logging
 logger.info("Flask app starting up...")
@@ -335,7 +339,6 @@ def check_api_key(provider):
     
     logger.info(f"📊 {provider} API key check result for user {user_uuid[:8]}: {result}")
     return jsonify(result)
-
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 8000))
