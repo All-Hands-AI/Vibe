@@ -3,16 +3,14 @@ import PropTypes from 'prop-types'
 
 function MessageInput({ onSendMessage, disabled = false, placeholder = 'Type a message...' }) {
   const [message, setMessage] = useState('')
-  const [messageType, setMessageType] = useState('text')
   const textareaRef = useRef(null)
   const fileInputRef = useRef(null)
 
   const handleSubmit = (e) => {
     e.preventDefault()
     if (message.trim() && !disabled) {
-      onSendMessage(message, messageType)
+      onSendMessage(message, 'text')
       setMessage('')
-      setMessageType('text')
       // Reset textarea height
       if (textareaRef.current) {
         textareaRef.current.style.height = 'auto'
@@ -56,33 +54,9 @@ function MessageInput({ onSendMessage, disabled = false, placeholder = 'Type a m
     }
   }
 
-  const getTypeIcon = (type) => {
-    switch (type) {
-      case 'code':
-        return '💻'
-      case 'file':
-        return '📎'
-      default:
-        return '💬'
-    }
-  }
-
   return (
     <form onSubmit={handleSubmit} className="p-4">
       <div className="flex items-end space-x-3">
-        {/* Message Type Selector */}
-        <div className="flex flex-col space-y-1">
-          <select
-            value={messageType}
-            onChange={(e) => setMessageType(e.target.value)}
-            className="bg-gray-800 border border-gray-600 rounded px-2 py-1 text-xs text-cyber-text font-mono focus:outline-none focus:border-neon-green"
-            disabled={disabled}
-          >
-            <option value="text">💬 Text</option>
-            <option value="code">💻 Code</option>
-          </select>
-        </div>
-
         {/* Message Input */}
         <div className="flex-1">
           <textarea
@@ -124,7 +98,7 @@ function MessageInput({ onSendMessage, disabled = false, placeholder = 'Type a m
               </div>
             ) : (
               <div className="flex items-center space-x-2">
-                <span>{getTypeIcon(messageType)}</span>
+                <span>💬</span>
                 <span>Send</span>
               </div>
             )}
@@ -140,11 +114,6 @@ function MessageInput({ onSendMessage, disabled = false, placeholder = 'Type a m
         className="hidden"
         accept="*/*"
       />
-
-      {/* Help Text */}
-      <div className="mt-2 text-xs text-cyber-muted font-mono">
-        Press Enter to send, Shift+Enter for new line
-      </div>
     </form>
   )
 }
