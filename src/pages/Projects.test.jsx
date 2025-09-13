@@ -56,7 +56,7 @@ describe('Projects', () => {
     
     // Check form elements
     expect(screen.getByText('Create New Project')).toBeInTheDocument()
-    expect(screen.getByLabelText('Project Name')).toBeInTheDocument()
+    expect(screen.getByLabelText('> Project Name:')).toBeInTheDocument()
     expect(screen.getByPlaceholderText('Enter project name')).toBeInTheDocument()
     expect(screen.getByText('Create Project')).toBeInTheDocument()
     
@@ -127,7 +127,7 @@ describe('Projects', () => {
 
     renderWithRouter(<Projects />)
     
-    const nameInput = screen.getByLabelText('Project Name')
+    const nameInput = screen.getByLabelText('> Project Name:')
     
     // Type in the input
     fireEvent.change(nameInput, { target: { value: 'My Awesome Project!' } })
@@ -148,7 +148,7 @@ describe('Projects', () => {
 
     renderWithRouter(<Projects />)
     
-    const nameInput = screen.getByLabelText('Project Name')
+    const nameInput = screen.getByLabelText('> Project Name:')
     const createButton = screen.getByText('Create Project')
     
     // Initially disabled
@@ -190,7 +190,7 @@ describe('Projects', () => {
 
     renderWithRouter(<Projects />)
     
-    const nameInput = screen.getByLabelText('Project Name')
+    const nameInput = screen.getByLabelText('> Project Name:')
     const createButton = screen.getByText('Create Project')
     
     // Fill form and submit
@@ -220,7 +220,7 @@ describe('Projects', () => {
 
     renderWithRouter(<Projects />)
     
-    const nameInput = screen.getByLabelText('Project Name')
+    const nameInput = screen.getByLabelText('> Project Name:')
     const createButton = screen.getByText('Create Project')
     
     // Fill form and submit
@@ -258,7 +258,7 @@ describe('Projects', () => {
 
     renderWithRouter(<Projects />)
     
-    const nameInput = screen.getByLabelText('Project Name')
+    const nameInput = screen.getByLabelText('> Project Name:')
     const createButton = screen.getByText('Create Project')
     
     // Fill form and submit to trigger error

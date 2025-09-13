@@ -33,6 +33,9 @@ function MatrixRain() {
 
     // Drawing function
     const draw = () => {
+      // Check if canvas and context are available
+      if (!canvas || !ctx) return
+      
       // Black background with slight transparency for trail effect
       ctx.fillStyle = 'rgba(0, 0, 0, 0.05)'
       ctx.fillRect(0, 0, canvas.width, canvas.height)

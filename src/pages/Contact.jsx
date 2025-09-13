@@ -30,7 +30,7 @@ function Contact() {
             <span className="text-cyber-muted">{'<'}</span> Get in Touch <span className="text-cyber-muted">{'/>'}</span>
           </h1>
           <p className="text-xl text-cyber-muted max-w-2xl mx-auto font-mono">
-            📡 We'd love to hear from you. Send us a message and we'll hack back as soon as possible.
+            📡 We&apos;d love to hear from you. Send us a message and we&apos;ll hack back as soon as possible.
           </p>
         </section>
 
