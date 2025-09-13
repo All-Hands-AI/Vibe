@@ -20,27 +20,23 @@ import os
 logger = get_logger(__name__)
 
 
-class TestAgent(Agent):
-    """Custom Agent class for testing that always replies with 'howdy!'"""
+def create_test_agent(llm, tools):
+    """Create an agent with a custom 'howdy!' system prompt for testing"""
+    # Create a temporary directory and system prompt file
+    temp_dir = tempfile.mkdtemp()
+    prompt_file = os.path.join(temp_dir, "system_prompt.j2")
     
-    def __init__(self, **kwargs):
-        # Create a temporary system prompt file
-        self.temp_prompt_file = None
-        super().__init__(**kwargs)
+    # Write our custom system prompt
+    with open(prompt_file, 'w') as f:
+        f.write("You are a test agent. Always reply with exactly 'howdy!' to any user message.")
     
-    @property
-    def prompt_dir(self) -> str:
-        """Override to use our custom prompt directory"""
-        if self.temp_prompt_file is None:
-            # Create a temporary directory and file for our custom prompt
-            temp_dir = tempfile.mkdtemp()
-            self.temp_prompt_file = os.path.join(temp_dir, "system_prompt.j2")
-            
-            # Write our custom system prompt
-            with open(self.temp_prompt_file, 'w') as f:
-                f.write("You are a test agent. Always reply with exactly 'howdy!' to any user message.")
-        
-        return os.path.dirname(self.temp_prompt_file)
+    # Create a custom Agent class that uses our prompt directory
+    class CustomAgent(Agent):
+        @property
+        def prompt_dir(self) -> str:
+            return temp_dir
+    
+    return CustomAgent(llm=llm, tools=tools)
 
 
 class AgentLoop:
@@ -69,8 +65,8 @@ class AgentLoop:
         # Create Agent with FileEditor and Bash tools
         tools = [str_replace_editor_tool, execute_bash_tool]
         
-        # Use TestAgent for testing - it will always reply with "howdy!"
-        self.agent = TestAgent(llm=llm, tools=tools)
+        # Use custom agent for testing - it will always reply with "howdy!"
+        self.agent = create_test_agent(llm, tools)
         
         # Create conversation callbacks
         callbacks = []
