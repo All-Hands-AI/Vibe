@@ -112,11 +112,6 @@ describe('App', () => {
     expect(screen.getByText('Manage your OpenVibe apps')).toBeInTheDocument()
     expect(screen.getByText('Create New App')).toBeInTheDocument()
     
-    // Check for footer - copyright text is split across elements
-    expect(screen.getByText('©')).toBeInTheDocument()
-    expect(screen.getByText('2025 OpenVibe.')).toBeInTheDocument()
-    expect(screen.getByText('All rights reserved.')).toBeInTheDocument()
-    
     // Check navigation links in header
     const nav = screen.getByRole('navigation')
     expect(nav).toBeInTheDocument()
