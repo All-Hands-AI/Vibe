@@ -218,10 +218,19 @@ The LLM is configured to use:
 
 The system handles various error conditions:
 
+- **Missing OpenHands SDK**: Returns HTTP 503 with setup instructions
 - **Missing API Keys**: Returns 400 with clear error message
 - **GitHub Failures**: Logs warnings but continues conversation
 - **Agent Errors**: Captured in conversation thread status
 - **File System Issues**: Proper error logging and recovery
+
+### Graceful Degradation
+
+When the OpenHands SDK is not installed:
+- The Flask application starts successfully
+- Conversation endpoints return HTTP 503 with helpful error messages
+- File-based conversation listing still works
+- Clear setup instructions are provided in error responses
 
 ## Monitoring and Debugging
 
