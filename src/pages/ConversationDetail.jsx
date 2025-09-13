@@ -10,52 +10,108 @@ function ConversationDetail() {
   const [projectLoading, setProjectLoading] = useState(true)
   const [projectError, setProjectError] = useState('')
   const [conversationId, setConversationId] = useState(null)
+  const [isDirectAccess, setIsDirectAccess] = useState(false)
 
   // Fetch project details to get project ID
   const fetchProject = useCallback(async () => {
-    console.log('🔄 Fetching project details:', projectSlug)
     try {
       setProjectLoading(true)
       setProjectError('')
       
-      const projectResponse = await fetch(`/api/projects/${projectSlug}`)
-      console.log('📡 Project response status:', projectResponse?.status)
-      
-      if (!projectResponse || !projectResponse.ok) {
-        const errorText = await projectResponse?.text() || 'Unknown error'
-        console.error('❌ Fetch project failed:', errorText)
-        throw new Error(`Failed to fetch project: ${projectResponse?.status} ${errorText}`)
+      if (projectSlug) {
+        // Normal access via /projects/:slug/conversations/:conversationSlug
+        console.log('🔄 Fetching project details:', projectSlug)
+        setIsDirectAccess(false)
+        
+        const projectResponse = await fetch(`/api/projects/${projectSlug}`)
+        console.log('📡 Project response status:', projectResponse?.status)
+        
+        if (!projectResponse || !projectResponse.ok) {
+          const errorText = await projectResponse?.text() || 'Unknown error'
+          console.error('❌ Fetch project failed:', errorText)
+          throw new Error(`Failed to fetch project: ${projectResponse?.status} ${errorText}`)
+        }
+        
+        const projectData = await projectResponse.json()
+        console.log('📊 Received project data:', projectData)
+        setProject(projectData.project)
+        
+        // Now get the conversations for this project to find the conversation ID
+        const conversationsResponse = await fetch(`/api/projects/${projectData.project.id}/conversations`)
+        console.log('📡 Conversations response status:', conversationsResponse?.status)
+        
+        if (!conversationsResponse || !conversationsResponse.ok) {
+          const errorText = await conversationsResponse?.text() || 'Unknown error'
+          console.error('❌ Fetch conversations failed:', errorText)
+          throw new Error(`Failed to fetch conversations: ${conversationsResponse?.status} ${errorText}`)
+        }
+        
+        const conversationsData = await conversationsResponse.json()
+        console.log('📊 Received conversations data:', conversationsData)
+        
+        // Find the specific conversation by slug or ID
+        const foundConversation = conversationsData.conversations.find(
+          c => c.slug === conversationSlug || c.id === conversationSlug
+        )
+        
+        if (!foundConversation) {
+          console.error('❌ Conversation not found:', conversationSlug)
+          throw new Error('Conversation not found')
+        }
+        
+        setConversationId(foundConversation.id)
+        console.log('✅ Project data loaded successfully, conversation ID:', foundConversation.id)
+      } else {
+        // Direct access via /conversations/:conversationSlug
+        console.log('🔄 Direct conversation access, searching across all projects:', conversationSlug)
+        setIsDirectAccess(true)
+        
+        // First, get all projects
+        const projectsResponse = await fetch('/api/projects')
+        console.log('📡 Projects response status:', projectsResponse?.status)
+        
+        if (!projectsResponse || !projectsResponse.ok) {
+          const errorText = await projectsResponse?.text() || 'Unknown error'
+          console.error('❌ Fetch projects failed:', errorText)
+          throw new Error(`Failed to fetch projects: ${projectsResponse?.status} ${errorText}`)
+        }
+        
+        const projectsData = await projectsResponse.json()
+        console.log('📊 Received projects data:', projectsData)
+        
+        // Search for the conversation across all projects
+        let foundConversation = null
+        let foundProject = null
+        
+        for (const proj of projectsData.projects || []) {
+          try {
+            const conversationsResponse = await fetch(`/api/projects/${proj.id}/conversations`)
+            if (conversationsResponse.ok) {
+              const conversationsData = await conversationsResponse.json()
+              const conversation = conversationsData.conversations.find(
+                c => c.slug === conversationSlug || c.id === conversationSlug
+              )
+              if (conversation) {
+                foundConversation = conversation
+                foundProject = proj
+                break
+              }
+            }
+          } catch (err) {
+            console.warn(`⚠️ Failed to fetch conversations for project ${proj.id}:`, err)
+            // Continue searching other projects
+          }
+        }
+        
+        if (!foundConversation || !foundProject) {
+          console.error('❌ Conversation not found across all projects:', conversationSlug)
+          throw new Error('Conversation not found')
+        }
+        
+        setProject(foundProject)
+        setConversationId(foundConversation.id)
+        console.log('✅ Conversation found via direct access, project:', foundProject.name, 'conversation ID:', foundConversation.id)
       }
-      
-      const projectData = await projectResponse.json()
-      console.log('📊 Received project data:', projectData)
-      setProject(projectData.project)
-      
-      // Now get the conversations for this project to find the conversation ID
-      const conversationsResponse = await fetch(`/api/projects/${projectData.project.id}/conversations`)
-      console.log('📡 Conversations response status:', conversationsResponse?.status)
-      
-      if (!conversationsResponse || !conversationsResponse.ok) {
-        const errorText = await conversationsResponse?.text() || 'Unknown error'
-        console.error('❌ Fetch conversations failed:', errorText)
-        throw new Error(`Failed to fetch conversations: ${conversationsResponse?.status} ${errorText}`)
-      }
-      
-      const conversationsData = await conversationsResponse.json()
-      console.log('📊 Received conversations data:', conversationsData)
-      
-      // Find the specific conversation by slug
-      const foundConversation = conversationsData.conversations.find(
-        c => c.slug === conversationSlug
-      )
-      
-      if (!foundConversation) {
-        console.error('❌ Conversation not found:', conversationSlug)
-        throw new Error('Conversation not found')
-      }
-      
-      setConversationId(foundConversation.id)
-      console.log('✅ Project data loaded successfully, conversation ID:', foundConversation.id)
     } catch (err) {
       console.error('❌ Error fetching project data:', err)
       setProjectError(err.message || 'Failed to load project. Please try again.')
@@ -109,7 +165,7 @@ function ConversationDetail() {
               <Link to="/" className="inline-flex items-center text-primary-300 hover:text-primary-400 font-medium transition-colors duration-200">
                 ← Back to Projects
               </Link>
-              {project && (
+              {project && !isDirectAccess && (
                 <Link to={`/projects/${project.slug}`} className="inline-flex items-center text-primary-300 hover:text-primary-400 font-medium transition-colors duration-200">
                   ← Back to {project.name}
                 </Link>
@@ -146,12 +202,19 @@ function ConversationDetail() {
             <Link to="/" className="text-primary-300 hover:text-primary-400 transition-colors duration-200">
               ← Projects
             </Link>
-            <span className="text-gray-500">/</span>
-            <Link to={`/projects/${project.slug}`} className="text-primary-300 hover:text-primary-400 transition-colors duration-200">
-              {project.name}
-            </Link>
+            {!isDirectAccess && (
+              <>
+                <span className="text-gray-500">/</span>
+                <Link to={`/projects/${project.slug}`} className="text-primary-300 hover:text-primary-400 transition-colors duration-200">
+                  {project.name}
+                </Link>
+              </>
+            )}
             <span className="text-gray-500">/</span>
             <span className="text-gray-300">{conversation.name}</span>
+            {isDirectAccess && (
+              <span className="text-gray-500 ml-2">(from {project.name})</span>
+            )}
           </div>
         </nav>
 

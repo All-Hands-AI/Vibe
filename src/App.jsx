@@ -45,6 +45,7 @@ function AppContent() {
             <Route path="/" element={<Projects />} />
             <Route path="/projects/:slug" element={<ProjectDetail />} />
             <Route path="/projects/:slug/conversations/:conversationSlug" element={<ConversationDetail />} />
+            <Route path="/conversations/:conversationSlug" element={<ConversationDetail />} />
             <Route path="/home" element={<Home />} />
             <Route path="/about" element={<About />} />
             <Route path="/contact" element={<Contact />} />
