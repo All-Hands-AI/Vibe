@@ -1,0 +1,94 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "openvibe-backend"
+version = "0.1.0"
+description = "OpenVibe Backend API - A modern Flask application with file-based JSON storage"
+readme = "README.md"
+requires-python = ">=3.8"
+authors = [
+    {name = "OpenVibe Team", email = "openhands@all-hands.dev"},
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Framework :: Flask",
+]
+dependencies = [
+    "Flask==3.0.0",
+    "Flask-CORS==4.0.0",
+    "gunicorn==21.2.0",
+    "requests==2.31.0",
+    "PyNaCl==1.5.0",
+    # OpenHands Agent SDK dependencies
+    "pydantic>=2.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0",
+    "pytest-flask>=1.2.0",
+    "black>=23.0.0",
+    "flake8>=6.0.0",
+    "mypy>=1.0.0",
+]
+openhands = [
+    # Note: OpenHands SDK is not yet available on PyPI
+    # Install manually from: https://github.com/All-Hands-AI/agent-sdk
+    # "openhands-agent-sdk",  # Uncomment when available on PyPI
+    "litellm>=1.0.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/rbren/OpenVibe"
+Repository = "https://github.com/rbren/OpenVibe"
+Issues = "https://github.com/rbren/OpenVibe/issues"
+
+[tool.black]
+line-length = 88
+target-version = ['py38']
+include = '\.pyi?$'
+extend-exclude = '''
+/(
+  # directories
+  \.eggs
+  | \.git
+  | \.hg
+  | \.mypy_cache
+  | \.tox
+  | \.venv
+  | build
+  | dist
+)/
+'''
+
+[tool.mypy]
+python_version = "3.8"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+check_untyped_defs = true
+disallow_untyped_decorators = true
+no_implicit_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_no_return = true
+warn_unreachable = true
+strict_equality = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py", "*_test.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = "-v --tb=short"

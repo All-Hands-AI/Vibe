@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { getUserUUID } from '../utils/uuid'
-import './ProjectDetail.css'
 
 function ProjectDetail() {
   const { slug } = useParams()
@@ -185,10 +184,10 @@ function ProjectDetail() {
 
   if (loading) {
     return (
-      <div className="project-detail-page">
-        <div className="loading">
-          <div className="spinner"></div>
-          <p>Loading project...</p>
+      <div className="min-h-screen bg-gray-900 text-white">
+        <div className="flex flex-col items-center justify-center py-16">
+          <div className="w-10 h-10 border-4 border-gray-600 border-t-primary-300 rounded-full animate-spin mb-4"></div>
+          <p className="text-gray-400">Loading project...</p>
         </div>
       </div>
     )
@@ -196,11 +195,15 @@ function ProjectDetail() {
 
   if (error && !project) {
     return (
-      <div className="project-detail-page">
-        <div className="error-state">
-          <h2>Error</h2>
-          <p>{error}</p>
-          <Link to="/" className="back-link">← Back to Projects</Link>
+      <div className="min-h-screen bg-gray-900 text-white">
+        <div className="max-w-4xl mx-auto px-8 py-16">
+          <div className="text-center">
+            <h2 className="text-3xl font-bold text-red-400 mb-4">Error</h2>
+            <p className="text-gray-300 mb-8">{error}</p>
+            <Link to="/" className="inline-flex items-center text-primary-300 hover:text-primary-400 font-medium transition-colors duration-200">
+              ← Back to Projects
+            </Link>
+          </div>
         </div>
       </div>
     )
@@ -208,39 +211,47 @@ function ProjectDetail() {
 
   if (!project) {
     return (
-      <div className="project-detail-page">
-        <div className="error-state">
-          <h2>Project Not Found</h2>
-          <p>The project &quot;{slug}&quot; could not be found.</p>
-          <Link to="/" className="back-link">← Back to Projects</Link>
+      <div className="min-h-screen bg-gray-900 text-white">
+        <div className="max-w-4xl mx-auto px-8 py-16">
+          <div className="text-center">
+            <h2 className="text-3xl font-bold text-red-400 mb-4">Project Not Found</h2>
+            <p className="text-gray-300 mb-8">The project &quot;{slug}&quot; could not be found.</p>
+            <Link to="/" className="inline-flex items-center text-primary-300 hover:text-primary-400 font-medium transition-colors duration-200">
+              ← Back to Projects
+            </Link>
+          </div>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="project-detail-page">
-      <div className="project-detail-container">
+    <div className="min-h-screen bg-gray-900 text-white">
+      <div className="max-w-6xl mx-auto px-8 py-8">
         {/* Navigation */}
-        <nav className="project-nav">
-          <Link to="/" className="back-link">← Back to Projects</Link>
+        <nav className="mb-8">
+          <Link to="/" className="inline-flex items-center text-primary-300 hover:text-primary-400 font-medium transition-colors duration-200">
+            ← Back to Projects
+          </Link>
         </nav>
 
         {/* Project Header */}
-        <header className="project-header">
-          <div className="project-title">
-            <h1>{project.name}</h1>
-            <span className="project-slug">{project.slug}</span>
+        <header className="mb-12">
+          <div className="mb-6">
+            <h1 className="text-4xl font-bold text-white mb-2">{project.name}</h1>
+            <span className="text-gray-400 font-mono text-lg">{project.slug}</span>
           </div>
           
-          <div className="project-meta">
-            <p>Created: {new Date(project.created_at).toLocaleDateString()}</p>
+          <div className="flex flex-wrap items-center gap-6">
+            <p className="text-gray-300">
+              Created: {new Date(project.created_at).toLocaleDateString()}
+            </p>
             {project.github_url && (
               <a 
                 href={project.github_url} 
                 target="_blank" 
                 rel="noopener noreferrer"
-                className="github-link"
+                className="inline-flex items-center text-primary-300 hover:text-primary-400 font-medium transition-colors duration-200"
               >
                 View on GitHub →
               </a>
@@ -249,42 +260,48 @@ function ProjectDetail() {
         </header>
 
         {/* Project Status */}
-        <section className="project-status">
-          <h2>Project Status</h2>
-          <div className="status-grid">
-            <div className="status-card">
-              <h3>CI/CD Tests</h3>
-              <div className="status-indicator">
+        <section className="mb-12">
+          <h2 className="text-3xl font-bold text-primary-300 mb-8">Project Status</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="bg-gray-850 p-6 rounded-lg border border-gray-700">
+              <h3 className="text-xl font-semibold text-white mb-4">CI/CD Tests</h3>
+              <div className="mb-4">
                 {project.github_status ? (
-                  <span className={`status ${
-                    project.github_status.tests_passing === true ? 'success' : 
-                    project.github_status.tests_passing === false ? 'error' : 
-                    'running'
+                  <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
+                    project.github_status.tests_passing === true ? 'bg-green-900/20 text-green-400 border border-green-500' : 
+                    project.github_status.tests_passing === false ? 'bg-red-900/20 text-red-400 border border-red-500' : 
+                    'bg-yellow-900/20 text-yellow-400 border border-yellow-500'
                   }`}>
                     {project.github_status.tests_passing === true ? '✅ Passing' : 
                      project.github_status.tests_passing === false ? '❌ Failing' : 
                      '🔄 Running'}
                   </span>
                 ) : (
-                  <span className="status loading">🔄 Checking...</span>
+                  <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-gray-700 text-gray-300">
+                    🔄 Checking...
+                  </span>
                 )}
               </div>
               {project.github_status?.last_commit && (
-                <p className="status-detail">
+                <p className="text-gray-400 text-sm">
                   Last commit: {project.github_status.last_commit.substring(0, 7)}
                 </p>
               )}
             </div>
 
-            <div className="status-card">
-              <h3>Deployment</h3>
-              <div className="status-indicator">
+            <div className="bg-gray-850 p-6 rounded-lg border border-gray-700">
+              <h3 className="text-xl font-semibold text-white mb-4">Deployment</h3>
+              <div className="mb-4">
                 {project.fly_status ? (
-                  <span className={`status ${project.fly_status.deployed ? 'success' : 'error'}`}>
+                  <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
+                    project.fly_status.deployed ? 'bg-green-900/20 text-green-400 border border-green-500' : 'bg-red-900/20 text-red-400 border border-red-500'
+                  }`}>
                     {project.fly_status.deployed ? '✅ Deployed' : '❌ Failed'}
                   </span>
                 ) : (
-                  <span className="status loading">🔄 Checking...</span>
+                  <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-gray-700 text-gray-300">
+                    🔄 Checking...
+                  </span>
                 )}
               </div>
               {project.fly_status?.app_url && (
@@ -292,7 +309,7 @@ function ProjectDetail() {
                   href={project.fly_status.app_url} 
                   target="_blank" 
                   rel="noopener noreferrer"
-                  className="deployment-link"
+                  className="inline-flex items-center text-primary-300 hover:text-primary-400 font-medium transition-colors duration-200"
                 >
                   Visit App →
                 </a>
@@ -302,83 +319,87 @@ function ProjectDetail() {
         </section>
 
         {/* Conversations Section */}
-        <section className="conversations-section">
-          <h2>Conversations</h2>
+        <section>
+          <h2 className="text-3xl font-bold text-primary-300 mb-8">Conversations</h2>
           
           {/* Create New Conversation */}
-          <div className="create-conversation">
-            <h3>Create New Conversation</h3>
-            <form onSubmit={handleCreateConversation} className="create-conversation-form">
-              <div className="form-group">
-                <input
-                  type="text"
-                  value={newConversationName}
-                  onChange={(e) => setNewConversationName(e.target.value)}
-                  placeholder="Enter conversation name"
-                  disabled={creating}
-                  className={error ? 'error' : ''}
-                />
-                {newConversationName && (
-                  <div className="slug-preview">
-                    Slug: <code>{createSlug(newConversationName)}</code>
-                  </div>
-                )}
-              </div>
-              
-              <button 
-                type="submit" 
-                disabled={creating || !newConversationName.trim()}
-                className="create-button"
-              >
-                {creating ? 'Creating...' : 'Create Conversation'}
-              </button>
-            </form>
+          <div className="mb-12">
+            <h3 className="text-2xl font-semibold text-white mb-6">Create New Conversation</h3>
+            <div className="bg-gray-850 p-6 rounded-lg border border-gray-700 max-w-2xl">
+              <form onSubmit={handleCreateConversation} className="space-y-6">
+                <div>
+                  <input
+                    type="text"
+                    value={newConversationName}
+                    onChange={(e) => setNewConversationName(e.target.value)}
+                    placeholder="Enter conversation name"
+                    disabled={creating}
+                    className={`w-full px-4 py-3 bg-gray-700 text-white rounded-md border transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary-300 focus:border-transparent ${
+                      error ? 'border-red-500' : 'border-gray-600'
+                    }`}
+                  />
+                  {newConversationName && (
+                    <div className="mt-2 text-sm text-gray-400">
+                      Slug: <code className="bg-gray-700 px-2 py-1 rounded text-primary-300">{createSlug(newConversationName)}</code>
+                    </div>
+                  )}
+                </div>
+                
+                <button 
+                  type="submit" 
+                  disabled={creating || !newConversationName.trim()}
+                  className="w-full px-6 py-3 bg-primary-300 text-gray-900 rounded-md font-semibold hover:bg-primary-400 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 hover:transform hover:-translate-y-0.5"
+                >
+                  {creating ? 'Creating...' : 'Create Conversation'}
+                </button>
+              </form>
 
-            {error && (
-              <div className="message error-message">
-                {error}
-              </div>
-            )}
+              {error && (
+                <div className="mt-4 p-4 bg-red-900/20 border border-red-500 rounded-md text-red-400">
+                  {error}
+                </div>
+              )}
 
-            {success && (
-              <div className="message success-message">
-                {success}
-              </div>
-            )}
+              {success && (
+                <div className="mt-4 p-4 bg-green-900/20 border border-green-500 rounded-md text-green-400">
+                  {success}
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Conversations List */}
-          <div className="conversations-list">
-            <h3>All Conversations</h3>
+          <div>
+            <h3 className="text-2xl font-semibold text-white mb-6">All Conversations</h3>
             
             {conversationsLoading ? (
-              <div className="loading">
-                <div className="spinner"></div>
-                <p>Loading conversations...</p>
+              <div className="flex flex-col items-center justify-center py-16">
+                <div className="w-10 h-10 border-4 border-gray-600 border-t-primary-300 rounded-full animate-spin mb-4"></div>
+                <p className="text-gray-400">Loading conversations...</p>
               </div>
             ) : conversations.length === 0 ? (
-              <div className="empty-state">
-                <p>No conversations yet. Create your first conversation above!</p>
+              <div className="text-center py-16">
+                <p className="text-gray-400 text-lg">No conversations yet. Create your first conversation above!</p>
               </div>
             ) : (
-              <div className="conversations-grid">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {conversations.map((conversation) => (
                   <Link 
                     key={conversation.id} 
                     to={`/projects/${project.slug}/conversations/${conversation.slug}`}
-                    className="conversation-card"
+                    className="block bg-gray-850 rounded-lg border border-gray-700 hover:border-primary-300 transition-all duration-300 hover:transform hover:-translate-y-1 p-6"
                   >
-                    <div className="conversation-header">
-                      <h4>{conversation.name}</h4>
-                      <span className="conversation-slug">{conversation.slug}</span>
+                    <div className="mb-4">
+                      <h4 className="text-xl font-semibold text-white mb-1">{conversation.name}</h4>
+                      <span className="text-sm text-gray-400 font-mono">{conversation.slug}</span>
                     </div>
                     
-                    <div className="conversation-details">
-                      <p className="conversation-date">
+                    <div className="space-y-2">
+                      <p className="text-sm text-gray-400">
                         Created: {new Date(conversation.created_at).toLocaleDateString()}
                       </p>
                       {conversation.last_message_at && (
-                        <p className="conversation-activity">
+                        <p className="text-sm text-gray-400">
                           Last activity: {new Date(conversation.last_message_at).toLocaleDateString()}
                         </p>
                       )}

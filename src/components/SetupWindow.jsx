@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import PropTypes from 'prop-types'
 import { useSetup } from '../context/SetupContext'
-import './SetupWindow.css'
 
 const SetupWindow = ({ onSetupComplete }) => {
   const { userUUID } = useSetup()
@@ -102,28 +101,28 @@ const SetupWindow = ({ onSetupComplete }) => {
   }
 
   const getStatusClass = (status) => {
-    if (status.loading) return 'validating'
-    if (status.valid) return 'valid'
-    if (status.message && !status.valid) return 'invalid'
-    return ''
+    if (status.loading) return 'border-yellow-500 bg-yellow-50/10'
+    if (status.valid) return 'border-green-500 bg-green-50/10'
+    if (status.message && !status.valid) return 'border-red-500 bg-red-50/10'
+    return 'border-gray-600'
   }
 
   return (
-    <div className="setup-overlay">
-      <div className="setup-window">
-        <div className="setup-header">
-          <h2>🚀 Welcome to OpenVibe</h2>
-          <p>Please configure your API keys to get started</p>
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <div className="bg-gray-800 rounded-lg shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+        <div className="p-6 border-b border-gray-700">
+          <h2 className="text-2xl font-bold text-primary-300 mb-2">🚀 Welcome to OpenVibe</h2>
+          <p className="text-gray-300">Please configure your API keys to get started</p>
         </div>
 
-        <form onSubmit={handleSubmit} className="setup-form">
-          <div className="api-key-section">
-            <div className="input-group">
-              <label htmlFor="anthropic-key">
-                <span className="provider-icon">🤖</span>
+        <form onSubmit={handleSubmit} className="p-6">
+          <div className="space-y-6">
+            <div>
+              <label htmlFor="anthropic-key" className="flex items-center text-sm font-medium text-gray-300 mb-2">
+                <span className="mr-2">🤖</span>
                 Anthropic API Key
               </label>
-              <div className="input-with-status">
+              <div className="relative">
                 <input
                   id="anthropic-key"
                   type="password"
@@ -131,25 +130,31 @@ const SetupWindow = ({ onSetupComplete }) => {
                   value={apiKeys.anthropic}
                   onChange={(e) => handleInputChange('anthropic', e.target.value)}
                   onBlur={() => handleInputBlur('anthropic')}
-                  className={getStatusClass(validationStatus.anthropic)}
+                  className={`w-full px-3 py-2 bg-gray-700 text-white rounded-md border-2 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary-300 ${getStatusClass(validationStatus.anthropic)}`}
                 />
-                <span className="status-icon">
+                <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-lg">
                   {getStatusIcon(validationStatus.anthropic)}
                 </span>
               </div>
               {validationStatus.anthropic.message && (
-                <div className={`status-message ${getStatusClass(validationStatus.anthropic)}`}>
+                <div className={`mt-2 text-sm px-3 py-2 rounded ${
+                  validationStatus.anthropic.valid 
+                    ? 'text-green-400 bg-green-900/20' 
+                    : validationStatus.anthropic.loading 
+                      ? 'text-yellow-400 bg-yellow-900/20'
+                      : 'text-red-400 bg-red-900/20'
+                }`}>
                   {validationStatus.anthropic.message}
                 </div>
               )}
             </div>
 
-            <div className="input-group">
-              <label htmlFor="github-key">
-                <span className="provider-icon">🐙</span>
+            <div>
+              <label htmlFor="github-key" className="flex items-center text-sm font-medium text-gray-300 mb-2">
+                <span className="mr-2">🐙</span>
                 GitHub API Key
               </label>
-              <div className="input-with-status">
+              <div className="relative">
                 <input
                   id="github-key"
                   type="password"
@@ -157,25 +162,31 @@ const SetupWindow = ({ onSetupComplete }) => {
                   value={apiKeys.github}
                   onChange={(e) => handleInputChange('github', e.target.value)}
                   onBlur={() => handleInputBlur('github')}
-                  className={getStatusClass(validationStatus.github)}
+                  className={`w-full px-3 py-2 bg-gray-700 text-white rounded-md border-2 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary-300 ${getStatusClass(validationStatus.github)}`}
                 />
-                <span className="status-icon">
+                <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-lg">
                   {getStatusIcon(validationStatus.github)}
                 </span>
               </div>
               {validationStatus.github.message && (
-                <div className={`status-message ${getStatusClass(validationStatus.github)}`}>
+                <div className={`mt-2 text-sm px-3 py-2 rounded ${
+                  validationStatus.github.valid 
+                    ? 'text-green-400 bg-green-900/20' 
+                    : validationStatus.github.loading 
+                      ? 'text-yellow-400 bg-yellow-900/20'
+                      : 'text-red-400 bg-red-900/20'
+                }`}>
                   {validationStatus.github.message}
                 </div>
               )}
             </div>
 
-            <div className="input-group">
-              <label htmlFor="fly-key">
-                <span className="provider-icon">🪰</span>
+            <div>
+              <label htmlFor="fly-key" className="flex items-center text-sm font-medium text-gray-300 mb-2">
+                <span className="mr-2">🪰</span>
                 Fly.io API Key
               </label>
-              <div className="input-with-status">
+              <div className="relative">
                 <input
                   id="fly-key"
                   type="password"
@@ -183,35 +194,72 @@ const SetupWindow = ({ onSetupComplete }) => {
                   value={apiKeys.fly}
                   onChange={(e) => handleInputChange('fly', e.target.value)}
                   onBlur={() => handleInputBlur('fly')}
-                  className={getStatusClass(validationStatus.fly)}
+                  className={`w-full px-3 py-2 bg-gray-700 text-white rounded-md border-2 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary-300 ${getStatusClass(validationStatus.fly)}`}
                 />
-                <span className="status-icon">
+                <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-lg">
                   {getStatusIcon(validationStatus.fly)}
                 </span>
               </div>
               {validationStatus.fly.message && (
-                <div className={`status-message ${getStatusClass(validationStatus.fly)}`}>
+                <div className={`mt-2 text-sm px-3 py-2 rounded ${
+                  validationStatus.fly.valid 
+                    ? 'text-green-400 bg-green-900/20' 
+                    : validationStatus.fly.loading 
+                      ? 'text-yellow-400 bg-yellow-900/20'
+                      : 'text-red-400 bg-red-900/20'
+                }`}>
                   {validationStatus.fly.message}
                 </div>
               )}
             </div>
           </div>
 
-          <div className="setup-footer">
+          <div className="mt-8 border-t border-gray-700 pt-6">
             <button 
               type="submit" 
-              className="continue-button"
+              className={`w-full py-3 px-4 rounded-md font-medium transition-all duration-200 ${
+                allKeysValid 
+                  ? 'bg-primary-300 text-gray-900 hover:bg-primary-400 transform hover:scale-105' 
+                  : 'bg-gray-600 text-gray-400 cursor-not-allowed'
+              }`}
               disabled={!allKeysValid}
             >
               {allKeysValid ? '✨ Continue to OpenVibe' : '🔑 Enter all API keys to continue'}
             </button>
             
-            <div className="help-text">
-              <p>Need help getting your API keys?</p>
-              <ul>
-                <li><a href="https://console.anthropic.com/" target="_blank" rel="noopener noreferrer">Get Anthropic API Key</a></li>
-                <li><a href="https://github.com/settings/tokens" target="_blank" rel="noopener noreferrer">Get GitHub API Key</a></li>
-                <li><a href="https://fly.io/user/personal_access_tokens" target="_blank" rel="noopener noreferrer">Get Fly.io API Key</a></li>
+            <div className="mt-6 text-center">
+              <p className="text-gray-400 text-sm mb-3">Need help getting your API keys?</p>
+              <ul className="space-y-2 text-sm">
+                <li>
+                  <a 
+                    href="https://console.anthropic.com/" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="text-primary-300 hover:text-primary-400 transition-colors duration-200"
+                  >
+                    Get Anthropic API Key
+                  </a>
+                </li>
+                <li>
+                  <a 
+                    href="https://github.com/settings/tokens" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="text-primary-300 hover:text-primary-400 transition-colors duration-200"
+                  >
+                    Get GitHub API Key
+                  </a>
+                </li>
+                <li>
+                  <a 
+                    href="https://fly.io/user/personal_access_tokens" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="text-primary-300 hover:text-primary-400 transition-colors duration-200"
+                  >
+                    Get Fly.io API Key
+                  </a>
+                </li>
               </ul>
             </div>
           </div>
