@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { getUserUUID } from '../utils/uuid'
-import BranchStatus from '../components/BranchStatus'
+import AppStatus from '../components/AppStatus'
 
 function AppDetail() {
   const { slug } = useParams()
@@ -324,39 +324,7 @@ function AppDetail() {
         {/* App Status */}
         <section className="mb-12">
           <h2 className="text-3xl font-bold text-cyber-text mb-8 font-mono">App Status</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <BranchStatus app={app} />
-
-            <div className="hacker-card">
-              <h3 className="text-xl font-semibold text-cyber-text mb-4 font-mono">Deployment</h3>
-              <div className="mb-4">
-                {app.fly_status ? (
-                  <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium font-mono border ${
-                    app.fly_status.deployed ? 'bg-green-900/20 text-green-400 border-green-500' : 'bg-red-900/20 text-red-400 border-red-500'
-                  }`}>
-                    {app.fly_status.deployed ? '✅ Deployed' : '❌ Failed'}
-                  </span>
-                ) : (
-                  <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-cyber-accent text-cyber-muted border border-cyber-border">
-                    🔄 Checking...
-                  </span>
-                )}
-              </div>
-              {app.fly_status?.app_url && (
-                <a 
-                  href={app.fly_status.app_url} 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 text-cyber-muted hover:text-neon-green font-medium transition-colors duration-200 font-mono"
-                >
-                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/>
-                  </svg>
-                  {getHostname(app.fly_status.app_url) || 'Visit App'}
-                </a>
-              )}
-            </div>
-          </div>
+          <AppStatus app={app} />
         </section>
 
         {/* Riffs Section */}

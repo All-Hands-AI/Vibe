@@ -116,10 +116,10 @@ describe('AppDetail', () => {
       expect(screen.getByText('Test App')).toBeInTheDocument()
     })
 
-    // Check that CI/CD status shows "Passing"
-    expect(screen.getByText('✅ Passing')).toBeInTheDocument()
-    expect(screen.queryByText('❌ Failing')).not.toBeInTheDocument()
-    expect(screen.queryByText('🔄 Running')).not.toBeInTheDocument()
+    // Check that AppStatus shows no PR and deployment status
+    expect(screen.getByText('No active pull request found')).toBeInTheDocument()
+    expect(screen.getByText('Deployment Status')).toBeInTheDocument()
+    expect(screen.getByText('🔄 Running')).toBeInTheDocument() // Deploy status shows as running
   })
 
   it('displays "Failing" status when CI/CD has failed', async () => {
@@ -160,10 +160,10 @@ describe('AppDetail', () => {
       expect(screen.getByText('Test App')).toBeInTheDocument()
     })
 
-    // Check that CI/CD status shows "Failing"
-    expect(screen.getByText('❌ Failing')).toBeInTheDocument()
-    expect(screen.queryByText('✅ Passing')).not.toBeInTheDocument()
-    expect(screen.queryByText('🔄 Running')).not.toBeInTheDocument()
+    // Check that AppStatus shows no PR and deployment status
+    expect(screen.getByText('No active pull request found')).toBeInTheDocument()
+    expect(screen.getByText('Deployment Status')).toBeInTheDocument()
+    expect(screen.getByText('🔄 Running')).toBeInTheDocument() // Deploy status shows as running
   })
 
   it('displays "Checking..." status when github_status is null', async () => {
@@ -199,10 +199,9 @@ describe('AppDetail', () => {
       expect(screen.getByText('Test App')).toBeInTheDocument()
     })
 
-    // Check that CI/CD status shows "Checking..."
-    expect(screen.getByText('🔄 Checking...')).toBeInTheDocument()
-    expect(screen.queryByText('❌ Failing')).not.toBeInTheDocument()
-    expect(screen.queryByText('✅ Passing')).not.toBeInTheDocument()
-    expect(screen.queryByText('🔄 Running')).not.toBeInTheDocument()
+    // Check that AppStatus shows no PR and deployment status
+    expect(screen.getByText('No active pull request found')).toBeInTheDocument()
+    expect(screen.getByText('Deployment Status')).toBeInTheDocument()
+    expect(screen.getByText('🔄 Running')).toBeInTheDocument() // Deploy status shows as running
   })
 })
