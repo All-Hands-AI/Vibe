@@ -18,87 +18,116 @@ function Contact() {
     e.preventDefault()
     // In a real app, you would send this data to a server
     console.log('Form submitted:', formData)
-    alert('Thank you for your message! We&apos;ll get back to you soon.')
+    alert('🔥 Message transmitted to the mainframe! We\'ll hack back to you soon. 💻')
     setFormData({ name: '', email: '', message: '' })
   }
 
   return (
-    <div className="min-h-screen bg-gray-900 text-white">
-      <div className="max-w-6xl mx-auto px-8 py-16">
+    <div className="min-h-screen bg-black text-neon-green relative">
+      <div className="max-w-6xl mx-auto px-8 py-16 relative z-10">
         <section className="text-center mb-16">
-          <h1 className="text-5xl font-bold text-primary-300 mb-4">Get in Touch</h1>
-          <p className="text-xl text-gray-300 max-w-2xl mx-auto">We&apos;d love to hear from you. Send us a message and we&apos;ll respond as soon as possible.</p>
+          <h1 className="text-5xl font-bold text-neon-green mb-4 font-mono neon-glow-strong glitch-text" data-text="Get in Touch">
+            <span className="text-neon-cyan">{'<'}</span> Get in Touch <span className="text-neon-cyan">{'/>'}</span>
+            <span className="animate-terminal-blink">_</span>
+          </h1>
+          <p className="text-xl text-neon-green/80 max-w-2xl mx-auto font-mono">
+            📡 We'd love to hear from you. Send us a message and we'll hack back as soon as possible.
+          </p>
         </section>
 
         <section>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
             <div>
-              <h2 className="text-3xl font-bold text-primary-300 mb-8">Contact Information</h2>
+              <h2 className="text-3xl font-bold text-neon-green mb-8 font-mono neon-glow">
+                📞 Contact Information
+              </h2>
               <div className="space-y-6">
-                <div className="bg-gray-850 p-6 rounded-lg border border-gray-700">
-                  <h3 className="text-xl font-semibold text-primary-300 mb-2">📧 Email</h3>
-                  <p className="text-gray-300">hello@openvibe.com</p>
+                <div className="hacker-card group">
+                  <h3 className="text-xl font-semibold text-neon-green mb-2 font-mono neon-glow group-hover:animate-pulse-neon">
+                    📧 Email
+                  </h3>
+                  <p className="text-neon-green/80 font-mono">hello@openvibe.com</p>
                 </div>
-                <div className="bg-gray-850 p-6 rounded-lg border border-gray-700">
-                  <h3 className="text-xl font-semibold text-primary-300 mb-2">🐙 GitHub</h3>
-                  <p className="text-gray-300">github.com/openvibe</p>
+                <div className="hacker-card group">
+                  <h3 className="text-xl font-semibold text-neon-green mb-2 font-mono neon-glow group-hover:animate-pulse-neon">
+                    🐙 GitHub
+                  </h3>
+                  <p className="text-neon-green/80 font-mono">github.com/openvibe</p>
                 </div>
-                <div className="bg-gray-850 p-6 rounded-lg border border-gray-700">
-                  <h3 className="text-xl font-semibold text-primary-300 mb-2">🐦 Twitter</h3>
-                  <p className="text-gray-300">@openvibe</p>
+                <div className="hacker-card group">
+                  <h3 className="text-xl font-semibold text-neon-green mb-2 font-mono neon-glow group-hover:animate-pulse-neon">
+                    🐦 Twitter
+                  </h3>
+                  <p className="text-neon-green/80 font-mono">@openvibe</p>
                 </div>
-                <div className="bg-gray-850 p-6 rounded-lg border border-gray-700">
-                  <h3 className="text-xl font-semibold text-primary-300 mb-2">💼 LinkedIn</h3>
-                  <p className="text-gray-300">linkedin.com/company/openvibe</p>
+                <div className="hacker-card group">
+                  <h3 className="text-xl font-semibold text-neon-green mb-2 font-mono neon-glow group-hover:animate-pulse-neon">
+                    💼 LinkedIn
+                  </h3>
+                  <p className="text-neon-green/80 font-mono">linkedin.com/company/openvibe</p>
                 </div>
               </div>
             </div>
 
-            <div className="bg-gray-850 p-8 rounded-lg border border-gray-700">
-              <form onSubmit={handleSubmit} className="space-y-6">
-                <div>
-                  <label htmlFor="name" className="block text-sm font-medium text-gray-300 mb-2">Name</label>
-                  <input
-                    type="text"
-                    id="name"
-                    name="name"
-                    value={formData.name}
-                    onChange={handleChange}
-                    required
-                    className="w-full px-4 py-3 bg-gray-700 text-white rounded-md border border-gray-600 focus:outline-none focus:ring-2 focus:ring-primary-300 focus:border-transparent transition-colors duration-200"
-                  />
-                </div>
-                <div>
-                  <label htmlFor="email" className="block text-sm font-medium text-gray-300 mb-2">Email</label>
-                  <input
-                    type="email"
-                    id="email"
-                    name="email"
-                    value={formData.email}
-                    onChange={handleChange}
-                    required
-                    className="w-full px-4 py-3 bg-gray-700 text-white rounded-md border border-gray-600 focus:outline-none focus:ring-2 focus:ring-primary-300 focus:border-transparent transition-colors duration-200"
-                  />
-                </div>
-                <div>
-                  <label htmlFor="message" className="block text-sm font-medium text-gray-300 mb-2">Message</label>
-                  <textarea
-                    id="message"
-                    name="message"
-                    rows="5"
-                    value={formData.message}
-                    onChange={handleChange}
-                    required
-                    className="w-full px-4 py-3 bg-gray-700 text-white rounded-md border border-gray-600 focus:outline-none focus:ring-2 focus:ring-primary-300 focus:border-transparent transition-colors duration-200 resize-vertical"
-                  ></textarea>
-                </div>
-                <button 
-                  type="submit" 
-                  className="w-full px-6 py-3 bg-primary-300 text-gray-900 rounded-md font-semibold hover:bg-primary-400 transition-all duration-300 hover:transform hover:-translate-y-0.5"
-                >
-                  Send Message
-                </button>
-              </form>
+            <div className="terminal-window">
+              <div className="terminal-header">
+                💻 MESSAGE_FORM.EXE
+              </div>
+              <div className="terminal-content">
+                <form onSubmit={handleSubmit} className="space-y-6">
+                  <div>
+                    <label htmlFor="name" className="block text-sm font-medium text-neon-green mb-2 font-mono">
+                      <span className="text-neon-cyan">{'>'}</span> Name:
+                    </label>
+                    <input
+                      type="text"
+                      id="name"
+                      name="name"
+                      value={formData.name}
+                      onChange={handleChange}
+                      required
+                      className="w-full px-4 py-3 bg-black text-neon-green font-mono border-2 border-neon-green/30 focus:outline-none focus:border-neon-green focus:neon-glow transition-all duration-200"
+                      placeholder="Enter your hacker alias..."
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="email" className="block text-sm font-medium text-neon-green mb-2 font-mono">
+                      <span className="text-neon-cyan">{'>'}</span> Email:
+                    </label>
+                    <input
+                      type="email"
+                      id="email"
+                      name="email"
+                      value={formData.email}
+                      onChange={handleChange}
+                      required
+                      className="w-full px-4 py-3 bg-black text-neon-green font-mono border-2 border-neon-green/30 focus:outline-none focus:border-neon-green focus:neon-glow transition-all duration-200"
+                      placeholder="your.email@cybernet.com"
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="message" className="block text-sm font-medium text-neon-green mb-2 font-mono">
+                      <span className="text-neon-cyan">{'>'}</span> Message:
+                    </label>
+                    <textarea
+                      id="message"
+                      name="message"
+                      rows="5"
+                      value={formData.message}
+                      onChange={handleChange}
+                      required
+                      className="w-full px-4 py-3 bg-black text-neon-green font-mono border-2 border-neon-green/30 focus:outline-none focus:border-neon-green focus:neon-glow transition-all duration-200 resize-vertical"
+                      placeholder="Enter your cyberpunk message..."
+                    ></textarea>
+                  </div>
+                  <button 
+                    type="submit" 
+                    className="btn-hacker-primary w-full text-base"
+                  >
+                    🚀 Transmit Message
+                  </button>
+                </form>
+              </div>
             </div>
           </div>
         </section>

@@ -6,51 +6,56 @@ function Header() {
   const isActive = (path) => location.pathname === path
 
   return (
-    <header className="bg-gray-850 border-b border-gray-700 sticky top-0 z-40">
+    <header className="bg-black border-b-2 border-neon-green sticky top-0 z-40 neon-border">
       <div className="max-w-6xl mx-auto flex justify-between items-center px-8 py-4">
-        <Link to="/" className="text-primary-300 no-underline">
-          <h1 className="text-3xl font-bold m-0">OpenVibe</h1>
+        <Link to="/" className="text-neon-green no-underline group">
+          <h1 className="text-3xl font-bold m-0 font-mono neon-glow group-hover:animate-pulse-neon">
+            <span className="text-neon-cyan">{'<'}</span>
+            OpenVibe
+            <span className="text-neon-cyan">{'/>'}</span>
+            <span className="animate-terminal-blink text-neon-green">_</span>
+          </h1>
         </Link>
-        <nav className="flex gap-8">
+        <nav className="flex gap-6">
           <Link 
             to="/" 
-            className={`text-white no-underline font-medium transition-colors duration-300 px-4 py-2 rounded ${
+            className={`no-underline font-mono font-semibold transition-all duration-300 px-4 py-2 border-2 ${
               isActive('/') 
-                ? 'text-primary-300 bg-primary-300/20' 
-                : 'hover:text-primary-300 hover:bg-primary-300/10'
+                ? 'text-black bg-neon-green border-neon-green neon-glow' 
+                : 'text-neon-green border-neon-green/30 hover:border-neon-green hover:bg-neon-green/10 hover:neon-glow'
             }`}
           >
-            Projects
+            🗂️ Projects
           </Link>
           <Link 
             to="/home" 
-            className={`text-white no-underline font-medium transition-colors duration-300 px-4 py-2 rounded ${
+            className={`no-underline font-mono font-semibold transition-all duration-300 px-4 py-2 border-2 ${
               isActive('/home') 
-                ? 'text-primary-300 bg-primary-300/20' 
-                : 'hover:text-primary-300 hover:bg-primary-300/10'
+                ? 'text-black bg-neon-green border-neon-green neon-glow' 
+                : 'text-neon-green border-neon-green/30 hover:border-neon-green hover:bg-neon-green/10 hover:neon-glow'
             }`}
           >
-            Home
+            🏠 Home
           </Link>
           <Link 
             to="/about" 
-            className={`text-white no-underline font-medium transition-colors duration-300 px-4 py-2 rounded ${
+            className={`no-underline font-mono font-semibold transition-all duration-300 px-4 py-2 border-2 ${
               isActive('/about') 
-                ? 'text-primary-300 bg-primary-300/20' 
-                : 'hover:text-primary-300 hover:bg-primary-300/10'
+                ? 'text-black bg-neon-green border-neon-green neon-glow' 
+                : 'text-neon-green border-neon-green/30 hover:border-neon-green hover:bg-neon-green/10 hover:neon-glow'
             }`}
           >
-            About
+            ℹ️ About
           </Link>
           <Link 
             to="/contact" 
-            className={`text-white no-underline font-medium transition-colors duration-300 px-4 py-2 rounded ${
+            className={`no-underline font-mono font-semibold transition-all duration-300 px-4 py-2 border-2 ${
               isActive('/contact') 
-                ? 'text-primary-300 bg-primary-300/20' 
-                : 'hover:text-primary-300 hover:bg-primary-300/10'
+                ? 'text-black bg-neon-green border-neon-green neon-glow' 
+                : 'text-neon-green border-neon-green/30 hover:border-neon-green hover:bg-neon-green/10 hover:neon-glow'
             }`}
           >
-            Contact
+            📞 Contact
           </Link>
         </nav>
       </div>
