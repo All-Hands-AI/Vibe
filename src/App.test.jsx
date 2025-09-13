@@ -48,7 +48,7 @@ describe('App', () => {
     render(<App />)
     
     // Should show loading screen initially
-    expect(screen.getByText('Loading OpenVibe...')).toBeInTheDocument()
+    expect(screen.getByText('Initializing OpenVibe...')).toBeInTheDocument()
   })
 
   it('shows setup window when API keys are not configured', async () => {
@@ -104,7 +104,7 @@ describe('App', () => {
     
     // Wait for main app to load
     await waitFor(() => {
-      expect(screen.getByRole('link', { name: 'OpenVibe' })).toBeInTheDocument()
+      expect(screen.getByRole('link', { name: /OpenVibe/ })).toBeInTheDocument()
     })
     
     // Check for projects page content (default route is now Projects)
@@ -112,24 +112,26 @@ describe('App', () => {
     expect(screen.getByText('Manage your OpenVibe projects')).toBeInTheDocument()
     expect(screen.getByText('Create New Project')).toBeInTheDocument()
     
-    // Check for footer
-    expect(screen.getByText('© 2025 OpenVibe. All rights reserved.')).toBeInTheDocument()
+    // Check for footer - copyright text is split across elements
+    expect(screen.getByText('©')).toBeInTheDocument()
+    expect(screen.getByText('2025 OpenVibe.')).toBeInTheDocument()
+    expect(screen.getByText('All rights reserved.')).toBeInTheDocument()
     
     // Check navigation links in header
     const nav = screen.getByRole('navigation')
     expect(nav).toBeInTheDocument()
     
     // Use getAllByRole to handle multiple links with same name
-    const projectsLinks = screen.getAllByRole('link', { name: 'Projects' })
+    const projectsLinks = screen.getAllByRole('link', { name: '🗂️ Projects' })
     expect(projectsLinks.length).toBeGreaterThan(0)
     
-    const homeLinks = screen.getAllByRole('link', { name: 'Home' })
+    const homeLinks = screen.getAllByRole('link', { name: '🏠 Home' })
     expect(homeLinks.length).toBeGreaterThan(0)
     
-    const aboutLinks = screen.getAllByRole('link', { name: 'About' })
+    const aboutLinks = screen.getAllByRole('link', { name: 'ℹ️ About' })
     expect(aboutLinks.length).toBeGreaterThan(0)
     
-    const contactLinks = screen.getAllByRole('link', { name: 'Contact' })
+    const contactLinks = screen.getAllByRole('link', { name: '📞 Contact' })
     expect(contactLinks.length).toBeGreaterThan(0)
   })
 

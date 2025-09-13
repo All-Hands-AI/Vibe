@@ -90,15 +90,26 @@ if [ -n "$PULL_FROM_BRANCH" ]; then
             log "📦 Installing npm dependencies..."
             if npm install; then
                 log "✅ npm dependencies installed"
-                log "✅ Vite binary: $(ls -la node_modules/.bin/vite 2>/dev/null || echo 'not found')"
-                VITE_AVAILABLE=true
+                if [ -f "node_modules/.bin/vite" ]; then
+                    log "✅ Vite binary: $(ls -la node_modules/.bin/vite)"
+                    VITE_AVAILABLE=true
+                else
+                    log "❌ Vite binary not found after npm install"
+                    VITE_AVAILABLE=false
+                fi
             else
                 log "❌ Failed to install npm dependencies - Vite will not be available"
                 VITE_AVAILABLE=false
             fi
         else
             log "✅ npm dependencies already installed"
-            VITE_AVAILABLE=true
+            if [ -f "node_modules/.bin/vite" ]; then
+                log "✅ Vite binary confirmed: $(ls -la node_modules/.bin/vite)"
+                VITE_AVAILABLE=true
+            else
+                log "❌ Vite binary missing despite node_modules existing"
+                VITE_AVAILABLE=false
+            fi
         fi
     else
         log "⚠️  Skipping npm dependencies - Node.js not available"
@@ -136,7 +147,8 @@ if [ -n "$PULL_FROM_BRANCH" ]; then
     if [ "$VITE_AVAILABLE" = true ]; then
         log "⚡ Starting Vite dev server..."
         cd /app
-        npm run dev &
+        # Use npx to ensure we use the local vite binary
+        npx vite --host 0.0.0.0 --port 3000 &
         VITE_PID=$!
         log "✅ Vite dev server started (PID: $VITE_PID)"
     else
@@ -172,7 +184,7 @@ if [ -n "$PULL_FROM_BRANCH" ]; then
         if [ "$VITE_AVAILABLE" = true ] && [ -n "$VITE_PID" ]; then
             if ! kill -0 $VITE_PID 2>/dev/null; then
                 log "❌ Vite process died, restarting..."
-                cd /app && npm run dev &
+                cd /app && npx vite --host 0.0.0.0 --port 3000 &
                 VITE_PID=$!
                 log "✅ Vite restarted (PID: $VITE_PID)"
             fi
