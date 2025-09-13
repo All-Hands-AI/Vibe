@@ -12,7 +12,7 @@ from storage import get_apps_storage
 logger = logging.getLogger(__name__)
 
 # Create Blueprint for apps
-apps_bp = Blueprint('apps', __name__)
+apps_bp = Blueprint("apps", __name__)
 
 def load_user_apps(user_uuid):
     """Load apps for a specific user"""
@@ -643,7 +643,7 @@ def create_github_repo(repo_name, github_token, fly_token):
         logger.error(f"💥 GitHub repo creation error: {str(e)}")
         return False, f"Error creating repository: {str(e)}"
 
-@apps_bp.route('/api/apps', methods=['GET'])
+@apps_bp.route("/api/apps", methods=["GET"]
 def get_apps():
     """Get all apps for a user, ordered alphabetically"""
     logger.info("📋 GET /api/apps - Fetching user apps")
@@ -673,7 +673,7 @@ def get_apps():
         logger.error(f"💥 Error fetching apps: {str(e)}")
         return jsonify({'error': 'Failed to fetch apps'}), 500
 
-@apps_bp.route('/api/apps/<slug>', methods=['GET'])
+@apps_bp.route("/api/apps/<slug>", methods=["GET"]
 def get_app(slug):
     """Get a specific app by slug with status information"""
     logger.info(f"📋 GET /api/apps/{slug} - Fetching app details")
@@ -730,7 +730,7 @@ def get_app(slug):
         logger.error(f"💥 Error fetching app: {str(e)}")
         return jsonify({'error': 'Failed to fetch app'}), 500
 
-@apps_bp.route('/api/apps', methods=['POST'])
+@apps_bp.route("/api/apps", methods=["POST"]
 def create_app():
     """Create a new app with GitHub repo and Fly.io app"""
     logger.info("🆕 POST /api/apps - Creating new app")
@@ -838,7 +838,7 @@ def create_app():
         logger.error(f"💥 Error creating app: {str(e)}")
         return jsonify({'error': 'Failed to create app'}), 500
 
-@apps_bp.route('/api/apps/<slug>', methods=['DELETE'])
+@apps_bp.route("/api/apps/<slug>", methods=["DELETE"]
 def delete_app(slug):
     """Delete a app and its associated GitHub repo and Fly.io app"""
     logger.info(f"🗑️ DELETE /api/apps/{slug} - Deleting app")

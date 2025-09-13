@@ -9,7 +9,7 @@ from storage import get_riffs_storage, get_apps_storage
 logger = logging.getLogger(__name__)
 
 # Create Blueprint for riffs
-riffs_bp = Blueprint('riffs', __name__)
+riffs_bp = Blueprint("riffs", __name__)
 
 def load_user_riffs(user_uuid, app_slug):
     """Load riffs for a specific app and user"""
@@ -65,7 +65,7 @@ def create_slug(name):
     slug = re.sub(r'-+', '-', slug)
     return slug.strip('-')
 
-@riffs_bp.route('/api/apps/<slug>/riffs', methods=['GET'])
+@riffs_bp.route("/api/apps/<slug>/riffs", methods=["GET"]
 def get_riffs(slug):
     """Get all riffs for a specific app"""
     logger.info(f"📋 GET /api/apps/{slug}/riffs - Fetching riffs")
@@ -101,7 +101,7 @@ def get_riffs(slug):
         logger.error(f"💥 Error fetching riffs: {str(e)}")
         return jsonify({'error': 'Failed to fetch riffs'}), 500
 
-@riffs_bp.route('/api/apps/<slug>/riffs', methods=['POST'])
+@riffs_bp.route("/api/apps/<slug>/riffs", methods=["POST"]
 def create_riff(slug):
     """Create a new riff for a specific app"""
     logger.info(f"🆕 POST /api/apps/{slug}/riffs - Creating new riff")
