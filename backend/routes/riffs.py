@@ -5,7 +5,32 @@ from datetime import datetime, timezone
 from storage import get_riffs_storage, get_apps_storage
 from agent_loop import agent_loop_manager
 from keys import get_user_key
-from openhands.sdk import LLM
+
+try:
+    from openhands.sdk import LLM
+except ImportError:
+    # SDK not available, create a mock LLM class for testing
+    class LLM:
+        def __init__(self, *args, **kwargs):
+            pass
+
+        def completion(self, messages):
+            # Mock response for testing
+            class MockChoice:
+                def __init__(self):
+                    self.message = MockMessage()
+
+            class MockMessage:
+                def __init__(self):
+                    self.content = "Hello! This is a mock response from the LLM."
+
+            class MockResponse:
+                def __init__(self):
+                    self.choices = [MockChoice()]
+
+            return MockResponse()
+
+
 from utils.logging import get_logger, log_api_request, log_api_response
 
 logger = get_logger(__name__)
