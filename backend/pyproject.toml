@@ -71,6 +71,10 @@ extend-exclude = '''
 )/
 '''
 
+[tool.flake8]
+max-line-length = 88
+extend-ignore = ["W503"]
+
 [tool.mypy]
 python_version = "3.12"
 warn_return_any = false

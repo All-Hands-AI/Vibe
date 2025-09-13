@@ -78,7 +78,9 @@ def create_agent_for_user(user_uuid, app_slug, riff_slug):
 
         # Create LLM instance
         try:
-            llm = get_llm_instance(api_key=anthropic_token, model="claude-3-haiku-20240307")
+            llm = get_llm_instance(
+                api_key=anthropic_token, model="claude-3-haiku-20240307"
+            )
 
             # Create message callback to store events as messages
             def message_callback(event):
@@ -92,7 +94,10 @@ def create_agent_for_user(user_uuid, app_slug, riff_slug):
 
                     if isinstance(event, MessageEvent):
                         # Handle message events from the agent
-                        if (event.source == "assistant" or event.llm_message.role == "assistant"):
+                        if (
+                            event.source == "assistant"
+                            or event.llm_message.role == "assistant"
+                        ):
                             # This is an assistant response
                             content = ""
                             if event.llm_message.content:
