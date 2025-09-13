@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react'
 import PropTypes from 'prop-types'
+import { getUserUUID } from '../utils/uuid'
 
 const SetupContext = createContext()
 
@@ -14,20 +15,31 @@ export const useSetup = () => {
 export const SetupProvider = ({ children }) => {
   const [isSetupComplete, setIsSetupComplete] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
+  const [userUUID, setUserUUID] = useState(null)
 
   // Backend URL - in production, backend runs on same domain
   const BACKEND_URL = import.meta.env.MODE === 'production' 
     ? '' 
     : 'http://localhost:8000'
 
+  // Initialize user UUID
+  useEffect(() => {
+    const uuid = getUserUUID()
+    setUserUUID(uuid)
+  }, [])
+
   // Check if all API keys are already configured
   const checkSetupStatus = useCallback(async () => {
+    if (!userUUID) {
+      return // Wait for UUID to be initialized
+    }
+
     try {
       const providers = ['anthropic', 'github', 'fly']
       const checks = await Promise.all(
         providers.map(async (provider) => {
           try {
-            const response = await fetch(`${BACKEND_URL}/integrations/${provider}`)
+            const response = await fetch(`${BACKEND_URL}/integrations/${provider}?uuid=${userUUID}`)
             const data = await response.json()
             return data.valid
           } catch (error) {
@@ -46,7 +58,7 @@ export const SetupProvider = ({ children }) => {
     } finally {
       setIsLoading(false)
     }
-  }, [BACKEND_URL])
+  }, [BACKEND_URL, userUUID])
 
   useEffect(() => {
     checkSetupStatus()
@@ -63,6 +75,7 @@ export const SetupProvider = ({ children }) => {
   const value = {
     isSetupComplete,
     isLoading,
+    userUUID,
     completeSetup,
     resetSetup,
     checkSetupStatus

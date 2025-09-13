@@ -6,6 +6,7 @@ import json
 import logging
 import sys
 from datetime import datetime
+from pathlib import Path
 
 # Configure logging for Fly.io - stdout only
 logging.basicConfig(
@@ -37,6 +38,53 @@ api_keys = {
 }
 
 logger.info(f"📊 API keys storage initialized: {list(api_keys.keys())}")
+
+# File-based storage utilities
+DATA_DIR = Path('/data')
+
+def get_user_keys_file(uuid):
+    """Get the path to a user's keys.json file"""
+    user_dir = DATA_DIR / uuid
+    return user_dir / 'keys.json'
+
+def ensure_user_directory(uuid):
+    """Ensure user directory exists"""
+    user_dir = DATA_DIR / uuid
+    user_dir.mkdir(parents=True, exist_ok=True)
+    return user_dir
+
+def load_user_keys(uuid):
+    """Load user's API keys from file"""
+    keys_file = get_user_keys_file(uuid)
+    if keys_file.exists():
+        try:
+            with open(keys_file, 'r') as f:
+                return json.load(f)
+        except (json.JSONDecodeError, IOError) as e:
+            logger.error(f"Failed to load keys for user {uuid}: {e}")
+            return {}
+    return {}
+
+def save_user_keys(uuid, keys):
+    """Save user's API keys to file"""
+    ensure_user_directory(uuid)
+    keys_file = get_user_keys_file(uuid)
+    try:
+        with open(keys_file, 'w') as f:
+            json.dump(keys, f, indent=2)
+        logger.info(f"💾 Saved keys for user {uuid}")
+        return True
+    except IOError as e:
+        logger.error(f"Failed to save keys for user {uuid}: {e}")
+        return False
+
+def user_has_keys(uuid):
+    """Check if user has any keys stored"""
+    keys_file = get_user_keys_file(uuid)
+    return keys_file.exists()
+
+logger.info(f"📁 Data directory: {DATA_DIR}")
+logger.info(f"📁 Data directory exists: {DATA_DIR.exists()}")
 
 @app.route('/')
 def hello_world():
@@ -195,16 +243,22 @@ def set_api_key(provider):
         return jsonify({'error': 'Invalid provider'}), 400
     
     data = request.get_json()
-    if not data or 'api_key' not in data:
-        logger.warning("❌ No API key provided in request")
-        return jsonify({'error': 'API key is required'}), 400
+    if not data or 'api_key' not in data or 'uuid' not in data:
+        logger.warning("❌ API key and UUID are required in request")
+        return jsonify({'error': 'API key and UUID are required'}), 400
     
     api_key = data['api_key'].strip()
+    user_uuid = data['uuid'].strip()
+    
     if not api_key:
         logger.warning("❌ Empty API key provided")
         return jsonify({'error': 'API key cannot be empty'}), 400
+        
+    if not user_uuid:
+        logger.warning("❌ Empty UUID provided")
+        return jsonify({'error': 'UUID cannot be empty'}), 400
     
-    logger.info(f"🔍 Validating {provider} API key...")
+    logger.info(f"🔍 Validating {provider} API key for user {user_uuid[:8]}...")
     
     # Validate the API key
     is_valid = False
@@ -216,11 +270,21 @@ def set_api_key(provider):
         is_valid = validate_fly_key(api_key)
     
     if is_valid:
-        api_keys[provider] = api_key
-        logger.info(f"✅ {provider} API key validated and stored successfully")
-        return jsonify({'valid': True, 'message': f'{provider.title()} API key is valid'})
+        # Load existing keys for this user
+        user_keys = load_user_keys(user_uuid)
+        user_keys[provider] = api_key
+        
+        # Save to file
+        if save_user_keys(user_uuid, user_keys):
+            # Also store in memory for backward compatibility
+            api_keys[provider] = api_key
+            logger.info(f"✅ {provider} API key validated and stored for user {user_uuid[:8]}")
+            return jsonify({'valid': True, 'message': f'{provider.title()} API key is valid'})
+        else:
+            logger.error(f"❌ Failed to save {provider} API key for user {user_uuid[:8]}")
+            return jsonify({'valid': False, 'message': 'Failed to save API key'}), 500
     else:
-        logger.warning(f"❌ {provider} API key validation failed")
+        logger.warning(f"❌ {provider} API key validation failed for user {user_uuid[:8]}")
         return jsonify({'valid': False, 'message': f'{provider.title()} API key is invalid'}), 400
 
 @app.route('/integrations/<provider>', methods=['GET'])
@@ -232,12 +296,28 @@ def check_api_key(provider):
         logger.warning(f"❌ Invalid provider requested: {provider}")
         return jsonify({'error': 'Invalid provider'}), 400
     
-    api_key = api_keys.get(provider)
-    if not api_key:
-        logger.info(f"⚠️ {provider} API key not set")
+    # Get UUID from query parameters
+    user_uuid = request.args.get('uuid')
+    if not user_uuid:
+        logger.warning("❌ UUID is required for checking API key status")
+        return jsonify({'error': 'UUID is required'}), 400
+    
+    logger.info(f"🔍 Checking {provider} API key status for user {user_uuid[:8]}...")
+    
+    # Check if user has keys file
+    if not user_has_keys(user_uuid):
+        logger.info(f"⚠️ No keys file found for user {user_uuid[:8]}")
         return jsonify({'valid': False, 'message': f'{provider.title()} API key not set'})
     
-    logger.info(f"🔍 Re-validating stored {provider} API key...")
+    # Load user's keys
+    user_keys = load_user_keys(user_uuid)
+    api_key = user_keys.get(provider)
+    
+    if not api_key:
+        logger.info(f"⚠️ {provider} API key not set for user {user_uuid[:8]}")
+        return jsonify({'valid': False, 'message': f'{provider.title()} API key not set'})
+    
+    logger.info(f"🔍 Re-validating stored {provider} API key for user {user_uuid[:8]}...")
     
     # Re-validate the stored key
     is_valid = False
@@ -253,8 +333,9 @@ def check_api_key(provider):
         'message': f'{provider.title()} API key is {"valid" if is_valid else "invalid"}'
     }
     
-    logger.info(f"📊 {provider} API key check result: {result}")
+    logger.info(f"📊 {provider} API key check result for user {user_uuid[:8]}: {result}")
     return jsonify(result)
+
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 8000))
