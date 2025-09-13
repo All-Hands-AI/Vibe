@@ -9,5 +9,10 @@ export default defineConfig({
     port: 12000,
     allowedHosts: true,
     cors: true
+  },
+  test: {
+    globals: true,
+    environment: 'jsdom',
+    setupFiles: './src/test/setup.js',
   }
 })
