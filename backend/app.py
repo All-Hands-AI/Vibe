@@ -9,7 +9,11 @@ from routes.apps import apps_bp
 from routes.riffs import riffs_bp
 
 # No-op import to ensure agent-sdk loads properly
-import openhands.sdk  # noqa: F401
+try:
+    import openhands.sdk  # noqa: F401
+except ImportError:
+    # SDK not available, continue without it (useful for testing)
+    pass
 
 # Configure logging for Fly.io - stdout only with enhanced formatting
 logging.basicConfig(
