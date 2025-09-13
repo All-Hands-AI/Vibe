@@ -53,7 +53,7 @@ I have successfully implemented a comprehensive OpenHands Agent SDK integration 
 ### 4. Agent Configuration
 
 - **LLM Integration**: Configured for Anthropic Claude via LiteLLM proxy
-- **Tool Suite**: BashTool, FileEditorTool, TaskTrackerTool
+- **Tool Suite**: FileEditorTool, TaskTrackerTool
 - **Context Management**: Workspace-isolated execution
 - **Event System**: Full event tracking and callback support
 

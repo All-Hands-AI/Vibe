@@ -34,7 +34,6 @@ try:
         get_logger,
     )
     from openhands.tools import (
-        BashTool,
         FileEditorTool,
         TaskTrackerTool,
     )
@@ -267,7 +266,6 @@ class AgentLoopManager:
         
         try:
             tools = [
-                BashTool.create(working_dir=str(workspace_dir)),
                 FileEditorTool.create(),
                 TaskTrackerTool.create(save_dir=str(workspace_dir)),
             ]

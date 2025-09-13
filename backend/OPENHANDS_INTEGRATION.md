@@ -206,7 +206,6 @@ The agent's file operations will work within the conversation's workspace direct
 
 The agent is configured with the following tools:
 
-- **BashTool**: Execute shell commands in the workspace
 - **FileEditorTool**: Create and edit files
 - **TaskTrackerTool**: Track and manage tasks
 
