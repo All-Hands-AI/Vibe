@@ -37,7 +37,7 @@ RUN npm prune --omit=dev
 # Final stage for app image - using Ubuntu to support both nginx and python
 FROM ubuntu:22.04
 
-# Install nginx, python, uv, and supervisor
+# Install nginx, python, uv, git, and supervisor
 RUN apt-get update -qq && \
     apt-get install --no-install-recommends -y \
     nginx \
@@ -45,6 +45,7 @@ RUN apt-get update -qq && \
     python3-pip \
     supervisor \
     curl \
+    git \
     && rm -rf /var/lib/apt/lists/* \
     && pip3 install uv
 
