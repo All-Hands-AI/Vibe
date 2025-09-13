@@ -5,14 +5,15 @@ Provides common file operations and utilities for all storage classes.
 
 import json
 import logging
+import os
 from pathlib import Path
 from typing import Any, Optional
 import shutil
 
 logger = logging.getLogger(__name__)
 
-# Base data directory
-DATA_DIR = Path("/data")
+# Base data directory - configurable via environment variable
+DATA_DIR = Path(os.environ.get("DATA_DIR", "/data"))
 
 
 class BaseStorage:
