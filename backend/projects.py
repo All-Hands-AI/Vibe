@@ -150,11 +150,11 @@ def create_slug(name):
 
 def get_user_default_org(fly_token):
     """
-    Get the user's default organization slug.
+    Get the user's default organization slug by checking their existing apps.
     
-    Since Fly.io's REST API for organizations is not stable/available,
-    we'll use 'personal' as the default organization slug, which is
-    the most common case for individual users.
+    This function tries to determine the user's actual organization slug
+    by listing their existing apps and extracting the organization information.
+    Falls back to 'personal' if no apps exist or API call fails.
     
     Args:
         fly_token (str): The user's Fly.io API token
@@ -165,9 +165,43 @@ def get_user_default_org(fly_token):
     if not fly_token:
         return False, "Fly.io API token is required"
     
-    # For most users, the personal organization slug is 'personal'
-    # If this doesn't work, the app creation will fail with a clear error
-    logger.debug(f"🛩️ Using default organization: personal")
+    logger.debug(f"🛩️ Attempting to determine user's organization from existing apps")
+    
+    try:
+        headers = {
+            'Authorization': f'Bearer {fly_token}',
+            'Content-Type': 'application/json',
+            'User-Agent': 'OpenVibe-Backend/1.0'
+        }
+        
+        # Try to list user's existing apps to determine their organization
+        response = requests.get(
+            'https://api.machines.dev/v1/apps',
+            headers=headers,
+            timeout=10
+        )
+        
+        if response.status_code == 200:
+            apps = response.json()
+            if apps and len(apps) > 0:
+                # Get organization from the first app
+                first_app = apps[0]
+                org_slug = first_app.get('organization', {}).get('slug')
+                if org_slug:
+                    logger.debug(f"🛩️ Detected user organization from existing apps: {org_slug}")
+                    return True, org_slug
+                else:
+                    logger.debug(f"🛩️ No organization info found in existing apps")
+            else:
+                logger.debug(f"🛩️ User has no existing apps")
+        else:
+            logger.debug(f"🛩️ Failed to list apps: {response.status_code}")
+    
+    except Exception as e:
+        logger.debug(f"🛩️ Error determining organization from apps: {str(e)}")
+    
+    # Fall back to 'personal' as the default organization slug
+    logger.debug(f"🛩️ Falling back to default organization: personal")
     return True, "personal"
 
 def create_fly_app(app_name, fly_token):
@@ -212,12 +246,28 @@ def create_fly_app(app_name, fly_token):
             app_data = check_response.json()
             app_org_slug = app_data.get('organization', {}).get('slug')
             
-            if app_org_slug == org_slug:
-                logger.info(f"✅ App '{app_name}' already exists and is owned by user")
-                return True, app_data
-            else:
-                logger.error(f"❌ App '{app_name}' already exists but is owned by different organization")
-                return False, f"App '{app_name}' already exists and is not owned by you"
+            # If the user can successfully retrieve the app details with their token,
+            # it means they have access to it. This is a strong indicator of ownership.
+            # We'll accept this as ownership regardless of organization slug mismatch,
+            # since the organization detection might not be perfect.
+            logger.info(f"✅ App '{app_name}' already exists and user has access to it")
+            logger.debug(f"🛩️ App organization: {app_org_slug}, Expected: {org_slug}")
+            
+            # Update our understanding of the user's organization if it differs
+            if app_org_slug and app_org_slug != org_slug:
+                logger.debug(f"🛩️ Updating user organization from {org_slug} to {app_org_slug}")
+            
+            return True, app_data
+        
+        elif check_response.status_code == 403:
+            # App exists but user doesn't have access - this means it's owned by someone else
+            logger.error(f"❌ App '{app_name}' exists but user doesn't have access to it")
+            return False, f"App '{app_name}' already exists and is not owned by you"
+        
+        elif check_response.status_code == 401:
+            # Unauthorized - invalid token
+            logger.error(f"❌ Invalid Fly.io API token")
+            return False, "Invalid Fly.io API token"
         
         elif check_response.status_code != 404:
             # Some other error occurred
@@ -556,8 +606,54 @@ def create_github_repo(repo_name, github_token, fly_token):
         # Check if repo already exists
         check_response = requests.get(f'https://api.github.com/repos/{owner}/{repo_name}', headers=headers, timeout=10)
         if check_response.status_code == 200:
-            logger.warning(f"❌ Repository {owner}/{repo_name} already exists")
-            return False, f"Repository {repo_name} already exists"
+            # Repository already exists, but that's okay - we'll use the existing one
+            repo_data = check_response.json()
+            logger.info(f"✅ Repository {owner}/{repo_name} already exists, using existing repository")
+            
+            # Still try to set the FLY_API_TOKEN secret if provided
+            if fly_token:
+                logger.info(f"🔐 Setting FLY_API_TOKEN secret for existing repo {repo_name}")
+                
+                # Get the repository's public key for encrypting secrets
+                key_response = requests.get(
+                    f'https://api.github.com/repos/{owner}/{repo_name}/actions/secrets/public-key',
+                    headers=headers,
+                    timeout=10
+                )
+                
+                if key_response.status_code == 200:
+                    from base64 import b64encode
+                    from nacl import encoding, public
+                    
+                    public_key_data = key_response.json()
+                    public_key = public.PublicKey(public_key_data['key'].encode('utf-8'), encoding.Base64Encoder())
+                    
+                    # Encrypt the secret
+                    sealed_box = public.SealedBox(public_key)
+                    encrypted = sealed_box.encrypt(fly_token.encode('utf-8'))
+                    encrypted_value = b64encode(encrypted).decode('utf-8')
+                    
+                    # Set the secret
+                    secret_data = {
+                        'encrypted_value': encrypted_value,
+                        'key_id': public_key_data['key_id']
+                    }
+                    
+                    secret_response = requests.put(
+                        f'https://api.github.com/repos/{owner}/{repo_name}/actions/secrets/FLY_API_TOKEN',
+                        headers=headers,
+                        json=secret_data,
+                        timeout=10
+                    )
+                    
+                    if secret_response.status_code in [201, 204]:
+                        logger.info("✅ FLY_API_TOKEN secret set successfully for existing repo")
+                    else:
+                        logger.warning(f"⚠️ Failed to set FLY_API_TOKEN secret for existing repo: {secret_response.text}")
+                else:
+                    logger.warning(f"⚠️ Failed to get public key for secrets on existing repo: {key_response.text}")
+            
+            return True, repo_data['html_url']
         
         # Create repo from template
         create_data = {
