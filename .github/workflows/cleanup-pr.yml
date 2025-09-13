@@ -1,0 +1,66 @@
+name: Cleanup PR Deployments
+
+on:
+  pull_request:
+    types: [closed]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+env:
+  FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+
+jobs:
+  cleanup:
+    name: Cleanup feature deployment
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Fly CLI
+        uses: superfly/flyctl-actions/setup-flyctl@master
+
+      - name: Get app name for cleanup
+        id: app-name
+        run: |
+          app_name=$(./.github/scripts/get-app-name.sh "${{ github.event.pull_request.head.ref }}")
+          echo "app_name=$app_name" >> $GITHUB_OUTPUT
+          echo "Cleaning up app: $app_name"
+
+      - name: Delete feature app
+        run: |
+          app_name="${{ steps.app-name.outputs.app_name }}"
+          echo "Attempting to delete app: $app_name"
+          
+          # Check if app exists before trying to delete
+          if flyctl apps list | grep -q "^$app_name"; then
+            echo "App $app_name exists, deleting..."
+            flyctl apps destroy $app_name --yes
+            echo "✅ Successfully deleted app: $app_name"
+          else
+            echo "ℹ️  App $app_name does not exist or was already deleted"
+          fi
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+
+      - name: Comment cleanup status
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const appName = '${{ steps.app-name.outputs.app_name }}';
+            const comment = `## 🧹 Deployment Cleanup
+            
+            The feature deployment \`${appName}\` has been automatically destroyed since this PR was closed.
+            
+            <sub>Cleaned up via GitHub Actions • [View workflow run](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})</sub>`;
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
