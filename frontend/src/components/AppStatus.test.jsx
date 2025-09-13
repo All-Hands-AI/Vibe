@@ -7,6 +7,7 @@ describe('AppStatus', () => {
     const app = {
       name: 'test-app',
       slug: 'test-app',
+      branch: 'feature-branch',
       pr_status: {
         number: 123,
         title: 'Add new feature',
@@ -32,7 +33,7 @@ describe('AppStatus', () => {
 
     render(<AppStatus app={app} />)
     
-    expect(screen.getByText('Pull Request Status')).toBeInTheDocument()
+    expect(screen.getByText('feature-branch')).toBeInTheDocument()
     expect(screen.getByText('#123 - Add new feature')).toBeInTheDocument()
     expect(screen.getAllByText('✅ Passing')).toHaveLength(2) // CI and Deploy status
     expect(screen.getByText('Open')).toBeInTheDocument()
@@ -43,6 +44,7 @@ describe('AppStatus', () => {
   it('displays draft status correctly', () => {
     const app = {
       name: 'test-app',
+      branch: 'draft-feature',
       pr_status: {
         number: 456,
         title: 'Draft PR',
@@ -56,6 +58,7 @@ describe('AppStatus', () => {
 
     render(<AppStatus app={app} />)
     
+    expect(screen.getByText('draft-feature')).toBeInTheDocument()
     expect(screen.getByText('Draft')).toBeInTheDocument()
     expect(screen.getByText('Checking...')).toBeInTheDocument()
     expect(screen.getAllByText('🔄 Running')).toHaveLength(2) // CI and Deploy status
@@ -65,6 +68,7 @@ describe('AppStatus', () => {
     const app = {
       name: 'my-project',
       slug: 'conversation-123',
+      branch: 'main',
       deployment_status: {
         deploy_status: 'success',
         deployed: true,
@@ -74,7 +78,7 @@ describe('AppStatus', () => {
 
     render(<AppStatus app={app} />)
     
-    expect(screen.getByText('Deployment Status')).toBeInTheDocument()
+    expect(screen.getByText('main')).toBeInTheDocument()
     expect(screen.getByText('✅ Passing')).toBeInTheDocument()
     expect(screen.getByText('🚀 Deployed')).toBeInTheDocument()
     expect(screen.getByText('https://my-project-conversation-123.fly.dev')).toBeInTheDocument()
@@ -82,6 +86,7 @@ describe('AppStatus', () => {
 
   it('displays individual check commits', () => {
     const app = {
+      branch: 'bugfix-branch',
       pr_status: {
         number: 789,
         title: 'Fix bug',
@@ -107,15 +112,21 @@ describe('AppStatus', () => {
 
     render(<AppStatus app={app} />)
     
+    expect(screen.getByText('bugfix-branch')).toBeInTheDocument()
     expect(screen.getByText('Unit Tests')).toBeInTheDocument()
     expect(screen.getByText('Lint Check')).toBeInTheDocument()
     expect(screen.getByText('Conflicts')).toBeInTheDocument()
     expect(screen.getAllByText('View →')).toHaveLength(2)
   })
 
-  it('handles missing PR data gracefully', () => {
+  it('handles missing PR data gracefully for non-main branch', () => {
     const app = {
       name: 'test-app',
+      branch: 'feature-branch',
+      github_status: {
+        tests_passing: false,
+        last_commit: 'abc1234567890'
+      },
       deployment_status: {
         deploy_status: 'pending',
         deployed: false
@@ -124,20 +135,43 @@ describe('AppStatus', () => {
 
     render(<AppStatus app={app} />)
     
+    expect(screen.getByText('feature-branch')).toBeInTheDocument()
     expect(screen.getByText('No active pull request found')).toBeInTheDocument()
-    expect(screen.getByText('Deployment Status')).toBeInTheDocument()
-    expect(screen.getByText('🔄 Running')).toBeInTheDocument()
+    expect(screen.getByText('❌ Failing')).toBeInTheDocument() // Branch CI status
+    expect(screen.getByText('abc1234')).toBeInTheDocument() // Last commit
+    expect(screen.getByText('🔄 Running')).toBeInTheDocument() // Deploy status
   })
 
   it('generates correct fly.io app URL', () => {
     const app = {
       name: 'my-app',
-      conversation_id: 'conv-456'
+      conversation_id: 'conv-456',
+      branch: 'main'
     }
 
     render(<AppStatus app={app} />)
     
+    expect(screen.getByText('main')).toBeInTheDocument()
     expect(screen.getByText('https://my-app-conv-456.fly.dev')).toBeInTheDocument()
+  })
+
+  it('handles main branch without PR gracefully', () => {
+    const app = {
+      name: 'test-app',
+      branch: 'main',
+      github_status: {
+        tests_passing: true,
+        last_commit: 'def5678901234'
+      }
+    }
+
+    render(<AppStatus app={app} />)
+    
+    expect(screen.getByText('main')).toBeInTheDocument()
+    expect(screen.queryByText('No active pull request found')).not.toBeInTheDocument() // Should not show for main
+    expect(screen.getByText('✅ Passing')).toBeInTheDocument() // Branch CI status
+    expect(screen.getByText('def5678')).toBeInTheDocument() // Last commit
+    expect(screen.getByText('https://test-app-main.fly.dev')).toBeInTheDocument()
   })
 
   it('handles empty app data gracefully', () => {
@@ -145,8 +179,8 @@ describe('AppStatus', () => {
 
     render(<AppStatus app={app} />)
     
-    expect(screen.getByText('App Status')).toBeInTheDocument()
-    expect(screen.getByText('No active pull request found')).toBeInTheDocument()
+    expect(screen.getByText('main')).toBeInTheDocument() // Default branch
+    expect(screen.queryByText('No active pull request found')).not.toBeInTheDocument() // Should not show for main
     expect(screen.getByText('https://project-main.fly.dev')).toBeInTheDocument()
   })
 })
