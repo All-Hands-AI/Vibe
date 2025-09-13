@@ -19,20 +19,16 @@ logger = logging.getLogger(__name__)
 conversations_bp = Blueprint('conversations', __name__)
 
 # Global agent loop manager instance
-try:
-    from agent_loop import AgentLoopManager, OPENHANDS_AVAILABLE
-    if OPENHANDS_AVAILABLE:
-        agent_manager = AgentLoopManager()
-        AGENT_MANAGER_AVAILABLE = True
-        logger.info("✅ AgentLoopManager initialized successfully")
-    else:
-        agent_manager = None
-        AGENT_MANAGER_AVAILABLE = False
-        logger.warning("⚠️ OpenHands SDK not available - conversation features disabled")
-except Exception as e:
-    logger.warning(f"⚠️ AgentLoopManager not available: {e}")
+from agent_loop import AgentLoopManager, OPENHANDS_AVAILABLE
+
+if OPENHANDS_AVAILABLE:
+    agent_manager = AgentLoopManager()
+    AGENT_MANAGER_AVAILABLE = True
+    logger.info("✅ AgentLoopManager initialized successfully")
+else:
     agent_manager = None
     AGENT_MANAGER_AVAILABLE = False
+    logger.warning("⚠️ OpenHands SDK not available - conversation features disabled")
 
 # File-based storage utilities
 DATA_DIR = Path('/data')

@@ -41,9 +41,6 @@ def test_agent_loop_manager():
         
         return True
         
-    except ImportError as e:
-        print(f"❌ OpenHands SDK not available: {e}")
-        return False
     except Exception as e:
         print(f"❌ Error testing AgentLoopManager: {e}")
         return False

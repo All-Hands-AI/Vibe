@@ -21,26 +21,23 @@ import requests
 from pydantic import SecretStr
 
 # OpenHands SDK imports
-try:
-    from openhands.sdk import (
-        LLM,
-        Agent,
-        Conversation,
-        Event,
-        LLMConvertibleEvent,
-        LocalFileStore,
-        Message,
-        TextContent,
-        get_logger,
-    )
-    from openhands.tools import (
-        FileEditorTool,
-        TaskTrackerTool,
-    )
-    OPENHANDS_AVAILABLE = True
-except ImportError as e:
-    logging.warning(f"OpenHands SDK not available: {e}")
-    OPENHANDS_AVAILABLE = False
+from openhands.sdk import (
+    LLM,
+    Agent,
+    Conversation,
+    Event,
+    LLMConvertibleEvent,
+    LocalFileStore,
+    Message,
+    TextContent,
+    get_logger,
+)
+from openhands.tools import (
+    FileEditorTool,
+    TaskTrackerTool,
+)
+
+OPENHANDS_AVAILABLE = True
 
 logger = logging.getLogger(__name__)
 
