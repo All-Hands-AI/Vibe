@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useParams, Link } from 'react-router-dom'
-import './ConversationDetail.css'
 
 function ConversationDetail() {
   const { slug: projectSlug, conversationSlug } = useParams()

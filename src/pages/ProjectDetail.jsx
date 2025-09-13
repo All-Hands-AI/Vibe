@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { getUserUUID } from '../utils/uuid'
-import './ProjectDetail.css'
 
 function ProjectDetail() {
   const { slug } = useParams()

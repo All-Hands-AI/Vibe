@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { getUserUUID } from '../utils/uuid'
 import ConfirmationModal from '../components/ConfirmationModal'
-import './Projects.css'
 
 function Projects() {
   const [projects, setProjects] = useState([])
@@ -253,107 +252,115 @@ function Projects() {
   }, [newProjectName, error])
 
   return (
-    <div className="projects-page">
-      <div className="projects-container">
-        <header className="projects-header">
-          <h1>Projects</h1>
-          <p>Manage your OpenVibe projects</p>
+    <div className="min-h-screen bg-gray-900 text-white">
+      <div className="max-w-6xl mx-auto px-8 py-16">
+        <header className="text-center mb-16">
+          <h1 className="text-5xl font-bold text-primary-300 mb-4">Projects</h1>
+          <p className="text-xl text-gray-300">Manage your OpenVibe projects</p>
         </header>
 
         {/* Create New Project Form */}
-        <section className="create-project-section">
-          <h2>Create New Project</h2>
-          <form onSubmit={handleCreateProject} className="create-project-form">
-            <div className="form-group">
-              <label htmlFor="projectName">Project Name</label>
-              <input
-                type="text"
-                id="projectName"
-                value={newProjectName}
-                onChange={(e) => setNewProjectName(e.target.value)}
-                placeholder="Enter project name"
-                disabled={creating}
-                className={error ? 'error' : ''}
-              />
-              {newProjectName && (
-                <div className="slug-preview">
-                  Slug: <code>{createSlug(newProjectName)}</code>
-                </div>
-              )}
-            </div>
-            
-            <button 
-              type="submit" 
-              disabled={creating || !newProjectName.trim()}
-              className="create-button"
-            >
-              {creating ? 'Creating...' : 'Create Project'}
-            </button>
-          </form>
+        <section className="mb-16">
+          <h2 className="text-3xl font-bold text-primary-300 mb-8">Create New Project</h2>
+          <div className="bg-gray-850 p-8 rounded-lg border border-gray-700 max-w-2xl">
+            <form onSubmit={handleCreateProject} className="space-y-6">
+              <div>
+                <label htmlFor="projectName" className="block text-sm font-medium text-gray-300 mb-2">
+                  Project Name
+                </label>
+                <input
+                  type="text"
+                  id="projectName"
+                  value={newProjectName}
+                  onChange={(e) => setNewProjectName(e.target.value)}
+                  placeholder="Enter project name"
+                  disabled={creating}
+                  className={`w-full px-4 py-3 bg-gray-700 text-white rounded-md border transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary-300 focus:border-transparent ${
+                    error ? 'border-red-500' : 'border-gray-600'
+                  }`}
+                />
+                {newProjectName && (
+                  <div className="mt-2 text-sm text-gray-400">
+                    Slug: <code className="bg-gray-700 px-2 py-1 rounded text-primary-300">{createSlug(newProjectName)}</code>
+                  </div>
+                )}
+              </div>
+              
+              <button 
+                type="submit" 
+                disabled={creating || !newProjectName.trim()}
+                className="w-full px-6 py-3 bg-primary-300 text-gray-900 rounded-md font-semibold hover:bg-primary-400 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 hover:transform hover:-translate-y-0.5"
+              >
+                {creating ? 'Creating...' : 'Create Project'}
+              </button>
+            </form>
 
-          {error && (
-            <div className="message error-message">
-              {error}
-            </div>
-          )}
+            {error && (
+              <div className="mt-4 p-4 bg-red-900/20 border border-red-500 rounded-md text-red-400">
+                {error}
+              </div>
+            )}
 
-          {success && (
-            <div className="message success-message">
-              {success}
-            </div>
-          )}
+            {success && (
+              <div className="mt-4 p-4 bg-green-900/20 border border-green-500 rounded-md text-green-400">
+                {success}
+              </div>
+            )}
+          </div>
         </section>
 
         {/* Projects List */}
-        <section className="projects-list-section">
-          <h2>Your Projects</h2>
+        <section>
+          <h2 className="text-3xl font-bold text-primary-300 mb-8">Your Projects</h2>
           
           {loading ? (
-            <div className="loading">
-              <div className="spinner"></div>
-              <p>Loading projects...</p>
+            <div className="flex flex-col items-center justify-center py-16">
+              <div className="w-10 h-10 border-4 border-gray-600 border-t-primary-300 rounded-full animate-spin mb-4"></div>
+              <p className="text-gray-400">Loading projects...</p>
             </div>
           ) : projects.length === 0 ? (
-            <div className="empty-state">
-              <p>No projects yet. Create your first project above!</p>
+            <div className="text-center py-16">
+              <p className="text-gray-400 text-lg">No projects yet. Create your first project above!</p>
             </div>
           ) : (
-            <div className="projects-grid">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {projects.map((project) => (
-                <div key={project.id} className="project-card">
-                  <div className="project-header">
-                    <div className="project-title-section">
-                      <h3>{project.name}</h3>
-                      <span className="project-slug">{project.slug}</span>
-                    </div>
-                    <button 
-                      className="delete-button"
-                      onClick={(e) => handleDeleteClick(project, e)}
-                      title={`Delete project "${project.name}"`}
-                      aria-label={`Delete project "${project.name}"`}
-                    >
-                      🗑️
-                    </button>
-                  </div>
-                  
-                  <div className="project-details">
-                    <p className="project-date">
-                      Created: {new Date(project.created_at).toLocaleDateString()}
-                    </p>
-                    
-                    {project.github_url && (
-                      <div className="github-info">
-                        GitHub repository available
+                <div key={project.id} className="bg-gray-850 rounded-lg border border-gray-700 hover:border-primary-300 transition-all duration-300 hover:transform hover:-translate-y-1">
+                  <div className="p-6">
+                    <div className="flex justify-between items-start mb-4">
+                      <div className="flex-1">
+                        <h3 className="text-xl font-semibold text-white mb-1">{project.name}</h3>
+                        <span className="text-sm text-gray-400 font-mono">{project.slug}</span>
                       </div>
-                    )}
-                    
-                    <div className="project-actions">
-                      <Link 
-                        to={`/projects/${project.slug}`}
-                        className="view-project-link"
+                      <button 
+                        className="text-red-400 hover:text-red-300 text-lg p-2 hover:bg-red-900/20 rounded transition-colors duration-200"
+                        onClick={(e) => handleDeleteClick(project, e)}
+                        title={`Delete project "${project.name}"`}
+                        aria-label={`Delete project "${project.name}"`}
                       >
-                        View Project →
-                      </Link>
+                        🗑️
+                      </button>
+                    </div>
+                    
+                    <div className="space-y-3">
+                      <p className="text-sm text-gray-400">
+                        Created: {new Date(project.created_at).toLocaleDateString()}
+                      </p>
+                      
+                      {project.github_url && (
+                        <div className="text-sm text-green-400 bg-green-900/20 px-3 py-1 rounded">
+                          GitHub repository available
+                        </div>
+                      )}
+                      
+                      <div className="pt-2">
+                        <Link 
+                          to={`/projects/${project.slug}`}
+                          className="inline-flex items-center text-primary-300 hover:text-primary-400 font-medium transition-colors duration-200"
+                        >
+                          View Project →
+                        </Link>
+                      </div>
                     </div>
                   </div>
                 </div>

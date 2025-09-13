@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import './Contact.css'
 
 function Contact() {
   const [formData, setFormData] = useState({
@@ -24,39 +23,41 @@ function Contact() {
   }
 
   return (
-    <div className="contact">
-      <div className="container">
-        <section className="contact-hero">
-          <h1>Get in Touch</h1>
-          <p>We&apos;d love to hear from you. Send us a message and we&apos;ll respond as soon as possible.</p>
+    <div className="min-h-screen bg-gray-900 text-white">
+      <div className="max-w-6xl mx-auto px-8 py-16">
+        <section className="text-center mb-16">
+          <h1 className="text-5xl font-bold text-primary-300 mb-4">Get in Touch</h1>
+          <p className="text-xl text-gray-300 max-w-2xl mx-auto">We&apos;d love to hear from you. Send us a message and we&apos;ll respond as soon as possible.</p>
         </section>
 
-        <section className="contact-content">
-          <div className="contact-grid">
-            <div className="contact-info">
-              <h2>Contact Information</h2>
-              <div className="contact-item">
-                <h3>📧 Email</h3>
-                <p>hello@openvibe.com</p>
-              </div>
-              <div className="contact-item">
-                <h3>🐙 GitHub</h3>
-                <p>github.com/openvibe</p>
-              </div>
-              <div className="contact-item">
-                <h3>🐦 Twitter</h3>
-                <p>@openvibe</p>
-              </div>
-              <div className="contact-item">
-                <h3>💼 LinkedIn</h3>
-                <p>linkedin.com/company/openvibe</p>
+        <section>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
+            <div>
+              <h2 className="text-3xl font-bold text-primary-300 mb-8">Contact Information</h2>
+              <div className="space-y-6">
+                <div className="bg-gray-850 p-6 rounded-lg border border-gray-700">
+                  <h3 className="text-xl font-semibold text-primary-300 mb-2">📧 Email</h3>
+                  <p className="text-gray-300">hello@openvibe.com</p>
+                </div>
+                <div className="bg-gray-850 p-6 rounded-lg border border-gray-700">
+                  <h3 className="text-xl font-semibold text-primary-300 mb-2">🐙 GitHub</h3>
+                  <p className="text-gray-300">github.com/openvibe</p>
+                </div>
+                <div className="bg-gray-850 p-6 rounded-lg border border-gray-700">
+                  <h3 className="text-xl font-semibold text-primary-300 mb-2">🐦 Twitter</h3>
+                  <p className="text-gray-300">@openvibe</p>
+                </div>
+                <div className="bg-gray-850 p-6 rounded-lg border border-gray-700">
+                  <h3 className="text-xl font-semibold text-primary-300 mb-2">💼 LinkedIn</h3>
+                  <p className="text-gray-300">linkedin.com/company/openvibe</p>
+                </div>
               </div>
             </div>
 
-            <div className="contact-form-container">
-              <form className="contact-form" onSubmit={handleSubmit}>
-                <div className="form-group">
-                  <label htmlFor="name">Name</label>
+            <div className="bg-gray-850 p-8 rounded-lg border border-gray-700">
+              <form onSubmit={handleSubmit} className="space-y-6">
+                <div>
+                  <label htmlFor="name" className="block text-sm font-medium text-gray-300 mb-2">Name</label>
                   <input
                     type="text"
                     id="name"
@@ -64,10 +65,11 @@ function Contact() {
                     value={formData.name}
                     onChange={handleChange}
                     required
+                    className="w-full px-4 py-3 bg-gray-700 text-white rounded-md border border-gray-600 focus:outline-none focus:ring-2 focus:ring-primary-300 focus:border-transparent transition-colors duration-200"
                   />
                 </div>
-                <div className="form-group">
-                  <label htmlFor="email">Email</label>
+                <div>
+                  <label htmlFor="email" className="block text-sm font-medium text-gray-300 mb-2">Email</label>
                   <input
                     type="email"
                     id="email"
@@ -75,10 +77,11 @@ function Contact() {
                     value={formData.email}
                     onChange={handleChange}
                     required
+                    className="w-full px-4 py-3 bg-gray-700 text-white rounded-md border border-gray-600 focus:outline-none focus:ring-2 focus:ring-primary-300 focus:border-transparent transition-colors duration-200"
                   />
                 </div>
-                <div className="form-group">
-                  <label htmlFor="message">Message</label>
+                <div>
+                  <label htmlFor="message" className="block text-sm font-medium text-gray-300 mb-2">Message</label>
                   <textarea
                     id="message"
                     name="message"
@@ -86,9 +89,15 @@ function Contact() {
                     value={formData.message}
                     onChange={handleChange}
                     required
+                    className="w-full px-4 py-3 bg-gray-700 text-white rounded-md border border-gray-600 focus:outline-none focus:ring-2 focus:ring-primary-300 focus:border-transparent transition-colors duration-200 resize-vertical"
                   ></textarea>
                 </div>
-                <button type="submit" className="btn btn-primary">Send Message</button>
+                <button 
+                  type="submit" 
+                  className="w-full px-6 py-3 bg-primary-300 text-gray-900 rounded-md font-semibold hover:bg-primary-400 transition-all duration-300 hover:transform hover:-translate-y-0.5"
+                >
+                  Send Message
+                </button>
               </form>
             </div>
           </div>
