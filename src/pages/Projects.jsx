@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { Link } from 'react-router-dom'
 import { generateUUID } from '../utils/uuid'
 import './Projects.css'
 
@@ -225,7 +226,11 @@ function Projects() {
           ) : (
             <div className="projects-grid">
               {projects.map((project) => (
-                <div key={project.id} className="project-card">
+                <Link 
+                  key={project.id} 
+                  to={`/projects/${project.slug}`}
+                  className="project-card"
+                >
                   <div className="project-header">
                     <h3>{project.name}</h3>
                     <span className="project-slug">{project.slug}</span>
@@ -237,17 +242,16 @@ function Projects() {
                     </p>
                     
                     {project.github_url && (
-                      <a 
-                        href={project.github_url} 
-                        target="_blank" 
-                        rel="noopener noreferrer"
-                        className="github-link"
-                      >
-                        View on GitHub →
-                      </a>
+                      <div className="github-info">
+                        GitHub repository available
+                      </div>
                     )}
+                    
+                    <div className="project-actions">
+                      <span className="view-project">View Project →</span>
+                    </div>
                   </div>
-                </div>
+                </Link>
               ))}
             </div>
           )}

@@ -190,16 +190,22 @@
 }
 
 .project-card {
+  display: block;
   background: #f8f9fa;
   border: 1px solid #e9ecef;
   border-radius: 8px;
   padding: 1.5rem;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+  text-decoration: none;
+  color: inherit;
 }
 
 .project-card:hover {
   transform: translateY(-2px);
   box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+  border-color: #667eea;
+  text-decoration: none;
+  color: inherit;
 }
 
 .project-header {
@@ -233,17 +239,20 @@
   margin: 0;
 }
 
-.github-link {
-  color: #667eea;
-  text-decoration: none;
-  font-weight: 500;
-  transition: color 0.2s ease;
-  align-self: flex-start;
+.github-info {
+  color: #666;
+  font-size: 0.9rem;
+  font-style: italic;
 }
 
-.github-link:hover {
-  color: #764ba2;
-  text-decoration: underline;
+.project-actions {
+  margin-top: 0.5rem;
+}
+
+.view-project {
+  color: #667eea;
+  font-weight: 500;
+  font-size: 0.9rem;
 }
 
 /* Responsive Design */
