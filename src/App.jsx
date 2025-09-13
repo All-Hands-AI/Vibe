@@ -1,3 +1,4 @@
+import React from 'react'
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
 import { ThemeProvider } from './context/ThemeContext'
 import { SetupProvider, useSetup } from './context/SetupContext'
@@ -8,10 +9,17 @@ import Home from './pages/Home'
 import About from './pages/About'
 import Contact from './pages/Contact'
 import Projects from './pages/Projects'
+import { logger } from './utils/logger'
 import './App.css'
 
 function AppContent() {
   const { isSetupComplete, isLoading, completeSetup } = useSetup()
+  
+  // Log system information on app start
+  React.useEffect(() => {
+    logger.logSystemInfo()
+    logger.info('🔧 Setup status:', { isSetupComplete, isLoading })
+  }, [])
 
   if (isLoading) {
     return (

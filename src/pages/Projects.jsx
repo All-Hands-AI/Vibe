@@ -32,35 +32,56 @@ function Projects() {
 
   // Fetch projects from backend
   const fetchProjects = async () => {
+    console.log('🔄 Fetching projects from backend...')
     try {
       setLoading(true)
-      const response = await fetch('/api/projects')
+      
+      const url = '/api/projects'
+      console.log('📡 Making request to:', url)
+      
+      const response = await fetch(url)
+      console.log('📡 Response status:', response?.status)
+      console.log('📡 Response ok:', response?.ok)
+      console.log('📡 Response headers:', response?.headers ? Object.fromEntries(response.headers.entries()) : 'N/A')
       
       if (!response || !response.ok) {
-        throw new Error('Failed to fetch projects')
+        const errorText = await response?.text() || 'Unknown error'
+        console.error('❌ Fetch failed:', errorText)
+        throw new Error(`Failed to fetch projects: ${response?.status} ${errorText}`)
       }
       
       const data = await response.json()
+      console.log('📊 Received data:', data)
+      console.log('📊 Projects count:', data.projects?.length || 0)
+      
       setProjects(data.projects || [])
+      console.log('✅ Projects loaded successfully')
     } catch (err) {
-      console.error('Error fetching projects:', err)
+      console.error('❌ Error fetching projects:', err)
+      console.error('❌ Error stack:', err.stack)
       setError('Failed to load projects. Please try again.')
     } finally {
       setLoading(false)
+      console.log('🔄 Fetch projects completed')
     }
   }
 
   // Create new project
   const handleCreateProject = async (e) => {
     e.preventDefault()
+    console.log('🆕 Creating new project...')
     
     if (!newProjectName.trim()) {
+      console.warn('❌ Project name is empty')
       setError('Project name is required')
       return
     }
 
     const slug = createSlug(newProjectName.trim())
+    console.log('📝 Project details:', { name: newProjectName.trim(), slug })
+    
     if (!slug) {
+      console.warn('❌ Invalid slug generated')
       setError('Please enter a valid project name')
       return
     }
@@ -70,37 +91,57 @@ function Projects() {
       setError('')
       setSuccess('')
 
-      const response = await fetch('/api/projects', {
+      const uuid = getUserUUID()
+      console.log('🆔 User UUID:', uuid)
+
+      const requestData = {
+        name: newProjectName.trim()
+      }
+      
+      const requestOptions = {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'X-User-UUID': getUserUUID()
+          'X-User-UUID': uuid
         },
-        body: JSON.stringify({
-          name: newProjectName.trim()
-        }),
-      })
+        body: JSON.stringify(requestData),
+      }
+      
+      console.log('📡 Request options:', requestOptions)
+      console.log('📡 Request body:', requestData)
+
+      const response = await fetch('/api/projects', requestOptions)
+      
+      console.log('📡 Create response status:', response?.status)
+      console.log('📡 Create response ok:', response?.ok)
+      console.log('📡 Create response headers:', response?.headers ? Object.fromEntries(response.headers.entries()) : 'N/A')
 
       const data = await response.json()
+      console.log('📊 Create response data:', data)
 
       if (!response.ok) {
+        console.error('❌ Create project failed:', data)
         throw new Error(data.error || 'Failed to create project')
       }
 
+      console.log('✅ Project created successfully:', data.project)
       setSuccess(`Project "${newProjectName}" created successfully!`)
       setNewProjectName('')
       
       // Refresh projects list
+      console.log('🔄 Refreshing projects list...')
       await fetchProjects()
       
       // Clear success message after 5 seconds
       setTimeout(() => setSuccess(''), 5000)
       
     } catch (err) {
-      console.error('Error creating project:', err)
+      console.error('❌ Error creating project:', err)
+      console.error('❌ Error stack:', err.stack)
       setError(err.message || 'Failed to create project. Please try again.')
     } finally {
       setCreating(false)
+      console.log('🆕 Create project completed')
     }
   }
 

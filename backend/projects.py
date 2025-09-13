@@ -23,26 +23,62 @@ def get_projects_file():
 def load_projects():
     """Load projects from file"""
     projects_file = get_projects_file()
+    logger.debug(f"📁 Loading projects from: {projects_file}")
+    logger.debug(f"📁 File exists: {projects_file.exists()}")
+    
     if projects_file.exists():
         try:
+            logger.debug(f"📁 File size: {projects_file.stat().st_size} bytes")
+            logger.debug(f"📁 File permissions: {oct(projects_file.stat().st_mode)[-3:]}")
+            
             with open(projects_file, 'r') as f:
-                return json.load(f)
+                content = f.read()
+                logger.debug(f"📁 File content length: {len(content)} characters")
+                logger.debug(f"📁 File content preview: {content[:200]}...")
+                
+                projects = json.loads(content)
+                logger.info(f"📁 Successfully loaded {len(projects)} projects")
+                return projects
         except (json.JSONDecodeError, IOError) as e:
-            logger.error(f"Failed to load projects: {e}")
+            logger.error(f"❌ Failed to load projects: {e}")
+            logger.debug(f"📁 Error type: {type(e).__name__}")
             return []
+    else:
+        logger.info(f"📁 Projects file doesn't exist, returning empty list")
     return []
 
 def save_projects(projects):
     """Save projects to file"""
-    DATA_DIR.mkdir(parents=True, exist_ok=True)
-    projects_file = get_projects_file()
+    logger.debug(f"💾 Saving {len(projects)} projects")
+    logger.debug(f"💾 Data directory: {DATA_DIR}")
+    logger.debug(f"💾 Data directory exists: {DATA_DIR.exists()}")
+    
     try:
+        DATA_DIR.mkdir(parents=True, exist_ok=True)
+        logger.debug(f"💾 Data directory created/verified")
+    except Exception as e:
+        logger.error(f"❌ Failed to create data directory: {e}")
+        return False
+    
+    projects_file = get_projects_file()
+    logger.debug(f"💾 Projects file path: {projects_file}")
+    
+    try:
+        # Create backup if file exists
+        if projects_file.exists():
+            backup_file = projects_file.with_suffix('.json.backup')
+            logger.debug(f"💾 Creating backup: {backup_file}")
+            projects_file.rename(backup_file)
+        
         with open(projects_file, 'w') as f:
             json.dump(projects, f, indent=2)
-        logger.info(f"💾 Saved {len(projects)} projects")
+        
+        logger.info(f"💾 Successfully saved {len(projects)} projects")
+        logger.debug(f"💾 File size: {projects_file.stat().st_size} bytes")
         return True
     except IOError as e:
-        logger.error(f"Failed to save projects: {e}")
+        logger.error(f"❌ Failed to save projects: {e}")
+        logger.debug(f"💾 Error type: {type(e).__name__}")
         return False
 
 def create_slug(name):
@@ -58,22 +94,35 @@ def create_slug(name):
 def create_github_repo(repo_name, github_token, fly_token):
     """Create a GitHub repository from template and set FLY_API_TOKEN secret"""
     logger.info(f"🐙 Creating GitHub repo: {repo_name}")
+    logger.debug(f"🐙 GitHub token length: {len(github_token)}")
+    logger.debug(f"🐙 GitHub token prefix: {github_token[:10]}...")
+    logger.debug(f"🐙 Fly token provided: {bool(fly_token)}")
+    logger.debug(f"🐙 Fly token length: {len(fly_token) if fly_token else 0}")
     
     try:
         # First, check if repo already exists
         headers = {
             'Authorization': f'token {github_token}',
-            'Accept': 'application/vnd.github.v3+json'
+            'Accept': 'application/vnd.github.v3+json',
+            'User-Agent': 'OpenVibe-Backend/1.0'
         }
+        logger.debug(f"🐙 Request headers: {headers}")
         
         # Get the authenticated user to determine the owner
+        logger.debug(f"🐙 Making request to GitHub user API...")
         user_response = requests.get('https://api.github.com/user', headers=headers, timeout=10)
+        logger.debug(f"🐙 GitHub user API response status: {user_response.status_code}")
+        logger.debug(f"🐙 GitHub user API response headers: {dict(user_response.headers)}")
+        
         if user_response.status_code != 200:
-            logger.error(f"Failed to get GitHub user: {user_response.text}")
+            logger.error(f"❌ Failed to get GitHub user: {user_response.text}")
+            logger.debug(f"🐙 Response content: {user_response.content}")
             return False, "Failed to authenticate with GitHub"
         
-        owner = user_response.json()['login']
+        user_data = user_response.json()
+        owner = user_data['login']
         logger.info(f"🔍 GitHub owner: {owner}")
+        logger.debug(f"🔍 GitHub user data: {user_data}")
         
         # Check if repo already exists
         check_response = requests.get(f'https://api.github.com/repos/{owner}/{repo_name}', headers=headers, timeout=10)
@@ -178,25 +227,38 @@ def get_projects():
 def create_project():
     """Create a new project"""
     logger.info("🆕 POST /api/projects - Creating new project")
+    logger.debug(f"📥 Request headers: {dict(request.headers)}")
+    logger.debug(f"📥 Request remote addr: {request.remote_addr}")
+    logger.debug(f"📥 Request content type: {request.content_type}")
     
     try:
         # Get UUID from headers
         user_uuid = request.headers.get('X-User-UUID')
+        logger.debug(f"🆔 Raw UUID from header: '{user_uuid}'")
+        
         if not user_uuid:
             logger.warning("❌ X-User-UUID header is required")
+            logger.debug(f"📋 Available headers: {list(request.headers.keys())}")
             return jsonify({'error': 'X-User-UUID header is required'}), 400
         
         user_uuid = user_uuid.strip()
+        logger.debug(f"🆔 Cleaned UUID: '{user_uuid}' (length: {len(user_uuid)})")
+        
         if not user_uuid:
             logger.warning("❌ Empty UUID provided in header")
             return jsonify({'error': 'UUID cannot be empty'}), 400
         
+        # Get request data
         data = request.get_json()
+        logger.debug(f"📥 Request data: {data}")
+        
         if not data or 'name' not in data:
             logger.warning("❌ Project name is required")
+            logger.debug(f"📥 Request data keys: {list(data.keys()) if data else 'None'}")
             return jsonify({'error': 'Project name is required'}), 400
         
         project_name = data['name'].strip()
+        logger.debug(f"📝 Project name: '{project_name}' (length: {len(project_name)})")
         
         if not project_name:
             logger.warning("❌ Project name cannot be empty")
