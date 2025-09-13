@@ -1,20 +1,23 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useParams, Link } from 'react-router-dom'
+import MessageList from '../components/MessageList'
+import MessageInput from '../components/MessageInput'
+import { useConversation } from '../hooks/useConversation'
 
 function ConversationDetail() {
   const { slug: projectSlug, conversationSlug } = useParams()
   const [project, setProject] = useState(null)
-  const [conversation, setConversation] = useState(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
+  const [projectLoading, setProjectLoading] = useState(true)
+  const [projectError, setProjectError] = useState('')
+  const [conversationId, setConversationId] = useState(null)
 
-  // Fetch project and conversation details
-  const fetchData = useCallback(async () => {
-    console.log('🔄 Fetching conversation details:', { projectSlug, conversationSlug })
+  // Fetch project details to get project ID
+  const fetchProject = useCallback(async () => {
+    console.log('🔄 Fetching project details:', projectSlug)
     try {
-      setLoading(true)
+      setProjectLoading(true)
+      setProjectError('')
       
-      // First, get the project to find its ID
       const projectResponse = await fetch(`/api/projects/${projectSlug}`)
       console.log('📡 Project response status:', projectResponse?.status)
       
@@ -28,7 +31,7 @@ function ConversationDetail() {
       console.log('📊 Received project data:', projectData)
       setProject(projectData.project)
       
-      // Now get the conversations for this project
+      // Now get the conversations for this project to find the conversation ID
       const conversationsResponse = await fetch(`/api/projects/${projectData.project.id}/conversations`)
       console.log('📡 Conversations response status:', conversationsResponse?.status)
       
@@ -51,20 +54,38 @@ function ConversationDetail() {
         throw new Error('Conversation not found')
       }
       
-      setConversation(foundConversation)
-      console.log('✅ Data loaded successfully')
+      setConversationId(foundConversation.id)
+      console.log('✅ Project data loaded successfully, conversation ID:', foundConversation.id)
     } catch (err) {
-      console.error('❌ Error fetching data:', err)
-      setError(err.message || 'Failed to load conversation. Please try again.')
+      console.error('❌ Error fetching project data:', err)
+      setProjectError(err.message || 'Failed to load project. Please try again.')
     } finally {
-      setLoading(false)
+      setProjectLoading(false)
     }
   }, [projectSlug, conversationSlug])
 
-  // Load data on component mount
+  // Load project data on component mount
   useEffect(() => {
-    fetchData()
-  }, [fetchData])
+    fetchProject()
+  }, [fetchProject])
+
+  // Use the conversation hook once we have the project ID and conversation ID
+  const {
+    messages,
+    events,
+    conversation,
+    loading: conversationLoading,
+    error: conversationError,
+    sending,
+    sendMessage,
+    refresh,
+    pollingEnabled,
+    setPollingEnabled,
+    isPolling
+  } = useConversation(project?.id, conversationId)
+
+  const loading = projectLoading || conversationLoading
+  const error = projectError || conversationError
 
   if (loading) {
     return (
@@ -135,52 +156,66 @@ function ConversationDetail() {
         </nav>
 
         {/* Conversation Header */}
-        <header className="mb-12">
+        <header className="mb-8">
           <div className="mb-6">
-            <h1 className="text-4xl font-bold text-white mb-2">{conversation.name}</h1>
-            <span className="text-gray-400 font-mono text-lg">{conversation.slug}</span>
+            <h1 className="text-4xl font-bold text-white mb-2">
+              {conversation?.name || conversation?.id || 'Conversation'}
+            </h1>
+            <span className="text-gray-400 font-mono text-lg">{conversationSlug}</span>
           </div>
           
-          <div className="flex flex-wrap items-center gap-6 text-gray-300">
-            <p>Created: {new Date(conversation.created_at).toLocaleDateString()}</p>
-            {conversation.last_message_at && (
+          <div className="flex flex-wrap items-center gap-6 text-gray-300 mb-4">
+            <p>Created: {conversation?.created_at ? new Date(conversation.created_at).toLocaleDateString() : 'Unknown'}</p>
+            {conversation?.last_message_at && (
               <p>Last activity: {new Date(conversation.last_message_at).toLocaleDateString()}</p>
             )}
-            <p>Messages: {conversation.message_count || 0}</p>
+            <p>Messages: {messages?.length || 0}</p>
+            <p>Events: {events?.length || 0}</p>
+            {isPolling && <p className="text-primary-400 font-medium">🔄 Live updates enabled</p>}
+          </div>
+          
+          <div className="flex flex-wrap gap-3">
+            <button 
+              onClick={refresh} 
+              disabled={loading}
+              className="px-4 py-2 bg-gray-700 hover:bg-gray-600 disabled:bg-gray-800 disabled:opacity-50 text-white border border-gray-600 rounded-lg transition-colors duration-200 text-sm font-medium"
+              title="Refresh conversation"
+            >
+              🔄 Refresh
+            </button>
+            <button 
+              onClick={() => setPollingEnabled(!pollingEnabled)}
+              className={`px-4 py-2 border rounded-lg transition-colors duration-200 text-sm font-medium ${
+                pollingEnabled 
+                  ? 'bg-primary-600 hover:bg-primary-700 text-white border-primary-500' 
+                  : 'bg-gray-700 hover:bg-gray-600 text-gray-300 border-gray-600'
+              }`}
+              title={pollingEnabled ? 'Disable live updates' : 'Enable live updates'}
+            >
+              {pollingEnabled ? '⏸️ Pause' : '▶️ Resume'} Updates
+            </button>
           </div>
         </header>
 
-        {/* Conversation Content */}
-        <section className="mb-12">
-          <div className="bg-gray-850 rounded-lg border border-gray-700 p-12 text-center">
-            <div className="text-6xl mb-6">💬</div>
-            <h3 className="text-2xl font-bold text-primary-300 mb-4">Conversation Interface</h3>
-            <p className="text-gray-300 mb-6">This is where the conversation interface would be implemented.</p>
-            <div className="text-left max-w-md mx-auto">
-              <p className="text-gray-300 mb-4 font-semibold">Features to add:</p>
-              <ul className="space-y-2 text-gray-400">
-                <li className="flex items-center">
-                  <span className="w-2 h-2 bg-primary-300 rounded-full mr-3"></span>
-                  Message history display
-                </li>
-                <li className="flex items-center">
-                  <span className="w-2 h-2 bg-primary-300 rounded-full mr-3"></span>
-                  Message input and sending
-                </li>
-                <li className="flex items-center">
-                  <span className="w-2 h-2 bg-primary-300 rounded-full mr-3"></span>
-                  Real-time updates
-                </li>
-                <li className="flex items-center">
-                  <span className="w-2 h-2 bg-primary-300 rounded-full mr-3"></span>
-                  File attachments
-                </li>
-                <li className="flex items-center">
-                  <span className="w-2 h-2 bg-primary-300 rounded-full mr-3"></span>
-                  Message search and filtering
-                </li>
-              </ul>
-            </div>
+        {/* Message Interface */}
+        <section className="mb-8">
+          <div className="flex flex-col gap-4 min-h-[600px]">
+            <MessageList 
+              messages={messages} 
+              loading={conversationLoading && !messages?.length} 
+              error={conversationError}
+            />
+            <MessageInput 
+              onSendMessage={sendMessage}
+              disabled={!conversation || sending || conversationError}
+              placeholder={
+                conversationError 
+                  ? "Cannot send messages due to error" 
+                  : sending 
+                    ? "Sending..." 
+                    : "Type your message to the agent..."
+              }
+            />
           </div>
         </section>
 
