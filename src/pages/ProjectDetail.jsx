@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { getUserUUID } from '../utils/uuid'
 import './ProjectDetail.css'
@@ -27,7 +27,7 @@ function ProjectDetail() {
   }
 
   // Fetch project details
-  const fetchProject = async () => {
+  const fetchProject = useCallback(async () => {
     console.log('🔄 Fetching project details for slug:', slug)
     try {
       setLoading(true)
@@ -57,10 +57,10 @@ function ProjectDetail() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [slug])
 
   // Fetch conversations for this project
-  const fetchConversations = async () => {
+  const fetchConversations = useCallback(async () => {
     if (!project) return
     
     console.log('🔄 Fetching conversations for project:', project.id)
@@ -87,7 +87,7 @@ function ProjectDetail() {
     } finally {
       setConversationsLoading(false)
     }
-  }
+  }, [project])
 
   // Create new conversation
   const handleCreateConversation = async (e) => {
@@ -167,14 +167,14 @@ function ProjectDetail() {
   // Load project on component mount
   useEffect(() => {
     fetchProject()
-  }, [slug])
+  }, [fetchProject])
 
   // Load conversations when project is loaded
   useEffect(() => {
     if (project) {
       fetchConversations()
     }
-  }, [project])
+  }, [project, fetchConversations])
 
   // Clear error when user starts typing
   useEffect(() => {
@@ -211,7 +211,7 @@ function ProjectDetail() {
       <div className="project-detail-page">
         <div className="error-state">
           <h2>Project Not Found</h2>
-          <p>The project "{slug}" could not be found.</p>
+          <p>The project &quot;{slug}&quot; could not be found.</p>
           <Link to="/" className="back-link">← Back to Projects</Link>
         </div>
       </div>

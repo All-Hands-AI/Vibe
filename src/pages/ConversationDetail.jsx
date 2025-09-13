@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import './ConversationDetail.css'
 
@@ -10,7 +10,7 @@ function ConversationDetail() {
   const [error, setError] = useState('')
 
   // Fetch project and conversation details
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     console.log('🔄 Fetching conversation details:', { projectSlug, conversationSlug })
     try {
       setLoading(true)
@@ -60,12 +60,12 @@ function ConversationDetail() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [projectSlug, conversationSlug])
 
   // Load data on component mount
   useEffect(() => {
     fetchData()
-  }, [projectSlug, conversationSlug])
+  }, [fetchData])
 
   if (loading) {
     return (
