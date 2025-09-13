@@ -1,9 +1,34 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { vi } from 'vitest'
 import SetupWindow from './SetupWindow'
+import { SetupProvider } from '../context/SetupContext'
 
 // Mock fetch
 global.fetch = vi.fn()
+
+// Mock localStorage
+const localStorageMock = {
+  getItem: vi.fn(),
+  setItem: vi.fn(),
+  removeItem: vi.fn(),
+}
+global.localStorage = localStorageMock
+
+// Mock UUID utility
+vi.mock('../utils/uuid', () => ({
+  getUserUUID: () => 'test-uuid-12345',
+  generateUUID: () => 'test-uuid-12345',
+  clearUserUUID: vi.fn(),
+}))
+
+// Helper function to render SetupWindow with providers
+const renderSetupWindow = (props = {}) => {
+  return render(
+    <SetupProvider>
+      <SetupWindow onSetupComplete={vi.fn()} {...props} />
+    </SetupProvider>
+  )
+}
 
 describe('SetupWindow', () => {
   const mockOnSetupComplete = vi.fn()
@@ -11,10 +36,28 @@ describe('SetupWindow', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     fetch.mockClear()
+    localStorageMock.getItem.mockClear()
+    localStorageMock.setItem.mockClear()
+    localStorageMock.removeItem.mockClear()
+    
+    // Mock initial setup check API calls (no keys found)
+    fetch
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ valid: false, message: 'Anthropic API key not set' })
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ valid: false, message: 'GitHub API key not set' })
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ valid: false, message: 'Fly API key not set' })
+      })
   })
 
   test('renders setup window with all required fields', () => {
-    render(<SetupWindow onSetupComplete={mockOnSetupComplete} />)
+    renderSetupWindow({ onSetupComplete: mockOnSetupComplete })
     
     expect(screen.getByText('🚀 Welcome to OpenVibe')).toBeInTheDocument()
     expect(screen.getByText('Please configure your API keys to get started')).toBeInTheDocument()
@@ -27,12 +70,13 @@ describe('SetupWindow', () => {
   })
 
   test('validates API key when input loses focus', async () => {
+    // Add extra mock for the validation call
     fetch.mockResolvedValueOnce({
       ok: true,
       json: async () => ({ valid: true, message: 'Anthropic API key is valid' })
     })
 
-    render(<SetupWindow onSetupComplete={mockOnSetupComplete} />)
+    renderSetupWindow({ onSetupComplete: mockOnSetupComplete })
     
     const anthropicInput = screen.getByLabelText(/Anthropic API Key/)
     
@@ -45,19 +89,23 @@ describe('SetupWindow', () => {
         expect.objectContaining({
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ api_key: 'sk-ant-test123' })
+          body: JSON.stringify({ 
+            api_key: 'sk-ant-test123',
+            uuid: 'test-uuid-12345'
+          })
         })
       )
     })
   })
 
   test('shows validation status icons', async () => {
+    // Add extra mock for the validation call
     fetch.mockResolvedValueOnce({
       ok: true,
       json: async () => ({ valid: true, message: 'Anthropic API key is valid' })
     })
 
-    render(<SetupWindow onSetupComplete={mockOnSetupComplete} />)
+    renderSetupWindow({ onSetupComplete: mockOnSetupComplete })
     
     const anthropicInput = screen.getByLabelText(/Anthropic API Key/)
     
@@ -71,7 +119,7 @@ describe('SetupWindow', () => {
   })
 
   test('enables continue button when all keys are valid', async () => {
-    // Mock successful validation for all three providers
+    // Mock successful validation for all three providers (in addition to initial setup checks)
     fetch
       .mockResolvedValueOnce({
         ok: true,
@@ -86,7 +134,7 @@ describe('SetupWindow', () => {
         json: async () => ({ valid: true, message: 'Fly API key is valid' })
       })
 
-    render(<SetupWindow onSetupComplete={mockOnSetupComplete} />)
+    renderSetupWindow({ onSetupComplete: mockOnSetupComplete })
     
     const anthropicInput = screen.getByLabelText(/Anthropic API Key/)
     const githubInput = screen.getByLabelText(/GitHub API Key/)
@@ -124,12 +172,13 @@ describe('SetupWindow', () => {
   })
 
   test('shows error message for invalid API key', async () => {
+    // Add extra mock for the validation call
     fetch.mockResolvedValueOnce({
       ok: false,
       json: async () => ({ valid: false, message: 'Anthropic API key is invalid' })
     })
 
-    render(<SetupWindow onSetupComplete={mockOnSetupComplete} />)
+    renderSetupWindow({ onSetupComplete: mockOnSetupComplete })
     
     const anthropicInput = screen.getByLabelText(/Anthropic API Key/)
     

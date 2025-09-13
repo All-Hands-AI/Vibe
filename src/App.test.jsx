@@ -5,10 +5,28 @@ import App from './App'
 // Mock fetch globally for App tests too
 global.fetch = vi.fn()
 
+// Mock localStorage
+const localStorageMock = {
+  getItem: vi.fn(),
+  setItem: vi.fn(),
+  removeItem: vi.fn(),
+}
+global.localStorage = localStorageMock
+
+// Mock UUID utility
+vi.mock('./utils/uuid', () => ({
+  getUserUUID: () => 'test-uuid-12345',
+  generateUUID: () => 'test-uuid-12345',
+  clearUserUUID: vi.fn(),
+}))
+
 describe('App', () => {
   beforeEach(() => {
     // Reset fetch mock before each test
     fetch.mockClear()
+    localStorageMock.getItem.mockClear()
+    localStorageMock.setItem.mockClear()
+    localStorageMock.removeItem.mockClear()
   })
 
   it('shows loading screen initially', () => {
