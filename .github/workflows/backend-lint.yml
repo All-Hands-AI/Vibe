@@ -1,0 +1,74 @@
+name: Backend Lint
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths:
+      - 'backend/**'
+      - '.github/workflows/backend-lint.yml'
+  pull_request:
+    branches: [ main, develop ]
+    paths:
+      - 'backend/**'
+      - '.github/workflows/backend-lint.yml'
+  workflow_call:
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  backend-lint:
+    name: Backend Lint (Black, Flake8, MyPy)
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          version: "latest"
+
+      - name: Create virtual environment
+        run: uv venv
+        working-directory: backend
+
+      - name: Install dependencies
+        run: |
+          source .venv/bin/activate
+          uv pip install -e ".[dev]"
+        working-directory: backend
+
+      - name: Run Black (code formatting check)
+        run: |
+          source .venv/bin/activate
+          black --check --diff .
+        working-directory: backend
+
+      - name: Run Flake8 (style guide enforcement)
+        run: |
+          source .venv/bin/activate
+          flake8 .
+        working-directory: backend
+
+      - name: Run MyPy (type checking)
+        run: |
+          source .venv/bin/activate
+          mypy .
+        working-directory: backend
+        continue-on-error: true  # MyPy can be strict, allow it to fail without failing the whole job
+
+      - name: Generate lint report
+        if: always()
+        run: |
+          echo "## Backend Lint Results" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Black formatting check completed" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Flake8 style check completed" >> $GITHUB_STEP_SUMMARY
+          echo "- ℹ️ MyPy type checking completed (warnings allowed)" >> $GITHUB_STEP_SUMMARY

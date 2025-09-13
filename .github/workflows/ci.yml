@@ -11,31 +11,37 @@ permissions:
   pull-requests: write
 
 jobs:
-  lint:
-    name: Lint
-    runs-on: ubuntu-latest
-    
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+  # Call separate lint and test workflows
+  frontend-lint:
+    name: Frontend Lint
+    uses: ./.github/workflows/frontend-lint.yml
+    permissions:
+      contents: read
+      pull-requests: write
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '18'
-          cache: 'npm'
-          cache-dependency-path: 'frontend/package-lock.json'
+  backend-lint:
+    name: Backend Lint
+    uses: ./.github/workflows/backend-lint.yml
+    permissions:
+      contents: read
+      pull-requests: write
 
-      - name: Install dependencies
-        run: npm ci
-        working-directory: frontend
+  frontend-tests:
+    name: Frontend Tests
+    uses: ./.github/workflows/frontend-tests.yml
+    permissions:
+      contents: read
+      pull-requests: write
 
-      - name: Run ESLint
-        run: npm run lint
-        working-directory: frontend
+  backend-tests:
+    name: Backend Tests
+    uses: ./.github/workflows/backend-tests.yml
+    permissions:
+      contents: read
+      pull-requests: write
 
   build:
-    name: Build
+    name: Build Frontend
     runs-on: ubuntu-latest
     
     steps:
@@ -64,63 +70,33 @@ jobs:
           path: frontend/dist/
           retention-days: 1
 
-  test:
-    name: Test
-    runs-on: ubuntu-latest
-    
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '18'
-          cache: 'npm'
-          cache-dependency-path: 'frontend/package-lock.json'
-
-      - name: Install dependencies
-        run: npm ci
-        working-directory: frontend
-
-      - name: Run tests
-        run: npm run test:run
-        working-directory: frontend
-
-      - name: Install coverage dependency
-        run: npm install --save-dev @vitest/coverage-v8
-        working-directory: frontend
-
-      - name: Run tests with coverage
-        run: npm run test:coverage
-        working-directory: frontend
-
-      - name: Upload coverage reports
-        uses: actions/upload-artifact@v4
-        with:
-          name: coverage-report
-          path: frontend/coverage/
-          retention-days: 7
-
   quality-gate:
     name: Quality Gate
     runs-on: ubuntu-latest
-    needs: [lint, build, test]
+    needs: [frontend-lint, backend-lint, frontend-tests, backend-tests, build]
     if: always()
     
     steps:
       - name: Check all jobs status
         run: |
-          if [[ "${{ needs.lint.result }}" != "success" ]]; then
-            echo "❌ Linting failed"
+          if [[ "${{ needs.frontend-lint.result }}" != "success" ]]; then
+            echo "❌ Frontend linting failed"
+            exit 1
+          fi
+          if [[ "${{ needs.backend-lint.result }}" != "success" ]]; then
+            echo "❌ Backend linting failed"
+            exit 1
+          fi
+          if [[ "${{ needs.frontend-tests.result }}" != "success" ]]; then
+            echo "❌ Frontend tests failed"
+            exit 1
+          fi
+          if [[ "${{ needs.backend-tests.result }}" != "success" ]]; then
+            echo "❌ Backend tests failed"
             exit 1
           fi
           if [[ "${{ needs.build.result }}" != "success" ]]; then
             echo "❌ Build failed"
-            exit 1
-          fi
-          if [[ "${{ needs.test.result }}" != "success" ]]; then
-            echo "❌ Tests failed"
             exit 1
           fi
           echo "✅ All quality checks passed!"
