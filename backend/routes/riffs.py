@@ -6,6 +6,13 @@ from storage import get_riffs_storage, get_apps_storage, get_messages_storage
 from agent_loop import agent_loop_manager
 from keys import get_user_key
 
+# Import LLM from openhands-sdk at module level
+try:
+    from openhands.sdk import LLM
+except ImportError:
+    # SDK not available, will handle this in the route
+    LLM = None
+
 logger = logging.getLogger(__name__)
 
 # Create Blueprint for riffs
@@ -190,18 +197,22 @@ def create_riff(slug):
                 logger.warning(f"⚠️ No Anthropic token found for user {user_uuid[:8]}")
                 return jsonify({"error": "Anthropic API key required"}), 400
             
-            # Import LLM from openhands-sdk
+            # Check if LLM is available
+            if LLM is None:
+                logger.error("❌ LLM from openhands-sdk is not available")
+                return jsonify({"error": "LLM service unavailable"}), 500
+            
+            # Create LLM instance
             try:
-                from openhands.sdk import LLM
                 llm = LLM(api_key=anthropic_token, model="claude-3-haiku-20240307")
                 
                 # Create and store the agent loop
                 agent_loop_manager.create_agent_loop(user_uuid, slug, riff_slug, llm)
                 logger.info(f"🤖 Created AgentLoop for riff: {riff_name}")
                 
-            except ImportError as e:
-                logger.error(f"❌ Failed to import LLM from openhands-sdk: {e}")
-                return jsonify({"error": "LLM service unavailable"}), 500
+            except Exception as e:
+                logger.error(f"❌ Failed to create LLM instance: {e}")
+                return jsonify({"error": "Failed to initialize LLM"}), 500
                 
         except Exception as e:
             logger.error(f"❌ Failed to create AgentLoop: {e}")
