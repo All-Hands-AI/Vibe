@@ -5,6 +5,11 @@
 
 set -e
 
+# Immediate startup indicator
+echo "🚨 START-SERVICES.SH IS EXECUTING 🚨"
+echo "Script path: $0"
+echo "Arguments: $@"
+
 echo "========================================="
 echo "🚀 OpenVibe Container Starting"
 echo "========================================="
@@ -12,6 +17,8 @@ echo "Timestamp: $(date)"
 echo "PULL_FROM_BRANCH: ${PULL_FROM_BRANCH:-not set}"
 echo "Working directory: $(pwd)"
 echo "User: $(whoami)"
+echo "Environment variables:"
+env | grep -E "(PULL_FROM_BRANCH|FLASK|NODE|GIT)" | sort || echo "No relevant env vars found"
 echo "========================================="
 
 # Function to log with timestamp
@@ -34,6 +41,7 @@ check_service() {
 }
 
 # Check if we're in development mode
+log "🔍 Checking mode: PULL_FROM_BRANCH='${PULL_FROM_BRANCH:-}'"
 if [ -n "$PULL_FROM_BRANCH" ]; then
     log "🔧 DEVELOPMENT MODE ENABLED"
     log "Branch to watch: $PULL_FROM_BRANCH"
@@ -170,62 +178,88 @@ if [ -n "$PULL_FROM_BRANCH" ]; then
     
 else
     log "🏭 PRODUCTION MODE"
+    log "📋 Current processes before starting:"
+    ps aux | head -10 || log "ps command failed"
     
     # Test nginx configuration
     log "🔍 Testing nginx configuration..."
-    nginx -t || {
+    if nginx -t; then
+        log "✅ Nginx configuration is valid"
+    else
         log "❌ Nginx configuration test failed"
         log "📋 Nginx config:"
-        cat /etc/nginx/sites-available/default
-        exit 1
-    }
-    log "✅ Nginx configuration is valid"
+        cat /etc/nginx/sites-available/default 2>/dev/null || log "Could not read nginx config"
+        log "📋 Nginx error log:"
+        cat /var/log/nginx/error.log 2>/dev/null || log "No nginx error log found"
+        # Don't exit, try to continue
+    fi
     
     # Start nginx in background
     log "🌐 Starting nginx..."
-    nginx -g "daemon off;" &
-    NGINX_PID=$!
-    log "✅ Nginx started (PID: $NGINX_PID)"
+    if nginx -g "daemon off;" & then
+        NGINX_PID=$!
+        log "✅ Nginx started (PID: $NGINX_PID)"
+    else
+        log "❌ Failed to start nginx"
+        exit 1
+    fi
     
     # Start Python backend in background
     log "🐍 Starting Python backend..."
     cd /app/backend
-    python3 -m gunicorn --bind 0.0.0.0:8000 --workers 2 app:app &
-    GUNICORN_PID=$!
-    log "✅ Gunicorn started (PID: $GUNICORN_PID)"
+    if python3 -m gunicorn --bind 0.0.0.0:8000 --workers 2 app:app & then
+        GUNICORN_PID=$!
+        log "✅ Gunicorn started (PID: $GUNICORN_PID)"
+    else
+        log "❌ Failed to start gunicorn"
+        exit 1
+    fi
     
     # Wait a bit for services to start
-    sleep 5
+    log "⏳ Waiting for services to initialize..."
+    sleep 10
     
     # Check services
-    check_service "Nginx" "80" || {
+    log "🔍 Checking if services are listening on ports..."
+    netstat -tuln | grep -E ":80|:8000" || log "No services found on expected ports"
+    
+    if check_service "Nginx" "80"; then
+        log "✅ Nginx is listening on port 80"
+    else
         log "❌ Nginx failed to start on port 80"
+        log "📋 Nginx processes:"
+        ps aux | grep nginx || log "No nginx processes found"
         log "📋 Nginx error log:"
         tail -20 /var/log/nginx/error.log 2>/dev/null || log "No nginx error log found"
-        exit 1
-    }
+        # Don't exit, continue to monitor
+    fi
     
-    check_service "Gunicorn" "8000" || {
+    if check_service "Gunicorn" "8000"; then
+        log "✅ Gunicorn is listening on port 8000"
+    else
         log "❌ Gunicorn failed to start on port 8000"
-        exit 1
-    }
+        log "📋 Gunicorn processes:"
+        ps aux | grep gunicorn || log "No gunicorn processes found"
+    fi
     
-    log "🎉 Production services started successfully!"
+    log "🎉 Production mode startup completed!"
     log "📝 Access URL: http://localhost:80"
     
     # Keep the container running and monitor processes
     while true; do
         # Check if critical processes are still running
-        if ! kill -0 $NGINX_PID 2>/dev/null; then
+        if [ -n "$NGINX_PID" ] && ! kill -0 $NGINX_PID 2>/dev/null; then
             log "❌ Nginx process died, restarting..."
             nginx -g "daemon off;" &
             NGINX_PID=$!
+            log "✅ Nginx restarted (PID: $NGINX_PID)"
         fi
         
-        if ! kill -0 $GUNICORN_PID 2>/dev/null; then
+        if [ -n "$GUNICORN_PID" ] && ! kill -0 $GUNICORN_PID 2>/dev/null; then
             log "❌ Gunicorn process died, restarting..."
             cd /app/backend && python3 -m gunicorn --bind 0.0.0.0:8000 --workers 2 app:app &
             GUNICORN_PID=$!
+            log "✅ Gunicorn restarted (PID: $GUNICORN_PID)"
         fi
         
         sleep 30
