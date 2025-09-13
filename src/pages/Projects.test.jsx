@@ -16,6 +16,7 @@ global.localStorage = localStorageMock
 // Mock UUID utility
 vi.mock('../utils/uuid', () => ({
   generateUUID: () => 'test-uuid-12345',
+  getUserUUID: () => 'test-uuid-12345',
 }))
 
 describe('Projects', () => {

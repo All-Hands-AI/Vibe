@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { generateUUID } from '../utils/uuid'
+import { getUserUUID } from '../utils/uuid'
 import './Projects.css'
 
 function Projects() {
@@ -9,16 +9,6 @@ function Projects() {
   const [newProjectName, setNewProjectName] = useState('')
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
-
-  // Get or create user UUID
-  const getUserUUID = () => {
-    let uuid = localStorage.getItem('user_uuid')
-    if (!uuid) {
-      uuid = generateUUID()
-      localStorage.setItem('user_uuid', uuid)
-    }
-    return uuid
-  }
 
   // Create slug from project name for preview
   const createSlug = (name) => {
