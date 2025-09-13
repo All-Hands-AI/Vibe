@@ -292,6 +292,11 @@ def get_github_status(repo_url, github_token):
             "User-Agent": "OpenVibe-Backend/1.0",
         }
 
+        logger.info(f"🔍 Request headers: {dict(headers)}")
+        logger.info(
+            f"🔍 Making request to: https://api.github.com/repos/{owner}/{repo}/commits/main"
+        )
+
         # Get latest commit on main branch
         commits_response = requests.get(
             f"https://api.github.com/repos/{owner}/{repo}/commits/main",
@@ -301,6 +306,8 @@ def get_github_status(repo_url, github_token):
 
         if commits_response.status_code != 200:
             logger.warning(f"❌ Failed to get commits: {commits_response.status_code}")
+            logger.warning(f"❌ Response body: {commits_response.text[:500]}")
+            logger.warning(f"❌ Response headers: {dict(commits_response.headers)}")
             return None
 
         commit_data = commits_response.json()
@@ -314,10 +321,15 @@ def get_github_status(repo_url, github_token):
             timeout=10,
         )
 
+        logger.info(
+            f"🔍 GitHub status API response code: {status_response.status_code}"
+        )
+
         if status_response.status_code != 200:
             logger.warning(
                 f"❌ Failed to get status checks: {status_response.status_code}"
             )
+            logger.warning(f"❌ Response body: {status_response.text[:500]}")
             # Return basic info even if status checks fail
             return {
                 "tests_passing": None,
@@ -326,7 +338,72 @@ def get_github_status(repo_url, github_token):
             }
 
         status_data = status_response.json()
+        logger.info(
+            f"🔍 Raw GitHub status response: {json.dumps(status_data, indent=2)}"
+        )
+
         state = status_data.get("state", "unknown")
+        total_count = status_data.get("total_count", 0)
+        logger.info(
+            f"🔍 Extracted state from GitHub: '{state}', total_count: {total_count}"
+        )
+
+        # If status API returns pending with no checks, try GitHub Actions API as fallback
+        if state == "pending" and total_count == 0:
+            logger.info(
+                f"🔍 Status API shows pending with no checks, trying GitHub Actions API..."
+            )
+            try:
+                actions_response = requests.get(
+                    f"https://api.github.com/repos/{owner}/{repo}/actions/runs?head_sha={latest_commit_sha}",
+                    headers=headers,
+                    timeout=10,
+                )
+
+                if actions_response.status_code == 200:
+                    actions_data = actions_response.json()
+                    workflow_runs = actions_data.get("workflow_runs", [])
+                    logger.info(f"🔍 Found {len(workflow_runs)} workflow runs")
+
+                    if workflow_runs:
+                        # Check if all workflows are completed and successful
+                        all_completed = True
+                        all_successful = True
+
+                        for run in workflow_runs:
+                            run_status = run.get("status")
+                            run_conclusion = run.get("conclusion")
+                            logger.info(
+                                f"🔍 Workflow '{run.get('name')}': status={run_status}, conclusion={run_conclusion}"
+                            )
+
+                            if run_status != "completed":
+                                all_completed = False
+                            if run_conclusion != "success":
+                                all_successful = False
+
+                        if all_completed:
+                            if all_successful:
+                                state = "success"
+                                logger.info(
+                                    f"🔍 All workflows completed successfully, overriding state to: {state}"
+                                )
+                            else:
+                                state = "failure"
+                                logger.info(
+                                    f"🔍 Some workflows failed, overriding state to: {state}"
+                                )
+                        else:
+                            # Keep as pending since some workflows are still running
+                            logger.info(
+                                f"🔍 Some workflows still running, keeping state as: {state}"
+                            )
+                else:
+                    logger.warning(
+                        f"❌ Failed to get GitHub Actions: {actions_response.status_code}"
+                    )
+            except Exception as e:
+                logger.warning(f"❌ Error checking GitHub Actions: {str(e)}")
 
         # Handle different CI/CD states properly
         if state == "success":
@@ -338,12 +415,18 @@ def get_github_status(repo_url, github_token):
 
         logger.info(f"✅ GitHub status retrieved: {state}")
 
-        return {
+        result = {
             "tests_passing": tests_passing,
             "last_commit": latest_commit_sha,
             "status": state,
             "total_count": status_data.get("total_count", 0),
         }
+
+        logger.info(
+            f"🔍 Final status object being returned: {json.dumps(result, indent=2)}"
+        )
+
+        return result
 
     except Exception as e:
         logger.error(f"💥 GitHub status check error: {str(e)}")
@@ -753,6 +836,8 @@ def get_app(slug):
 
             # Get GitHub status if token is available
             if github_token and app.get("github_url"):
+                logger.info(f"🔍 GitHub token length: {len(github_token)} characters")
+                logger.info(f"🔍 GitHub token starts with: {github_token[:10]}...")
                 github_status = get_github_status(app["github_url"], github_token)
 
             # Get Fly.io status if token is available
@@ -766,9 +851,17 @@ def get_app(slug):
         app_with_status = app.copy()
         if github_status:
             app_with_status["github_status"] = github_status
+            logger.info(
+                f"🔍 Adding github_status to response: {json.dumps(github_status, indent=2)}"
+            )
+        else:
+            logger.info(f"🔍 No github_status to add (github_status is None or empty)")
         if fly_status:
             app_with_status["fly_status"] = fly_status
 
+        logger.info(
+            f"🔍 Final API response for app {slug}: {json.dumps(app_with_status, indent=2, default=str)}"
+        )
         return jsonify(app_with_status)
     except Exception as e:
         logger.error(f"💥 Error fetching app: {str(e)}")
