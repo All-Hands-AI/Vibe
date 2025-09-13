@@ -200,7 +200,7 @@ function RiffDetail() {
         <nav className="mb-8">
           <div className="flex items-center space-x-2 text-sm">
             <Link to="/" className="text-cyber-muted hover:text-neon-green transition-colors duration-200">
-              ← Apps
+              Apps
             </Link>
             <span className="text-gray-500">/</span>
             <Link to={`/apps/${app.slug}`} className="text-cyber-muted hover:text-neon-green transition-colors duration-200">
@@ -224,14 +224,14 @@ function RiffDetail() {
         </header>
 
         {/* Main Content Grid */}
-        <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Branch Status */}
-          <div className="xl:col-span-1">
+          <div className="lg:col-span-1">
             <AppStatus app={app} />
           </div>
 
           {/* Chat Window */}
-          <div className="xl:col-span-2">
+          <div className="lg:col-span-2">
             <div className="h-[600px]">
               {userUUID ? (
                 <ChatWindow 
