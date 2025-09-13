@@ -30,9 +30,9 @@ RUN npm ci --omit=dev
 # Final stage for app image
 FROM node:${NODE_VERSION}-slim AS final
 
-# Install nginx
+# Install nginx and curl
 RUN apt-get update -qq && \
-    apt-get install --no-install-recommends -y nginx && \
+    apt-get install --no-install-recommends -y nginx curl && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
@@ -68,6 +68,17 @@ RUN echo 'server { \
         proxy_set_header X-Real-IP $remote_addr; \
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for; \
         proxy_set_header X-Forwarded-Proto $scheme; \
+        proxy_connect_timeout 5s; \
+        proxy_send_timeout 60s; \
+        proxy_read_timeout 60s; \
+    } \
+    \
+    # Health check endpoint \
+    location /health { \
+        proxy_pass http://localhost:3001/health; \
+        proxy_http_version 1.1; \
+        proxy_set_header Host $host; \
+        access_log off; \
     } \
 }' > /etc/nginx/sites-available/default
 
@@ -83,12 +94,25 @@ cd /app/backend \
 node server.js > /var/log/backend.log 2>&1 & \
 BACKEND_PID=$! \
 \
-# Wait a moment for backend to start \
-sleep 2 \
+# Wait for backend to be ready \
+echo "Waiting for backend to be ready..." \
+for i in {1..30}; do \
+    if curl -f http://localhost:3001/health >/dev/null 2>&1; then \
+        echo "Backend is ready!" \
+        break \
+    fi \
+    if ! kill -0 $BACKEND_PID 2>/dev/null; then \
+        echo "Backend process died!" \
+        cat /var/log/backend.log \
+        exit 1 \
+    fi \
+    echo "Waiting for backend... ($i/30)" \
+    sleep 1 \
+done \
 \
-# Check if backend is still running \
-if ! kill -0 $BACKEND_PID 2>/dev/null; then \
-    echo "Backend failed to start!" \
+# Final check \
+if ! curl -f http://localhost:3001/health >/dev/null 2>&1; then \
+    echo "Backend failed to become ready!" \
     cat /var/log/backend.log \
     exit 1 \
 fi \
@@ -101,6 +125,10 @@ nginx -g "daemon off;"' > /start.sh && chmod +x /start.sh
 
 # Expose port
 EXPOSE 80
+
+# Add health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+  CMD curl -f http://localhost/health || exit 1
 
 # Start both services
 CMD ["/start.sh"]
