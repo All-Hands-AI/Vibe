@@ -58,7 +58,7 @@ WORKDIR /app/backend
 
 # Install Python dependencies using uv from pyproject.toml
 RUN uv pip compile pyproject.toml -o requirements.txt && \
-    uv pip install --system -r requirements.txt && \
+    uv pip install --system --break-system-packages -r requirements.txt && \
     rm requirements.txt
 
 # Create data directory for persistent storage
