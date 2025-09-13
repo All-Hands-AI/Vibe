@@ -75,13 +75,17 @@ describe('ConfirmationModal', () => {
     render(<ConfirmationModal {...defaultProps} />)
     
     const confirmButton = screen.getByText('Delete')
-    expect(confirmButton).toHaveClass('modal-button-destructive')
+    expect(confirmButton).toHaveClass('bg-red-600')
+    expect(confirmButton).toHaveClass('text-white')
+    expect(confirmButton).toHaveClass('hover:bg-red-700')
   })
 
   it('applies primary styling when isDestructive is false', () => {
     render(<ConfirmationModal {...defaultProps} isDestructive={false} />)
     
     const confirmButton = screen.getByText('Delete')
-    expect(confirmButton).toHaveClass('modal-button-primary')
+    expect(confirmButton).toHaveClass('bg-primary-300')
+    expect(confirmButton).toHaveClass('text-gray-900')
+    expect(confirmButton).toHaveClass('hover:bg-primary-400')
   })
 })
