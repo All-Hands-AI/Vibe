@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
-import { generateUUID } from '../utils/uuid'
+import { getUserUUID } from '../utils/uuid'
 import './ProjectDetail.css'
 
 function ProjectDetail() {
@@ -14,15 +14,7 @@ function ProjectDetail() {
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
 
-  // Get or create user UUID
-  const getUserUUID = () => {
-    let uuid = localStorage.getItem('user_uuid')
-    if (!uuid) {
-      uuid = generateUUID()
-      localStorage.setItem('user_uuid', uuid)
-    }
-    return uuid
-  }
+
 
   // Create slug from conversation name
   const createSlug = (name) => {
