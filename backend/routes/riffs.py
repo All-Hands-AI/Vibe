@@ -354,10 +354,67 @@ def create_message(slug):
             logger.error("❌ Failed to save message to file")
             return jsonify({"error": "Failed to save message"}), 500
 
-        # Get updated message count for stats
-        messages = load_user_messages(user_uuid, slug, riff_slug)
+        # Check if this is a user message that should trigger LLM response
+        message_type = data.get("type", "text")
+        if message_type == "user" or (
+            message_type == "text" and message.get("created_by") == user_uuid
+        ):
+            # Try to get agent loop and generate LLM response
+            agent_loop = agent_loop_manager.get_agent_loop(user_uuid, slug, riff_slug)
+            if agent_loop:
+                try:
+                    logger.info(
+                        f"🤖 Generating LLM response for {user_uuid[:8]}/{slug}/{riff_slug}"
+                    )
+                    llm_response = agent_loop.send_message(content)
 
-        # Update riff statistics
+                    # Create assistant message
+                    assistant_message_id = str(uuid.uuid4())
+                    assistant_created_at = datetime.now(timezone.utc).isoformat()
+
+                    assistant_message = {
+                        "id": assistant_message_id,
+                        "content": llm_response,
+                        "riff_slug": riff_slug,
+                        "app_slug": slug,
+                        "created_at": assistant_created_at,
+                        "created_by": "assistant",
+                        "type": "assistant",
+                        "metadata": {},
+                    }
+
+                    # Save assistant message
+                    if add_user_message(user_uuid, slug, riff_slug, assistant_message):
+                        logger.info(f"✅ LLM response saved for riff: {riff_slug}")
+                        # Return both messages
+                        messages = load_user_messages(user_uuid, slug, riff_slug)
+                        update_riff_message_stats(
+                            user_uuid,
+                            slug,
+                            riff_slug,
+                            len(messages),
+                            assistant_created_at,
+                        )
+
+                        return (
+                            jsonify(
+                                {
+                                    "message": "Message created successfully with LLM response",
+                                    "user_message": message,
+                                    "assistant_message": assistant_message,
+                                }
+                            ),
+                            201,
+                        )
+                    else:
+                        logger.error("❌ Failed to save assistant message")
+
+                except Exception as e:
+                    logger.error(f"❌ Error getting LLM response: {e}")
+                    # Continue without LLM response - user message was still saved
+
+        # Get updated message count for stats (fallback if no LLM response)
+        messages = load_user_messages(user_uuid, slug, riff_slug)
         update_riff_message_stats(user_uuid, slug, riff_slug, len(messages), created_at)
 
         logger.info(f"✅ Message created successfully for riff: {riff_slug}")
@@ -369,128 +426,3 @@ def create_message(slug):
     except Exception as e:
         logger.error(f"💥 Error creating message: {str(e)}")
         return jsonify({"error": "Failed to create message"}), 500
-
-
-# AgentLoop integration endpoint for LLM interactions
-@riffs_bp.route("/api/apps/<slug>/riffs/<riff_slug>/chat", methods=["POST"])
-def send_message_to_agent(slug, riff_slug):
-    """Send a message to the agent and get a response"""
-    logger.info(
-        f"🤖 POST /api/apps/{slug}/riffs/{riff_slug}/chat - Sending message to agent"
-    )
-
-    try:
-        # Get UUID from headers
-        user_uuid = request.headers.get("X-User-UUID")
-        if not user_uuid:
-            logger.warning("❌ X-User-UUID header is required")
-            return jsonify({"error": "X-User-UUID header is required"}), 400
-
-        user_uuid = user_uuid.strip()
-        if not user_uuid:
-            logger.warning("❌ Empty UUID provided in header")
-            return jsonify({"error": "UUID cannot be empty"}), 400
-
-        # Verify app exists
-        if not user_app_exists(user_uuid, slug):
-            logger.warning(f"❌ App not found: {slug}")
-            return jsonify({"error": "App not found"}), 404
-
-        # Verify riff exists
-        if not user_riff_exists(user_uuid, slug, riff_slug):
-            logger.warning(f"❌ Riff not found: {riff_slug}")
-            return jsonify({"error": "Riff not found"}), 404
-
-        # Get request data
-        data = request.get_json()
-        if not data or "content" not in data:
-            logger.warning("❌ Message content is required")
-            return jsonify({"error": "Message content is required"}), 400
-
-        message_content = data["content"].strip()
-        if not message_content:
-            logger.warning("❌ Message content cannot be empty")
-            return jsonify({"error": "Message content cannot be empty"}), 400
-
-        # Get the agent loop
-        agent_loop = agent_loop_manager.get_agent_loop(user_uuid, slug, riff_slug)
-        if not agent_loop:
-            logger.error(
-                f"❌ AgentLoop not found for {user_uuid[:8]}/{slug}/{riff_slug}"
-            )
-            return jsonify({"error": "Agent not available for this conversation"}), 500
-
-        # Create user message
-        user_message_id = str(uuid.uuid4())
-        user_created_at = datetime.now(timezone.utc).isoformat()
-
-        user_message = {
-            "id": user_message_id,
-            "content": message_content,
-            "riff_slug": riff_slug,
-            "app_slug": slug,
-            "created_at": user_created_at,
-            "created_by": user_uuid,
-            "type": "user",
-            "metadata": {},
-        }
-
-        # Save user message
-        if not add_user_message(user_uuid, slug, riff_slug, user_message):
-            logger.error("❌ Failed to save user message")
-            return jsonify({"error": "Failed to save message"}), 500
-
-        # Send message to LLM and get response
-        try:
-            logger.info(
-                f"🤖 Sending message to LLM for {user_uuid[:8]}/{slug}/{riff_slug}"
-            )
-            llm_response = agent_loop.send_message(message_content)
-
-            # Create assistant message
-            assistant_message_id = str(uuid.uuid4())
-            assistant_created_at = datetime.now(timezone.utc).isoformat()
-
-            assistant_message = {
-                "id": assistant_message_id,
-                "content": llm_response,
-                "riff_slug": riff_slug,
-                "app_slug": slug,
-                "created_at": assistant_created_at,
-                "created_by": "assistant",
-                "type": "assistant",
-                "metadata": {},
-            }
-
-            # Save assistant message
-            if not add_user_message(user_uuid, slug, riff_slug, assistant_message):
-                logger.error("❌ Failed to save assistant message")
-                return jsonify({"error": "Failed to save assistant response"}), 500
-
-            # Get updated message count and update riff stats
-            messages = load_user_messages(user_uuid, slug, riff_slug)
-            update_riff_message_stats(
-                user_uuid, slug, riff_slug, len(messages), assistant_created_at
-            )
-
-            logger.info(
-                f"✅ Message exchange completed for {user_uuid[:8]}/{slug}/{riff_slug}"
-            )
-            return (
-                jsonify(
-                    {
-                        "message": "Message sent successfully",
-                        "user_message": user_message,
-                        "assistant_message": assistant_message,
-                    }
-                ),
-                201,
-            )
-
-        except Exception as e:
-            logger.error(f"❌ Error getting LLM response: {e}")
-            return jsonify({"error": "Failed to get response from agent"}), 500
-
-    except Exception as e:
-        logger.error(f"💥 Error sending message: {str(e)}")
-        return jsonify({"error": "Failed to send message"}), 500
