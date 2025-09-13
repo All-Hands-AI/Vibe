@@ -1,8 +1,32 @@
-from flask import Flask
-from flask_cors import CORS
-import os
 import logging
 import sys
+import os
+
+# Configure logging FIRST, before any other imports that might use logging
+# Fly.io already adds timestamps and log levels, so we only need the message
+logging.basicConfig(
+    level=logging.DEBUG,
+    format="%(message)s",
+    stream=sys.stdout,
+    force=True,  # Force reconfiguration even if logging was already configured
+)
+
+# Also configure the root logger explicitly to ensure our format is used
+root_logger = logging.getLogger()
+root_logger.setLevel(logging.DEBUG)
+
+# Remove any existing handlers and add our own
+for handler in root_logger.handlers[:]:
+    root_logger.removeHandler(handler)
+
+# Add a single StreamHandler with our minimal format
+handler = logging.StreamHandler(sys.stdout)
+handler.setFormatter(logging.Formatter("%(message)s"))
+root_logger.addHandler(handler)
+
+# Now import everything else
+from flask import Flask
+from flask_cors import CORS
 from routes.basic import basic_bp
 from routes.integrations import integrations_bp
 from routes.apps import apps_bp
@@ -15,14 +39,6 @@ try:
 except ImportError:
     # SDK not available, continue without it (useful for testing)
     pass
-
-# Configure logging for Fly.io - stdout only with minimal formatting
-# Fly.io already adds timestamps and log levels, so we only need the message
-logging.basicConfig(
-    level=logging.DEBUG,
-    format="%(message)s",
-    stream=sys.stdout,
-)
 
 logger = get_logger(__name__)
 
