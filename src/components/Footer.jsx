@@ -1,43 +1,53 @@
 function Footer() {
   return (
-    <footer className="bg-gray-850 border-t border-gray-700 mt-auto pt-8 pb-4">
+    <footer className="bg-black border-t-2 border-cyber-border mt-auto pt-8 pb-4 relative z-10">
       <div className="max-w-6xl mx-auto px-8">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
           <div>
-            <h3 className="text-primary-300 text-2xl mb-4">OpenVibe</h3>
-            <p className="text-gray-300 leading-relaxed">Building amazing experiences with React</p>
+            <h3 className="text-cyber-text text-2xl mb-4 font-mono">
+              <span className="text-cyber-muted">{'<'}</span>
+              OpenVibe
+              <span className="text-cyber-muted">{'/>'}</span>
+            </h3>
+            <p className="text-cyber-muted leading-relaxed font-mono">
+              🚀 Building cyberpunk experiences with React
+            </p>
           </div>
           <div>
-            <h4 className="text-primary-300 text-lg mb-4">Quick Links</h4>
-            <ul className="list-none p-0 m-0">
+            <h4 className="text-cyber-text text-lg mb-4 font-mono">
+              📡 Quick Links
+            </h4>
+            <ul className="list-none p-0 m-0 font-mono">
               <li className="mb-2">
-                <a href="/" className="text-gray-300 no-underline transition-colors duration-300 hover:text-primary-300">
-                  Home
+                <a href="/" className="text-cyber-muted no-underline transition-all duration-300 hover:text-neon-green">
+                  {'>'} Home
                 </a>
               </li>
               <li className="mb-2">
-                <a href="/about" className="text-gray-300 no-underline transition-colors duration-300 hover:text-primary-300">
-                  About
+                <a href="/about" className="text-cyber-muted no-underline transition-all duration-300 hover:text-neon-green">
+                  {'>'} About
                 </a>
               </li>
               <li className="mb-2">
-                <a href="/contact" className="text-gray-300 no-underline transition-colors duration-300 hover:text-primary-300">
-                  Contact
+                <a href="/contact" className="text-cyber-muted no-underline transition-all duration-300 hover:text-neon-green">
+                  {'>'} Contact
                 </a>
               </li>
             </ul>
           </div>
           <div>
-            <h4 className="text-primary-300 text-lg mb-4">Connect</h4>
-            <ul className="list-none p-0 m-0">
+            <h4 className="text-cyber-text text-lg mb-4 font-mono">
+              🔗 Connect
+            </h4>
+            <ul className="list-none p-0 m-0 font-mono">
               <li className="mb-2">
                 <a 
                   href="https://github.com" 
                   target="_blank" 
                   rel="noopener noreferrer"
-                  className="text-gray-300 no-underline transition-colors duration-300 hover:text-primary-300"
+                  className="text-cyber-muted no-underline transition-all duration-300 hover:text-neon-green"
                 >
-                  GitHub
+                  {'>'} 🐙 GitHub
                 </a>
               </li>
               <li className="mb-2">
@@ -45,9 +55,9 @@ function Footer() {
                   href="https://twitter.com" 
                   target="_blank" 
                   rel="noopener noreferrer"
-                  className="text-gray-300 no-underline transition-colors duration-300 hover:text-primary-300"
+                  className="text-cyber-muted no-underline transition-all duration-300 hover:text-neon-green"
                 >
-                  Twitter
+                  {'>'} 🐦 Twitter
                 </a>
               </li>
               <li className="mb-2">
@@ -55,16 +65,22 @@ function Footer() {
                   href="https://linkedin.com" 
                   target="_blank" 
                   rel="noopener noreferrer"
-                  className="text-gray-300 no-underline transition-colors duration-300 hover:text-primary-300"
+                  className="text-cyber-muted no-underline transition-all duration-300 hover:text-neon-green"
                 >
-                  LinkedIn
+                  {'>'} 💼 LinkedIn
                 </a>
               </li>
             </ul>
           </div>
         </div>
-        <div className="border-t border-gray-700 pt-4 text-center">
-          <p className="text-gray-500 m-0 text-sm">&copy; 2025 OpenVibe. All rights reserved.</p>
+        <div className="border-t-2 border-cyber-border pt-4 text-center">
+          <p className="text-cyber-muted m-0 text-sm font-mono">
+            <span className="text-cyber-text">©</span> 2025 OpenVibe. 
+            <span className="text-cyber-muted"> All rights reserved.</span>
+          </p>
+          <p className="text-cyber-muted text-xs mt-2 font-mono">
+            🔐 Powered by cyberpunk energy ⚡
+          </p>
         </div>
       </div>
     </footer>

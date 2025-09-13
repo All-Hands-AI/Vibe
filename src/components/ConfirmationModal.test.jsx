@@ -84,8 +84,7 @@ describe('ConfirmationModal', () => {
     render(<ConfirmationModal {...defaultProps} isDestructive={false} />)
     
     const confirmButton = screen.getByText('Delete')
-    expect(confirmButton).toHaveClass('bg-primary-300')
-    expect(confirmButton).toHaveClass('text-gray-900')
-    expect(confirmButton).toHaveClass('hover:bg-primary-400')
+    expect(confirmButton).toHaveClass('btn-hacker-primary')
+    expect(confirmButton).toHaveClass('font-mono')
   })
 })
