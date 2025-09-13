@@ -1,5 +1,4 @@
 from flask import Blueprint, jsonify, request
-import logging
 import re
 import uuid
 from datetime import datetime, timezone
@@ -7,8 +6,9 @@ from storage import get_riffs_storage, get_apps_storage
 from agent_loop import agent_loop_manager
 from keys import get_user_key
 from openhands.sdk import LLM
+from utils.logging import get_logger, log_api_request, log_api_response
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 # Create Blueprint for riffs
 riffs_bp = Blueprint("riffs", __name__)
@@ -493,9 +493,7 @@ def create_message(slug):
 @riffs_bp.route("/api/apps/<slug>/riffs/<riff_slug>/ready", methods=["GET"])
 def check_riff_ready(slug, riff_slug):
     """Check if an LLM object is ready in memory for a specific riff"""
-    logger.info(
-        f"🔍 GET /api/apps/{slug}/riffs/{riff_slug}/ready - Checking LLM readiness"
-    )
+    log_api_request(logger, "GET", f"/api/apps/{slug}/riffs/{riff_slug}/ready")
 
     try:
         # Get UUID from headers
@@ -533,17 +531,23 @@ def check_riff_ready(slug, riff_slug):
         else:
             logger.info(f"✅ LLM ready for {user_uuid[:8]}:{slug}:{riff_slug}")
 
+        log_api_response(
+            logger, "GET", f"/api/apps/{slug}/riffs/{riff_slug}/ready", 200, user_uuid
+        )
         return jsonify({"ready": is_ready}), 200
 
     except Exception as e:
         logger.error(f"💥 Error checking riff readiness: {str(e)}")
+        log_api_response(
+            logger, "GET", f"/api/apps/{slug}/riffs/{riff_slug}/ready", 500
+        )
         return jsonify({"error": "Failed to check riff readiness"}), 500
 
 
 @riffs_bp.route("/api/apps/<slug>/riffs/<riff_slug>/reset", methods=["POST"])
 def reset_riff_llm(slug, riff_slug):
     """Reset the LLM object for a specific riff by creating a brand new one"""
-    logger.info(f"🔄 POST /api/apps/{slug}/riffs/{riff_slug}/reset - Resetting LLM")
+    log_api_request(logger, "POST", f"/api/apps/{slug}/riffs/{riff_slug}/reset")
 
     try:
         # Get UUID from headers
@@ -587,8 +591,14 @@ def reset_riff_llm(slug, riff_slug):
             return jsonify({"error": error_message}), 500
 
         logger.info(f"✅ LLM reset successfully for riff: {riff_slug}")
+        log_api_response(
+            logger, "POST", f"/api/apps/{slug}/riffs/{riff_slug}/reset", 200, user_uuid
+        )
         return jsonify({"message": "LLM reset successfully", "ready": True}), 200
 
     except Exception as e:
         logger.error(f"💥 Error resetting riff LLM: {str(e)}")
+        log_api_response(
+            logger, "POST", f"/api/apps/{slug}/riffs/{riff_slug}/reset", 500
+        )
         return jsonify({"error": "Failed to reset riff LLM"}), 500

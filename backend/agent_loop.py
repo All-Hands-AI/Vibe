@@ -3,11 +3,11 @@ AgentLoop and AgentLoopManager classes for OpenVibe backend.
 Manages agent conversations and LLM interactions.
 """
 
-import logging
 from typing import Dict, Optional
 from threading import Lock
+from utils.logging import get_logger
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class AgentLoop:

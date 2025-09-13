@@ -3,12 +3,12 @@ Key management utilities for OpenVibe backend.
 Handles API key storage, validation, and user-specific key operations.
 """
 
-import logging
 import requests
 import os
 from storage import get_keys_storage
+from utils.logging import get_logger
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 def is_mock_mode():
