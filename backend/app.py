@@ -9,6 +9,7 @@ from keys import (
     validate_api_key, get_supported_providers, is_valid_provider
 )
 from projects import projects_bp
+from conversations import conversations_bp
 
 # Configure logging for Fly.io - stdout only with enhanced formatting
 logging.basicConfig(
@@ -24,6 +25,7 @@ CORS(app)
 
 # Register blueprints
 app.register_blueprint(projects_bp)
+app.register_blueprint(conversations_bp)
 
 # Enhanced startup logging
 logger.info("=" * 80)
