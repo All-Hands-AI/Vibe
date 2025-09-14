@@ -180,7 +180,7 @@ def create_agent_for_user(user_uuid, app_slug, riff_slug):
                 f"🔧 Creating AgentLoop with key: {user_uuid[:8]}:{app_slug}:{riff_slug}"
             )
             agent_loop_manager.create_agent_loop(
-                user_uuid, app_slug, riff_slug, llm, message_callback, workspace_path
+                user_uuid, app_slug, riff_slug, llm, workspace_path, message_callback
             )
             logger.info(f"🤖 Created AgentLoop for riff: {riff_slug}")
 
