@@ -5,7 +5,9 @@ import { getUserUUID } from '../utils/uuid'
 import ChatWindow from '../components/ChatWindow'
 import LLMErrorModal from '../components/LLMErrorModal'
 import CompactStatusPanel from '../components/CompactStatusPanel'
+import DeploymentBanner from '../components/DeploymentBanner'
 import { startLLMPolling, checkLLMReady } from '../utils/llmService'
+import { getDeployStatus } from '../utils/statusUtils'
 
 function RiffDetail() {
   const { slug: appSlug, riffSlug } = useParams()
@@ -292,10 +294,22 @@ function RiffDetail() {
           <div className="flex flex-col">
             <div className="mb-2">
               <h3 className="text-lg font-semibold text-cyber-text font-mono">🚀 Live App Preview</h3>
-              <p className="text-cyber-muted font-mono text-xs">
+              <a
+                href={`https://${app.name}-${riff.name}.fly.dev`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-cyber-muted hover:text-blue-400 font-mono text-xs transition-colors duration-200 underline"
+              >
                 {app.name}-{riff.name}.fly.dev
-              </p>
+              </a>
             </div>
+            
+            {/* Deployment Banner */}
+            <DeploymentBanner 
+              deployStatus={getDeployStatus(app)} 
+              prStatus={prStatus} 
+            />
+            
             <div className="flex-1 border border-gray-700 rounded-lg overflow-hidden">
               <iframe
                 src={`https://${app.name}-${riff.name}.fly.dev`}
