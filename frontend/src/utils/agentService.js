@@ -92,6 +92,35 @@ export async function pauseAgent(appSlug, riffSlug) {
 }
 
 /**
+ * Reset an agent
+ * @param {string} appSlug - The app slug
+ * @param {string} riffSlug - The riff slug
+ * @returns {Promise<Object>} Response object
+ */
+export async function resetAgent(appSlug, riffSlug) {
+  try {
+    const uuid = getUserUUID()
+    const response = await fetch(`/api/apps/${appSlug}/riffs/${riffSlug}/reset`, {
+      method: 'POST',
+      headers: {
+        'X-User-UUID': uuid,
+        'Content-Type': 'application/json'
+      }
+    })
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}))
+      throw new Error(errorData.error || `HTTP ${response.status}`)
+    }
+
+    return await response.json()
+  } catch (error) {
+    console.error('❌ Failed to reset agent:', error)
+    throw error
+  }
+}
+
+/**
  * Start polling for agent status updates
  * @param {string} appSlug - The app slug
  * @param {string} riffSlug - The riff slug
