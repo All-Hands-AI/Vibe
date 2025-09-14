@@ -38,7 +38,11 @@ This workspace has a git repository in it.
 When using the FileEditor tool, always use absolute paths.
 
 <WORKFLOW>
-Only work on the current branch. Commit and your work whenver you've made an improvement.
+Only work on the current branch. Push to its analog on the remote branch.
+
+<IMPORTANT>
+COMMIT AND PUSH your work whenver you've made an improvement. DO NOT wait for the user to tell you to push.
+</IMPORTANT>
 
 Whenever you push substantial changes, update the PR title and description as necessary,
 especially if they're currently blank. Keep it short!
