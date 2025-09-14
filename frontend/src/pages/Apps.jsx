@@ -28,14 +28,14 @@ function Apps() {
     isDeleting: false
   })
 
-  // Create slug from app name for preview
+  // Create slug from app name with real-time conversion
   const createSlug = (name) => {
     return name
       .toLowerCase()
-      .replace(/[^a-zA-Z0-9\s-]/g, '')
-      .replace(/\s+/g, '-')
-      .replace(/-+/g, '-')
-      .replace(/^-|-$/g, '')
+      .replace(/[^a-zA-Z0-9\s\-]/g, '') // Remove special chars but keep letters, numbers, spaces, hyphens
+      .replace(/\s+/g, '-')             // Convert spaces to hyphens
+      .replace(/-+/g, '-')              // Collapse multiple hyphens
+      .replace(/^-+|-+$/g, '')          // Remove leading/trailing hyphens
   }
 
 

@@ -39,7 +39,6 @@ describe('AppDetail', () => {
     global.fetch.mockResolvedValueOnce({
       ok: true,
       json: async () => ({
-        name: 'Test App',
         slug: 'test-app',
         github_url: 'https://github.com/user/test-app',
         created_at: '2025-01-01T00:00:00.000Z',
@@ -69,7 +68,7 @@ describe('AppDetail', () => {
 
     // Wait for the app to load
     await waitFor(() => {
-      expect(screen.getByRole('heading', { name: 'Test App' })).toBeInTheDocument()
+      expect(screen.getByRole('heading', { name: 'test-app' })).toBeInTheDocument()
     })
 
     // Check that CI/CD status shows "Running" (there are two instances - CI and Deploy)
@@ -83,7 +82,6 @@ describe('AppDetail', () => {
     global.fetch.mockResolvedValueOnce({
       ok: true,
       json: async () => ({
-        name: 'Test App',
         slug: 'test-app',
         github_url: 'https://github.com/user/test-app',
         created_at: '2025-01-01T00:00:00.000Z',
@@ -113,7 +111,7 @@ describe('AppDetail', () => {
 
     // Wait for the app to load
     await waitFor(() => {
-      expect(screen.getByRole('heading', { name: 'Test App' })).toBeInTheDocument()
+      expect(screen.getByRole('heading', { name: 'test-app' })).toBeInTheDocument()
     })
 
     // Check that AppStatus shows branch and deployment status
@@ -128,7 +126,6 @@ describe('AppDetail', () => {
     global.fetch.mockResolvedValueOnce({
       ok: true,
       json: async () => ({
-        name: 'Test App',
         slug: 'test-app',
         github_url: 'https://github.com/user/test-app',
         created_at: '2025-01-01T00:00:00.000Z',
@@ -158,7 +155,7 @@ describe('AppDetail', () => {
 
     // Wait for the app to load
     await waitFor(() => {
-      expect(screen.getByRole('heading', { name: 'Test App' })).toBeInTheDocument()
+      expect(screen.getByRole('heading', { name: 'test-app' })).toBeInTheDocument()
     })
 
     // Check that AppStatus shows branch and deployment status
@@ -173,7 +170,6 @@ describe('AppDetail', () => {
     global.fetch.mockResolvedValueOnce({
       ok: true,
       json: async () => ({
-        name: 'Test App',
         slug: 'test-app',
         github_url: 'https://github.com/user/test-app',
         created_at: '2025-01-01T00:00:00.000Z',
@@ -198,7 +194,7 @@ describe('AppDetail', () => {
 
     // Wait for the app to load
     await waitFor(() => {
-      expect(screen.getByRole('heading', { name: 'Test App' })).toBeInTheDocument()
+      expect(screen.getByRole('heading', { name: 'test-app' })).toBeInTheDocument()
     })
 
     // Check that AppStatus shows branch and deployment status

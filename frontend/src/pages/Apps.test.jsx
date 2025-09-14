@@ -83,13 +83,11 @@ describe('Apps', () => {
     // Mock apps response with data
     const mockApps = [
       {
-        name: 'Test App',
         slug: 'test-app',
         github_url: 'https://github.com/user/test-app',
         created_at: '2025-01-01T00:00:00.000Z'
       },
       {
-        name: 'Another App',
         slug: 'another-app',
         github_url: 'https://github.com/user/another-app',
         created_at: '2025-01-02T00:00:00.000Z'
@@ -104,8 +102,8 @@ describe('Apps', () => {
     renderWithRouter(<Apps />)
     
     await waitFor(() => {
-      expect(screen.getByText('Test App')).toBeInTheDocument()
-      expect(screen.getByText('Another App')).toBeInTheDocument()
+      expect(screen.getByText('test-app')).toBeInTheDocument()
+      expect(screen.getByText('another-app')).toBeInTheDocument()
     })
     
     // Check that cards are clickable (wrapped in links)
@@ -123,7 +121,7 @@ describe('Apps', () => {
     expect(screen.queryByText(/Created:/)).not.toBeInTheDocument()
   })
 
-  it('shows slug preview when typing app name', async () => {
+  it('converts input to slug format in real-time', async () => {
     // Mock apps fetch
     fetch.mockResolvedValueOnce({
       ok: true,
@@ -137,10 +135,9 @@ describe('Apps', () => {
     // Type in the input
     fireEvent.change(nameInput, { target: { value: 'My Awesome App!' } })
     
-    // Check slug preview appears
+    // Check that input shows converted slug
     await waitFor(() => {
-      expect(screen.getByText('Slug:')).toBeInTheDocument()
-      expect(screen.getByText('my-awesome-app')).toBeInTheDocument()
+      expect(nameInput.value).toBe('my-awesome-app')
     })
   })
 
@@ -181,7 +178,6 @@ describe('Apps', () => {
           message: 'App created successfully',
           app: {
             id: 1,
-            name: 'Test App',
             slug: 'test-app',
             github_url: 'https://github.com/user/test-app',
             created_at: '2025-01-01T00:00:00.000Z'
@@ -202,9 +198,9 @@ describe('Apps', () => {
     fireEvent.change(nameInput, { target: { value: 'Test App' } })
     fireEvent.click(createButton)
     
-    // Check success message appears
+    // Check success message appears (now shows slug)
     await waitFor(() => {
-      expect(screen.getByText('App "Test App" created successfully!')).toBeInTheDocument()
+      expect(screen.getByText('App "test-app" created successfully!')).toBeInTheDocument()
     })
     
     // Check that form was reset
