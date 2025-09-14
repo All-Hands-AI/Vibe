@@ -345,7 +345,7 @@ function Apps() {
                   type="text"
                   id="appName"
                   value={newAppName}
-                  onChange={(e) => setNewAppName(createSlug(e.target.value))}
+                  onChange={(e) => setNewAppName(e.target.value)}
                   placeholder="Enter app name"
                   disabled={creating}
                   className={`w-full px-4 py-3 bg-black text-cyber-text font-mono border-2 transition-colors duration-200 focus:outline-none focus:border-neon-green ${
