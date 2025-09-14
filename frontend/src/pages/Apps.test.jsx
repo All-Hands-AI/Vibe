@@ -106,13 +106,21 @@ describe('Apps', () => {
     await waitFor(() => {
       expect(screen.getByText('Test App')).toBeInTheDocument()
       expect(screen.getByText('Another App')).toBeInTheDocument()
-      expect(screen.getByText('test-app')).toBeInTheDocument()
-      expect(screen.getByText('another-app')).toBeInTheDocument()
     })
     
-    // Check GitHub info and app links
-    expect(screen.getAllByText('GitHub repository available')).toHaveLength(2)
-    expect(screen.getAllByText('View App →')).toHaveLength(2)
+    // Check that cards are clickable (wrapped in links)
+    const appLinks = screen.getAllByRole('link')
+    const appCardLinks = appLinks.filter(link => 
+      link.getAttribute('href')?.startsWith('/apps/')
+    )
+    expect(appCardLinks).toHaveLength(2)
+    
+    // Check that loading status is displayed (since detailed data isn't available in tests)
+    expect(screen.getAllByText('Loading status...')).toHaveLength(2)
+    
+    // Verify that GitHub info and created date are NOT displayed
+    expect(screen.queryByText('GitHub repository available')).not.toBeInTheDocument()
+    expect(screen.queryByText(/Created:/)).not.toBeInTheDocument()
   })
 
   it('shows slug preview when typing app name', async () => {
