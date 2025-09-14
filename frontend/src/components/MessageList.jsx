@@ -44,8 +44,9 @@ function MessageList({ messages, userUuid, scrollContainerRef, onScroll, message
     return message.created_by === userUuid
   }
 
-  const getMessageTypeIcon = (type) => {
-    switch (type) {
+  const getMessageTypeIcon = (message) => {
+    // For special message types, show the type-specific icon
+    switch (message.type) {
       case 'file':
         return '📎'
       case 'image':
@@ -53,7 +54,8 @@ function MessageList({ messages, userUuid, scrollContainerRef, onScroll, message
       case 'code':
         return '💻'
       default:
-        return '💬'
+        // For regular messages, show person for user, robot for agent
+        return isOwnMessage(message) ? '👤' : '🤖'
     }
   }
 
@@ -115,10 +117,10 @@ function MessageList({ messages, userUuid, scrollContainerRef, onScroll, message
                   <div className="flex items-center justify-between mb-1">
                     <div className="flex items-center space-x-1">
                       <span className="text-xs">
-                        {getMessageTypeIcon(message.type)}
+                        {getMessageTypeIcon(message)}
                       </span>
                       <span className="text-xs text-cyber-muted font-mono">
-                        {isOwnMessage(message) ? 'You' : '🤖 Agent'}
+                        {isOwnMessage(message) ? 'You' : 'Agent'}
                       </span>
                     </div>
                     <span className="text-xs text-cyber-muted font-mono">
