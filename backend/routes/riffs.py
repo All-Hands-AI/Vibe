@@ -5,7 +5,7 @@ import sys
 from datetime import datetime, timezone
 from storage import get_riffs_storage, get_apps_storage
 from agent_loop import agent_loop_manager
-from keys import get_user_key
+from keys import get_user_key, load_user_keys
 from utils.repository import setup_riff_workspace
 from utils.event_serializer import serialize_agent_event_to_message
 
@@ -51,6 +51,9 @@ def get_llm_instance(api_key: str, model: str = "claude-3-haiku-20240307"):
 
 
 from utils.logging import get_logger, log_api_request, log_api_response
+
+# Import get_pr_status from apps route for riff-specific PR status
+from routes.apps import get_pr_status
 
 logger = get_logger(__name__)
 
@@ -954,3 +957,81 @@ def pause_agent(slug, riff_slug):
             logger, "POST", f"/api/apps/{slug}/riffs/{riff_slug}/pause", 500
         )
         return jsonify({"error": "Failed to pause agent"}), 500
+
+
+@riffs_bp.route("/api/apps/<slug>/riffs/<riff_slug>/pr-status", methods=["GET"])
+def get_riff_pr_status(slug, riff_slug):
+    """Get GitHub Pull Request status for a specific riff (using riff name as branch)"""
+    log_api_request(logger, "GET", f"/api/apps/{slug}/riffs/{riff_slug}/pr-status")
+    
+    try:
+        # Get UUID from headers
+        user_uuid = request.headers.get("X-User-UUID")
+        if not user_uuid:
+            logger.warning("❌ X-User-UUID header is required")
+            log_api_response(logger, "GET", f"/api/apps/{slug}/riffs/{riff_slug}/pr-status", 400)
+            return jsonify({"error": "X-User-UUID header is required"}), 400
+
+        user_uuid = user_uuid.strip()
+        if not user_uuid:
+            logger.warning("❌ Empty UUID provided in header")
+            log_api_response(logger, "GET", f"/api/apps/{slug}/riffs/{riff_slug}/pr-status", 400)
+            return jsonify({"error": "UUID cannot be empty"}), 400
+
+        # Load app to get GitHub URL
+        apps_storage = get_apps_storage(user_uuid)
+        app = apps_storage.load_app(slug)
+        if not app:
+            logger.warning(f"❌ App not found: {slug} for user {user_uuid[:8]}")
+            log_api_response(logger, "GET", f"/api/apps/{slug}/riffs/{riff_slug}/pr-status", 404)
+            return jsonify({"error": "App not found"}), 404
+
+        # Check if app has GitHub URL
+        github_url = app.get("github_url")
+        if not github_url:
+            logger.info(f"ℹ️ No GitHub URL configured for app {slug}")
+            log_api_response(logger, "GET", f"/api/apps/{slug}/riffs/{riff_slug}/pr-status", 200)
+            return jsonify({"pr_status": None, "message": "No GitHub URL configured"})
+
+        # Get user's GitHub token
+        try:
+            user_keys = load_user_keys(user_uuid)
+            github_token = user_keys.get("github")
+            
+            if not github_token:
+                logger.info(f"ℹ️ No GitHub token found for user {user_uuid[:8]}")
+                log_api_response(logger, "GET", f"/api/apps/{slug}/riffs/{riff_slug}/pr-status", 200)
+                return jsonify({"pr_status": None, "message": "No GitHub token configured"})
+
+            # Use riff name as branch name (this is the key fix!)
+            branch_name = riff_slug
+            logger.info(f"🔍 Getting PR status for riff branch: {branch_name}")
+            
+            # First try searching for PRs FROM this branch (head search)
+            logger.info(f"🔍 Trying head search: PRs from branch '{branch_name}'")
+            pr_status = get_pr_status(github_url, github_token, branch_name, search_by_base=False)
+            
+            # If no PRs found, try searching for PRs TO this branch (base search)
+            # This handles cases where the riff branch is the target branch
+            if not pr_status:
+                logger.info(f"🔍 No PRs found from branch '{branch_name}', trying base search")
+                logger.info(f"🔍 Trying base search: PRs targeting branch '{branch_name}'")
+                pr_status = get_pr_status(github_url, github_token, branch_name, search_by_base=True)
+            
+            if pr_status:
+                logger.info(f"✅ Found PR status for riff {riff_slug}: #{pr_status['number']}")
+            else:
+                logger.info(f"ℹ️ No PR found for riff {riff_slug} (branch: {branch_name})")
+            
+            log_api_response(logger, "GET", f"/api/apps/{slug}/riffs/{riff_slug}/pr-status", 200)
+            return jsonify({"pr_status": pr_status})
+            
+        except Exception as e:
+            logger.warning(f"⚠️ Error getting PR status: {str(e)}")
+            log_api_response(logger, "GET", f"/api/apps/{slug}/riffs/{riff_slug}/pr-status", 200)
+            return jsonify({"pr_status": None, "error": str(e)})
+
+    except Exception as e:
+        logger.error(f"💥 Error getting riff PR status: {str(e)}")
+        log_api_response(logger, "GET", f"/api/apps/{slug}/riffs/{riff_slug}/pr-status", 500)
+        return jsonify({"error": "Failed to get PR status"}), 500

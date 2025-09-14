@@ -482,9 +482,19 @@ def get_fly_status(project_slug, fly_token):
         return None
 
 
-def get_pr_status(repo_url, github_token, branch="main"):
-    """Get GitHub Pull Request status for a specific branch"""
-    logger.info(f"🔀 Checking PR status for: {repo_url} (branch: {branch})")
+def get_pr_status(repo_url, github_token, branch="main", search_by_base=False):
+    """Get GitHub Pull Request status for a specific branch
+    
+    Args:
+        repo_url: GitHub repository URL
+        github_token: GitHub API token
+        branch: Branch name to search for
+        search_by_base: If True, search for PRs targeting this branch as base.
+                       If False, search for PRs from this branch as head.
+    """
+    search_type = "base" if search_by_base else "head"
+    logger.info(f"🔀 Checking PR status for: {repo_url} (branch: {branch}, search_by: {search_type})")
+    logger.info(f"🔑 GitHub token provided: {bool(github_token)} (length: {len(github_token) if github_token else 0})")
 
     try:
         # Extract owner and repo from URL
@@ -498,7 +508,8 @@ def get_pr_status(repo_url, github_token, branch="main"):
             return None
 
         owner, repo = parts[0], parts[1]
-        logger.debug(f"🔍 GitHub repo: {owner}/{repo}")
+        logger.info(f"🔍 Parsed GitHub repo: {owner}/{repo}")
+        logger.info(f"🌿 Looking for PRs with branch: '{branch}'")
 
         headers = {
             "Authorization": f"token {github_token}",
@@ -509,64 +520,105 @@ def get_pr_status(repo_url, github_token, branch="main"):
         # Try multiple approaches to find the PR
         prs = []
         
-        # Approach 1: Look for PRs with head branch from the same owner
-        logger.debug(f"🔍 Trying approach 1: head={owner}:{branch}")
-        pr_response = requests.get(
-            f"https://api.github.com/repos/{owner}/{repo}/pulls?head={owner}:{branch}&state=open",
-            headers=headers,
-            timeout=10,
-        )
+        if search_by_base:
+            # Approach 1: Look for PRs targeting this branch as base
+            approach1_url = f"https://api.github.com/repos/{owner}/{repo}/pulls?base={branch}&state=open"
+            logger.info(f"🔍 Approach 1 - Searching for PRs targeting base branch '{branch}'")
+            logger.info(f"🔍 Approach 1 - URL: {approach1_url}")
+        else:
+            # Approach 1: Look for PRs with head branch from the same owner
+            approach1_url = f"https://api.github.com/repos/{owner}/{repo}/pulls?head={owner}:{branch}&state=open"
+            logger.info(f"🔍 Approach 1 - Searching for PRs from head branch '{owner}:{branch}'")
+            logger.info(f"🔍 Approach 1 - URL: {approach1_url}")
+        
+        pr_response = requests.get(approach1_url, headers=headers, timeout=10)
+        logger.info(f"🔍 Approach 1 - Response status: {pr_response.status_code}")
         
         if pr_response.status_code == 200:
             prs = pr_response.json()
-            logger.debug(f"🔍 Approach 1 found {len(prs)} PRs")
+            logger.info(f"🔍 Approach 1 - Found {len(prs)} PRs")
+            for pr in prs:
+                head_info = pr.get('head', {})
+                base_info = pr.get('base', {})
+                logger.info(f"🔍 Approach 1 - PR #{pr['number']}: {pr['title']}")
+                logger.info(f"🔍   Head: {head_info.get('label', 'unknown')} (ref: {head_info.get('ref', 'unknown')})")
+                logger.info(f"🔍   Base: {base_info.get('label', 'unknown')} (ref: {base_info.get('ref', 'unknown')})")
         else:
-            logger.debug(f"🔍 Approach 1 failed: {pr_response.status_code}")
+            logger.warning(f"🔍 Approach 1 - Failed with status {pr_response.status_code}: {pr_response.text[:200]}")
 
-        # Approach 2: If no PRs found, search all open PRs and filter by branch name
+        # Approach 2: If no PRs found, search all open PRs and filter
         if not prs:
-            logger.debug(f"🔍 Trying approach 2: searching all open PRs")
-            pr_response = requests.get(
-                f"https://api.github.com/repos/{owner}/{repo}/pulls?state=open",
-                headers=headers,
-                timeout=10,
-            )
+            approach2_url = f"https://api.github.com/repos/{owner}/{repo}/pulls?state=open"
+            logger.info(f"🔍 Approach 2 - Searching all open PRs and filtering by {search_type}")
+            logger.info(f"🔍 Approach 2 - URL: {approach2_url}")
+            
+            pr_response = requests.get(approach2_url, headers=headers, timeout=10)
+            logger.info(f"🔍 Approach 2 - Response status: {pr_response.status_code}")
             
             if pr_response.status_code == 200:
                 all_prs = pr_response.json()
-                logger.debug(f"🔍 Found {len(all_prs)} total open PRs")
+                logger.info(f"🔍 Approach 2 - Found {len(all_prs)} total open PRs")
                 
-                # Filter PRs by branch name in head.ref
-                prs = [pr for pr in all_prs if pr.get('head', {}).get('ref') == branch]
-                logger.debug(f"🔍 Approach 2 found {len(prs)} PRs matching branch '{branch}'")
+                # Log all PR branches for debugging (first 10)
+                logger.info("🔍 Approach 2 - All open PRs (first 10):")
+                for i, pr in enumerate(all_prs[:10]):
+                    head_info = pr.get('head', {})
+                    base_info = pr.get('base', {})
+                    logger.info(f"🔍   PR #{pr['number']}: '{pr['title']}'")
+                    logger.info(f"🔍     Head: {head_info.get('label', 'unknown')} (ref: {head_info.get('ref', 'unknown')})")
+                    logger.info(f"🔍     Base: {base_info.get('label', 'unknown')} (ref: {base_info.get('ref', 'unknown')})")
                 
-                # Log details of found PRs for debugging
+                if len(all_prs) > 10:
+                    logger.info(f"🔍   ... and {len(all_prs) - 10} more PRs")
+                
+                # Filter PRs based on search type
+                if search_by_base:
+                    logger.info(f"🔍 Approach 2 - Filtering for PRs targeting base '{branch}'")
+                    prs = [pr for pr in all_prs if pr.get('base', {}).get('ref') == branch]
+                else:
+                    logger.info(f"🔍 Approach 2 - Filtering for PRs from head '{branch}'")
+                    prs = [pr for pr in all_prs if pr.get('head', {}).get('ref') == branch]
+                
+                logger.info(f"🔍 Approach 2 - Found {len(prs)} PRs matching {search_type} '{branch}'")
+                
+                # Log details of matching PRs
                 for pr in prs:
                     head_info = pr.get('head', {})
-                    logger.debug(f"🔍 Found PR #{pr['number']}: {pr['title']} (head: {head_info.get('label', 'unknown')})")
+                    base_info = pr.get('base', {})
+                    logger.info(f"🔍 Approach 2 - Matched PR #{pr['number']}: {pr['title']}")
+                    logger.info(f"🔍   Head: {head_info.get('label', 'unknown')}")
+                    logger.info(f"🔍   Base: {base_info.get('label', 'unknown')}")
             else:
-                logger.warning(f"❌ Failed to get all PRs: {pr_response.status_code}")
+                logger.warning(f"🔍 Approach 2 - Failed with status {pr_response.status_code}: {pr_response.text[:200]}")
 
         # Approach 3: If still no PRs found, try partial matching for branch names
-        # This handles cases where branch names might have slight variations
         if not prs and pr_response.status_code == 200:
-            logger.debug(f"🔍 Trying approach 3: partial branch name matching")
+            logger.info(f"🔍 Approach 3 - Trying partial branch name matching")
             all_prs = pr_response.json() if 'all_prs' not in locals() else all_prs
             
             # Look for PRs where the branch name is contained in the head.ref or vice versa
             partial_matches = []
+            logger.info(f"🔍 Approach 3 - Checking for partial matches with '{branch}'")
+            
             for pr in all_prs:
                 head_ref = pr.get('head', {}).get('ref', '')
-                if head_ref and (branch.lower() in head_ref.lower() or head_ref.lower() in branch.lower()):
-                    partial_matches.append(pr)
-                    logger.debug(f"🔍 Partial match: PR #{pr['number']} has head '{head_ref}' (looking for '{branch}')")
+                if head_ref:
+                    branch_lower = branch.lower()
+                    head_ref_lower = head_ref.lower()
+                    
+                    if branch_lower in head_ref_lower or head_ref_lower in branch_lower:
+                        partial_matches.append(pr)
+                        logger.info(f"🔍 Approach 3 - Partial match: PR #{pr['number']} has head '{head_ref}' (contains or contained in '{branch}')")
             
             if partial_matches:
-                logger.debug(f"🔍 Approach 3 found {len(partial_matches)} PRs with partial branch name matches")
+                logger.info(f"🔍 Approach 3 - Found {len(partial_matches)} PRs with partial branch name matches")
                 prs = partial_matches
+            else:
+                logger.info(f"🔍 Approach 3 - No partial matches found")
 
         if not prs:
-            logger.info(f"ℹ️ No open PRs found for branch {branch} using any approach")
+            logger.warning(f"❌ No open PRs found for {search_type} branch '{branch}' using any approach")
+            logger.warning(f"❌ Summary: Searched repo {owner}/{repo} with {len(all_prs) if 'all_prs' in locals() else 'unknown'} total open PRs")
             return None
 
         # Get the first (most recent) PR
