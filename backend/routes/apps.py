@@ -611,6 +611,132 @@ def get_pr_status(repo_url, github_token, branch="main"):
         return None
 
 
+def close_github_pr(repo_url, github_token, branch_name):
+    """Close GitHub Pull Request for a specific branch"""
+    logger.info(f"🔀 Closing PR for branch: {branch_name} in {repo_url}")
+
+    try:
+        # Extract owner and repo from URL
+        if not repo_url or "github.com" not in repo_url:
+            logger.warning(f"❌ Invalid GitHub URL: {repo_url}")
+            return False, "Invalid GitHub URL"
+
+        parts = repo_url.replace("https://github.com/", "").split("/")
+        if len(parts) < 2:
+            logger.warning(f"❌ Cannot parse GitHub URL: {repo_url}")
+            return False, "Cannot parse GitHub URL"
+
+        owner, repo = parts[0], parts[1]
+        logger.debug(f"🔍 GitHub repo: {owner}/{repo}, branch: {branch_name}")
+
+        headers = {
+            "Authorization": f"token {github_token}",
+            "Accept": "application/vnd.github.v3+json",
+            "User-Agent": "OpenVibe-Backend/1.0",
+        }
+
+        # Find open PRs for this branch
+        pr_response = requests.get(
+            f"https://api.github.com/repos/{owner}/{repo}/pulls?head={owner}:{branch_name}&state=open",
+            headers=headers,
+            timeout=10,
+        )
+
+        if pr_response.status_code != 200:
+            logger.warning(f"❌ Failed to get PRs: {pr_response.status_code}")
+            return False, f"Failed to get PRs: {pr_response.status_code}"
+
+        prs = pr_response.json()
+        
+        if not prs:
+            logger.info(f"ℹ️ No open PRs found for branch: {branch_name}")
+            return True, "No open PRs found for this branch"
+
+        # Close each PR found (usually there should be only one)
+        closed_prs = []
+        for pr in prs:
+            pr_number = pr["number"]
+            logger.info(f"🔀 Closing PR #{pr_number} for branch: {branch_name}")
+            
+            close_data = {"state": "closed"}
+            close_response = requests.patch(
+                f"https://api.github.com/repos/{owner}/{repo}/pulls/{pr_number}",
+                headers=headers,
+                json=close_data,
+                timeout=10,
+            )
+
+            if close_response.status_code == 200:
+                logger.info(f"✅ Successfully closed PR #{pr_number}")
+                closed_prs.append(pr_number)
+            else:
+                logger.error(f"❌ Failed to close PR #{pr_number}: {close_response.status_code}")
+                return False, f"Failed to close PR #{pr_number}"
+
+        if closed_prs:
+            return True, f"Closed PR(s): {', '.join(map(str, closed_prs))}"
+        else:
+            return True, "No PRs needed to be closed"
+
+    except Exception as e:
+        logger.error(f"💥 Error closing GitHub PR: {str(e)}")
+        return False, f"Error closing PR: {str(e)}"
+
+
+def delete_github_branch(repo_url, github_token, branch_name):
+    """Delete a GitHub branch"""
+    logger.info(f"🌿 Deleting branch: {branch_name} from {repo_url}")
+
+    try:
+        # Extract owner and repo from URL
+        if not repo_url or "github.com" not in repo_url:
+            logger.warning(f"❌ Invalid GitHub URL: {repo_url}")
+            return False, "Invalid GitHub URL"
+
+        parts = repo_url.replace("https://github.com/", "").split("/")
+        if len(parts) < 2:
+            logger.warning(f"❌ Cannot parse GitHub URL: {repo_url}")
+            return False, "Cannot parse GitHub URL"
+
+        owner, repo = parts[0], parts[1]
+        logger.debug(f"🔍 GitHub repo: {owner}/{repo}, branch: {branch_name}")
+
+        # Don't delete main/master branches
+        if branch_name.lower() in ['main', 'master']:
+            logger.warning(f"⚠️ Cannot delete protected branch: {branch_name}")
+            return False, f"Cannot delete protected branch: {branch_name}"
+
+        headers = {
+            "Authorization": f"token {github_token}",
+            "Accept": "application/vnd.github.v3+json",
+            "User-Agent": "OpenVibe-Backend/1.0",
+        }
+
+        # Delete the branch
+        delete_response = requests.delete(
+            f"https://api.github.com/repos/{owner}/{repo}/git/refs/heads/{branch_name}",
+            headers=headers,
+            timeout=10,
+        )
+
+        if delete_response.status_code == 204:
+            logger.info(f"✅ Successfully deleted branch: {branch_name}")
+            return True, f"Branch '{branch_name}' deleted successfully"
+        elif delete_response.status_code == 404:
+            logger.warning(f"⚠️ Branch not found: {branch_name}")
+            return True, f"Branch '{branch_name}' not found (may have been already deleted)"
+        elif delete_response.status_code == 422:
+            logger.warning(f"⚠️ Cannot delete branch: {branch_name} (may be protected)")
+            return False, f"Cannot delete branch '{branch_name}' (may be protected)"
+        else:
+            logger.error(f"❌ Failed to delete branch: {delete_response.status_code} - {delete_response.text}")
+            return False, f"GitHub API error: {delete_response.status_code}"
+
+    except Exception as e:
+        logger.error(f"💥 Error deleting GitHub branch: {str(e)}")
+        return False, f"Error deleting branch: {str(e)}"
+
+
 def delete_github_repo(repo_url, github_token):
     """Delete a GitHub repository"""
     logger.info(f"🗑️ Deleting GitHub repo: {repo_url}")

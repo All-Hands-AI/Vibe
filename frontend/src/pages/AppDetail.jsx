@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { getUserUUID } from '../utils/uuid'
 import AppStatus from '../components/AppStatus'
+import ConfirmationModal from '../components/ConfirmationModal'
 
 function AppDetail() {
   const { slug } = useParams()
@@ -13,6 +14,13 @@ function AppDetail() {
   const [newRiffName, setNewRiffName] = useState('')
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
+  
+  // Delete modal state
+  const [deleteModal, setDeleteModal] = useState({
+    isOpen: false,
+    riff: null,
+    isDeleting: false
+  })
 
 
 
@@ -169,6 +177,102 @@ function AppDetail() {
     } finally {
       setCreating(false)
     }
+  }
+
+  // Handle delete riff button click
+  const handleDeleteClick = (riff, event) => {
+    event.preventDefault() // Prevent navigation to riff detail
+    event.stopPropagation() // Stop event bubbling
+    
+    console.log('🗑️ Delete button clicked for riff:', riff.name)
+    setDeleteModal({
+      isOpen: true,
+      riff: riff,
+      isDeleting: false
+    })
+  }
+
+  // Handle delete confirmation
+  const handleDeleteConfirm = async () => {
+    const riff = deleteModal.riff
+    if (!riff) return
+
+    console.log('🗑️ Confirming deletion of riff:', riff.name)
+    
+    try {
+      setDeleteModal(prev => ({ ...prev, isDeleting: true }))
+      setError('')
+      setSuccess('')
+
+      const uuid = getUserUUID()
+      console.log('🆔 User UUID:', uuid)
+
+      const requestOptions = {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-User-UUID': uuid
+        }
+      }
+      
+      console.log('📡 Delete request options:', requestOptions)
+
+      const response = await fetch(`/api/apps/${app.slug}/riffs/${riff.slug}`, requestOptions)
+      
+      console.log('📡 Delete response status:', response?.status)
+      console.log('📡 Delete response ok:', response?.ok)
+
+      const data = await response.json()
+      console.log('📊 Delete response data:', data)
+
+      if (!response.ok) {
+        console.error('❌ Delete riff failed:', data)
+        throw new Error(data.error || 'Failed to delete riff')
+      }
+
+      console.log('✅ Riff deleted successfully:', data)
+      
+      // Show success message
+      let successMessage = `Riff "${riff.name}" deleted successfully!`
+      if (data.warnings && data.warnings.length > 0) {
+        successMessage += ` (Note: ${data.warnings.join(', ')})`
+      }
+      setSuccess(successMessage)
+      
+      // Close modal
+      setDeleteModal({
+        isOpen: false,
+        riff: null,
+        isDeleting: false
+      })
+      
+      // Refresh riffs list
+      console.log('🔄 Refreshing riffs list...')
+      await fetchRiffs()
+      
+      // Clear success message after 8 seconds (longer for delete confirmation)
+      setTimeout(() => setSuccess(''), 8000)
+      
+    } catch (err) {
+      console.error('❌ Error deleting riff:', err)
+      console.error('❌ Error stack:', err.stack)
+      setError(err.message || 'Failed to delete riff. Please try again.')
+      
+      // Keep modal open but stop loading state
+      setDeleteModal(prev => ({ ...prev, isDeleting: false }))
+    }
+  }
+
+  // Handle delete modal close
+  const handleDeleteCancel = () => {
+    if (deleteModal.isDeleting) return // Prevent closing while deleting
+    
+    console.log('❌ Delete cancelled')
+    setDeleteModal({
+      isOpen: false,
+      riff: null,
+      isDeleting: false
+    })
   }
 
   // Load app on component mount
@@ -331,27 +435,40 @@ function AppDetail() {
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {riffs.map((riff) => (
-                      <Link 
+                      <div 
                         key={riff.slug} 
-                        to={`/apps/${app.slug}/riffs/${riff.slug}`}
-                        className="block hacker-card rounded-lg border border-gray-700 hover:border-cyber-muted transition-all duration-300 hover:transform hover:-translate-y-1 p-6"
+                        className="hacker-card rounded-lg border border-gray-700 hover:border-cyber-muted transition-all duration-300 hover:transform hover:-translate-y-1 p-6 relative"
                       >
-                        <div className="mb-4">
-                          <h4 className="text-xl font-semibold text-cyber-text mb-1">{riff.name}</h4>
-                          <span className="text-sm text-cyber-muted font-mono">{riff.slug}</span>
-                        </div>
-                        
-                        <div className="space-y-2">
-                          <p className="text-sm text-cyber-muted">
-                            Created: {new Date(riff.created_at).toLocaleDateString()}
-                          </p>
-                          {riff.last_message_at && (
+                        <Link 
+                          to={`/apps/${app.slug}/riffs/${riff.slug}`}
+                          className="block"
+                        >
+                          <div className="mb-4 pr-12">
+                            <h4 className="text-xl font-semibold text-cyber-text mb-1">{riff.name}</h4>
+                            <span className="text-sm text-cyber-muted font-mono">{riff.slug}</span>
+                          </div>
+                          
+                          <div className="space-y-2">
                             <p className="text-sm text-cyber-muted">
-                              Last activity: {new Date(riff.last_message_at).toLocaleDateString()}
+                              Created: {new Date(riff.created_at).toLocaleDateString()}
                             </p>
-                          )}
-                        </div>
-                      </Link>
+                            {riff.last_message_at && (
+                              <p className="text-sm text-cyber-muted">
+                                Last activity: {new Date(riff.last_message_at).toLocaleDateString()}
+                              </p>
+                            )}
+                          </div>
+                        </Link>
+                        
+                        <button 
+                          className="absolute top-4 right-4 text-red-400 hover:text-red-300 text-lg p-2 hover:bg-red-900/20 rounded transition-colors duration-200 z-10"
+                          onClick={(e) => handleDeleteClick(riff, e)}
+                          title={`Delete riff "${riff.name}"`}
+                          aria-label={`Delete riff "${riff.name}"`}
+                        >
+                          🗑️
+                        </button>
+                      </div>
                     ))}
                   </div>
                 )}
@@ -360,6 +477,39 @@ function AppDetail() {
           </div>
         </div>
       </div>
+
+      {/* Delete Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={deleteModal.isOpen}
+        onClose={handleDeleteCancel}
+        onConfirm={handleDeleteConfirm}
+        title="Delete Riff"
+        message={
+          deleteModal.riff ? (
+            <div>
+              <p className="mb-4">
+                Are you sure you want to delete the riff <strong>&quot;{deleteModal.riff.name}&quot;</strong>?
+              </p>
+              <p className="mb-4 text-cyber-muted">
+                This will permanently delete:
+              </p>
+              <ul className="list-disc list-inside text-cyber-muted space-y-1 mb-4">
+                <li>The Fly.io app: <code className="bg-cyber-accent px-1 rounded">{app?.slug}-{deleteModal.riff.slug}</code></li>
+                <li>The GitHub branch: <code className="bg-cyber-accent px-1 rounded">{deleteModal.riff.slug}</code></li>
+                <li>Any open pull request for this branch</li>
+                <li>All riff data and chat history</li>
+              </ul>
+              <p className="text-red-400 font-semibold">
+                This action cannot be undone.
+              </p>
+            </div>
+          ) : null
+        }
+        confirmText="Delete Riff"
+        cancelText="Cancel"
+        isDestructive={true}
+        isLoading={deleteModal.isDeleting}
+      />
     </div>
   )
 }
