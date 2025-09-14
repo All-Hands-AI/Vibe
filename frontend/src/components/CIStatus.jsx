@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import PropTypes from 'prop-types'
 
 /**
@@ -82,7 +82,9 @@ function formatCheckStatus(check) {
 }
 
 function CIStatus({ prStatus }) {
-  const [showPopover, setShowPopover] = useState(false)
+  const [showModal, setShowModal] = useState(false)
+  const modalRef = useRef(null)
+  const triggerRef = useRef(null)
 
   if (!prStatus || (!prStatus.checks && !prStatus.ci_status)) {
     return null
@@ -91,68 +93,133 @@ function CIStatus({ prStatus }) {
   const overallStatus = getOverallCIStatus(prStatus.checks, prStatus.ci_status)
   const statusDisplay = getStatusDisplay(overallStatus)
 
-  const handleMouseEnter = () => setShowPopover(true)
-  const handleMouseLeave = () => setShowPopover(false)
+  const handleClick = (e) => {
+    e.stopPropagation()
+    setShowModal(true)
+  }
+
+  const handleClose = () => {
+    setShowModal(false)
+  }
+
+  // Handle click outside to close modal
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (showModal && 
+          modalRef.current && 
+          !modalRef.current.contains(event.target) &&
+          triggerRef.current &&
+          !triggerRef.current.contains(event.target)) {
+        setShowModal(false)
+      }
+    }
+
+    if (showModal) {
+      document.addEventListener('mousedown', handleClickOutside)
+      return () => {
+        document.removeEventListener('mousedown', handleClickOutside)
+      }
+    }
+  }, [showModal])
+
+  // Handle escape key to close modal
+  useEffect(() => {
+    const handleEscapeKey = (event) => {
+      if (event.key === 'Escape' && showModal) {
+        setShowModal(false)
+      }
+    }
+
+    if (showModal) {
+      document.addEventListener('keydown', handleEscapeKey)
+      return () => {
+        document.removeEventListener('keydown', handleEscapeKey)
+      }
+    }
+  }, [showModal])
 
   return (
-    <div 
-      className="relative inline-block"
-      onMouseEnter={handleMouseEnter}
-      onMouseLeave={handleMouseLeave}
-    >
-      <div
-        className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-sm font-mono cursor-pointer transition-all duration-200 ${statusDisplay.color} ${statusDisplay.bgColor} hover:bg-opacity-30`}
-      >
-        <span className="text-xs">{statusDisplay.icon}</span>
-        <span>CI: {statusDisplay.label}</span>
+    <>
+      <div className="relative inline-block">
+        <div
+          ref={triggerRef}
+          onClick={handleClick}
+          className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-sm font-mono cursor-pointer transition-all duration-200 ${statusDisplay.color} ${statusDisplay.bgColor} hover:bg-opacity-30`}
+        >
+          <span className="text-xs">{statusDisplay.icon}</span>
+          <span>CI: {statusDisplay.label}</span>
+        </div>
       </div>
 
-      {/* Popover */}
-      {showPopover && (prStatus.checks && prStatus.checks.length > 0) && (
-        <div className="absolute top-full left-0 mt-2 w-80 bg-gray-900 border border-gray-700 rounded-lg shadow-xl z-50 p-4">
-          <div className="text-sm font-mono text-cyber-text mb-3">
-            <div className="font-semibold text-neon-green mb-2">CI Checks</div>
-            <div className="space-y-2">
-              {prStatus.checks.map((check, index) => {
-                const checkDisplay = formatCheckStatus(check)
-                return (
-                  <div key={index} className="flex items-center justify-between gap-3 p-2 bg-gray-800 rounded">
-                    <div className="flex items-center gap-2 flex-1 min-w-0">
-                      <span className="text-xs">{checkDisplay.icon}</span>
-                      <span className="text-xs text-cyber-muted truncate">{check.name}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className={`text-xs ${checkDisplay.color}`}>{checkDisplay.label}</span>
-                      {check.details_url && (
-                        <a
-                          href={check.details_url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-blue-400 hover:text-blue-300 text-xs"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          🔗
-                        </a>
-                      )}
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-          </div>
+      {/* Modal */}
+      {showModal && (prStatus.checks && prStatus.checks.length > 0) && (
+        <>
+          {/* Backdrop */}
+          <div className="fixed inset-0 bg-black bg-opacity-50 z-40" onClick={handleClose} />
           
-          {/* Overall status summary */}
-          <div className="border-t border-gray-700 pt-3 mt-3">
-            <div className="flex items-center gap-2 text-xs font-mono">
-              <span className="text-cyber-muted">Overall:</span>
-              <span className={`${statusDisplay.color}`}>
-                {statusDisplay.icon} {statusDisplay.label}
-              </span>
+          {/* Modal Content */}
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <div 
+              ref={modalRef}
+              className="bg-gray-900 border border-gray-700 rounded-lg shadow-xl max-w-md w-full max-h-[80vh] overflow-y-auto"
+            >
+              {/* Header with close button */}
+              <div className="flex items-center justify-between p-4 border-b border-gray-700">
+                <h3 className="text-sm font-semibold text-neon-green font-mono">CI Checks</h3>
+                <button
+                  onClick={handleClose}
+                  className="text-gray-400 hover:text-white transition-colors duration-200 text-lg font-bold w-6 h-6 flex items-center justify-center"
+                  aria-label="Close"
+                >
+                  ×
+                </button>
+              </div>
+              
+              {/* Content */}
+              <div className="p-4">
+                <div className="space-y-2 mb-4">
+                  {prStatus.checks.map((check, index) => {
+                    const checkDisplay = formatCheckStatus(check)
+                    return (
+                      <div key={index} className="flex items-center justify-between gap-3 p-2 bg-gray-800 rounded">
+                        <div className="flex items-center gap-2 flex-1 min-w-0">
+                          <span className="text-xs">{checkDisplay.icon}</span>
+                          <span className="text-xs text-cyber-muted truncate">{check.name}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className={`text-xs ${checkDisplay.color}`}>{checkDisplay.label}</span>
+                          {check.details_url && (
+                            <a
+                              href={check.details_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-blue-400 hover:text-blue-300 text-xs"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              🔗
+                            </a>
+                          )}
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+                
+                {/* Overall status summary */}
+                <div className="border-t border-gray-700 pt-3">
+                  <div className="flex items-center gap-2 text-xs font-mono">
+                    <span className="text-cyber-muted">Overall:</span>
+                    <span className={`${statusDisplay.color}`}>
+                      {statusDisplay.icon} {statusDisplay.label}
+                    </span>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
-        </div>
+        </>
       )}
-    </div>
+    </>
   )
 }
 
