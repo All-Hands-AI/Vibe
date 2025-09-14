@@ -9,6 +9,11 @@ from routes.apps import apps_bp
 from routes.riffs import riffs_bp
 from utils.logging import get_logger, log_system_info
 
+# Import and apply mocks if in mock mode
+from mocks import MOCK_MODE, patch_requests_for_mock_mode
+if MOCK_MODE:
+    patch_requests_for_mock_mode()
+
 # No-op import to ensure agent-sdk loads properly
 try:
     import openhands.sdk  # noqa: F401
