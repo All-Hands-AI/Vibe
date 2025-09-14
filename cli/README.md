@@ -14,6 +14,7 @@
 
 ## Installation
 
+### Option 1: Install from Source
 ```bash
 # Clone the repository and navigate to the CLI directory
 cd OpenVibe/cli
@@ -22,6 +23,25 @@ cd OpenVibe/cli
 uv venv
 source .venv/bin/activate
 uv pip install -e .
+```
+
+### Option 2: Download Pre-built Binary
+Pre-built binaries are automatically created for each PR and release:
+- **Linux (x64)**: `openvibe-linux-x64`
+- **macOS (x64)**: `openvibe-macos-x64`
+- **Windows (x64)**: `openvibe-windows-x64.exe`
+
+Download from GitHub Actions artifacts or releases, make executable, and add to your PATH.
+
+### Option 3: Build Binary Locally
+```bash
+# Unix/macOS
+cd OpenVibe/cli
+./build.sh
+
+# Windows
+cd OpenVibe\cli
+build.bat
 ```
 
 ## Quick Start
@@ -145,6 +165,35 @@ Configuration is stored in `~/.openvibe/config.json`:
   "fly_token": "your-fly-token",
   "anthropic_api_key": "your-anthropic-key"
 }
+```
+
+## Binary Distribution
+
+The CLI is automatically packaged as standalone binaries using PyInstaller:
+
+### Automated Builds
+- **GitHub Actions**: Binaries are built for Linux, macOS, and Windows on every PR
+- **Artifacts**: Available as GitHub Actions artifacts (30-day retention)
+- **Releases**: Tagged releases include permanent binary downloads
+- **Cross-platform**: Native binaries for each platform with no dependencies
+
+### Build Process
+1. **PyInstaller**: Packages Python app and dependencies into single executable
+2. **Testing**: Each binary is tested with `--version` and `--help` commands
+3. **Artifacts**: Uploaded to GitHub Actions for easy download
+4. **Comments**: PR comments include direct download links
+
+### Local Building
+```bash
+# Install build dependencies
+uv pip install -e .[build]
+
+# Build using spec file
+pyinstaller --clean --noconfirm openvibe.spec
+
+# Or use convenience scripts
+./build.sh        # Unix/macOS
+build.bat         # Windows
 ```
 
 ## Development

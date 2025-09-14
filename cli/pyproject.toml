@@ -40,6 +40,9 @@ dev = [
     "mypy>=1.0.0",
     "types-requests",
 ]
+build = [
+    "pyinstaller>=6.0.0",
+]
 
 [project.scripts]
 openvibe = "openvibe_cli.main:main"

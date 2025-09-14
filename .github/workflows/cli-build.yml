@@ -1,0 +1,235 @@
+name: Build CLI Binary
+
+on:
+  pull_request:
+    paths:
+      - 'cli/**'
+      - '.github/workflows/cli-build.yml'
+  push:
+    branches:
+      - main
+    paths:
+      - 'cli/**'
+      - '.github/workflows/cli-build.yml'
+
+jobs:
+  build:
+    name: Build CLI Binary
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            platform: linux
+            arch: x64
+            binary_name: openvibe-linux-x64
+          - os: macos-latest
+            platform: macos
+            arch: x64
+            binary_name: openvibe-macos-x64
+          - os: windows-latest
+            platform: windows
+            arch: x64
+            binary_name: openvibe-windows-x64.exe
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.12'
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+
+      - name: Create virtual environment and install dependencies
+        run: |
+          cd cli
+          uv venv
+          uv pip install -e .[build]
+
+      - name: Build binary with PyInstaller (Unix)
+        if: matrix.os != 'windows-latest'
+        run: |
+          cd cli
+          source .venv/bin/activate
+          pyinstaller --clean --noconfirm openvibe.spec
+          mv dist/openvibe dist/${{ matrix.binary_name }}
+
+      - name: Build binary with PyInstaller (Windows)
+        if: matrix.os == 'windows-latest'
+        run: |
+          cd cli
+          .venv\Scripts\activate
+          pyinstaller --clean --noconfirm openvibe.spec
+          move dist\openvibe.exe dist\${{ matrix.binary_name }}
+
+      - name: Test binary (Unix)
+        if: matrix.os != 'windows-latest'
+        run: |
+          cd cli/dist
+          ./${{ matrix.binary_name }} --version
+          ./${{ matrix.binary_name }} --help
+
+      - name: Test binary (Windows)
+        if: matrix.os == 'windows-latest'
+        run: |
+          cd cli/dist
+          .\${{ matrix.binary_name }} --version
+          .\${{ matrix.binary_name }} --help
+
+      - name: Upload binary artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.binary_name }}
+          path: cli/dist/${{ matrix.binary_name }}
+          retention-days: 30
+
+  comment:
+    name: Post Download Links
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.event_name == 'pull_request'
+    
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: List artifacts
+        run: |
+          echo "Downloaded artifacts:"
+          find artifacts -type f -name "openvibe-*" -exec ls -la {} \;
+
+      - name: Post comment with download links
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const path = require('path');
+            
+            // Get the run ID for artifact URLs
+            const runId = context.runId;
+            const repo = context.repo;
+            
+            // Create download URLs for each platform
+            const platforms = [
+              { name: 'Linux (x64)', artifact: 'openvibe-linux-x64' },
+              { name: 'macOS (x64)', artifact: 'openvibe-macos-x64' },
+              { name: 'Windows (x64)', artifact: 'openvibe-windows-x64.exe' }
+            ];
+            
+            let comment = `## 🚀 CLI Binary Downloads\n\n`;
+            comment += `The OpenVibe CLI has been packaged as standalone binaries for easy distribution:\n\n`;
+            
+            for (const platform of platforms) {
+              const downloadUrl = `https://github.com/${repo.owner}/${repo.repo}/actions/runs/${runId}/artifacts`;
+              comment += `### ${platform.name}\n`;
+              comment += `📦 **[Download ${platform.artifact}](${downloadUrl})**\n\n`;
+            }
+            
+            comment += `### 📋 Installation Instructions\n\n`;
+            comment += `1. Download the binary for your platform from the links above\n`;
+            comment += `2. Make it executable (Unix/macOS): \`chmod +x openvibe-*\`\n`;
+            comment += `3. Move to your PATH: \`sudo mv openvibe-* /usr/local/bin/openvibe\`\n`;
+            comment += `4. Run: \`openvibe --help\`\n\n`;
+            
+            comment += `### ✨ Features\n\n`;
+            comment += `- 🤙 **1:1 Frontend Parity**: All web features available in CLI\n`;
+            comment += `- 📱 **Apps Management**: Create, list, show, delete apps\n`;
+            comment += `- 🎵 **Riffs Management**: Create and manage riffs within apps\n`;
+            comment += `- 💬 **Interactive Chat**: Real-time chat with full-screen and simple modes\n`;
+            comment += `- 🔧 **Setup & Config**: Easy configuration and API key management\n`;
+            comment += `- 📊 **Status Monitoring**: System health and integration status\n`;
+            comment += `- 🎨 **Beautiful UI**: Rich terminal interface with colors and progress bars\n\n`;
+            
+            comment += `### 🎯 Quick Start\n\n`;
+            comment += `\`\`\`bash\n`;
+            comment += `# Welcome and setup\n`;
+            comment += `openvibe welcome\n`;
+            comment += `openvibe setup\n\n`;
+            comment += `# Set up mock keys for testing\n`;
+            comment += `openvibe integrations setup-mock\n\n`;
+            comment += `# Create and manage apps\n`;
+            comment += `openvibe apps create "My App"\n`;
+            comment += `openvibe apps list\n\n`;
+            comment += `# Create riffs and chat\n`;
+            comment += `openvibe riffs create my-app "My Riff"\n`;
+            comment += `openvibe chat my-app my-riff --simple\n`;
+            comment += `\`\`\`\n\n`;
+            
+            comment += `---\n`;
+            comment += `*Binaries are automatically built and tested on every PR. They expire after 30 days.*`;
+            
+            // Post the comment
+            await github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: repo.owner,
+              repo: repo.repo,
+              body: comment
+            });
+
+  release:
+    name: Create Release Assets
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Create release tag
+        id: tag
+        run: |
+          # Create a tag based on the current date and commit
+          TAG="cli-v$(date +'%Y.%m.%d')-$(git rev-parse --short HEAD)"
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+          git tag $TAG
+          git push origin $TAG
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ steps.tag.outputs.tag }}
+          name: "OpenVibe CLI ${{ steps.tag.outputs.tag }}"
+          body: |
+            ## OpenVibe CLI Binary Release
+            
+            🤙 Standalone binaries for the OpenVibe CLI with 1:1 frontend parity.
+            
+            ### Downloads
+            - **Linux (x64)**: `openvibe-linux-x64`
+            - **macOS (x64)**: `openvibe-macos-x64` 
+            - **Windows (x64)**: `openvibe-windows-x64.exe`
+            
+            ### Installation
+            1. Download the binary for your platform
+            2. Make executable (Unix/macOS): `chmod +x openvibe-*`
+            3. Move to PATH: `sudo mv openvibe-* /usr/local/bin/openvibe`
+            4. Run: `openvibe --help`
+            
+            ### Features
+            - Apps and riffs management
+            - Interactive chat interface
+            - Configuration and setup
+            - Status monitoring
+            - Beautiful terminal UI
+            
+            Built from commit: ${{ github.sha }}
+          files: |
+            artifacts/openvibe-linux-x64/openvibe-linux-x64
+            artifacts/openvibe-macos-x64/openvibe-macos-x64
+            artifacts/openvibe-windows-x64.exe/openvibe-windows-x64.exe
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
