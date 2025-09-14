@@ -485,22 +485,25 @@ def get_fly_status(project_slug, fly_token):
 def get_pr_status(repo_url, github_token, branch="main", search_by_base=False):
     """
     Get GitHub Pull Request status for a specific branch.
-    
+
     Args:
         repo_url: GitHub repository URL
         github_token: GitHub API token
         branch: Branch name to search for
         search_by_base: If True, search for PRs targeting this branch as base.
                        If False, search for PRs from this branch as head.
-    
+
     Returns:
         dict: PR status information or None if no PR found
     """
 
-    
     search_type = "base" if search_by_base else "head"
-    logger.info(f"🔀 Checking PR status for: {repo_url} (branch: {branch}, search_by: {search_type})")
-    logger.info(f"🔑 GitHub token provided: {bool(github_token)} (length: {len(github_token) if github_token else 0})")
+    logger.info(
+        f"🔀 Checking PR status for: {repo_url} (branch: {branch}, search_by: {search_type})"
+    )
+    logger.info(
+        f"🔑 GitHub token provided: {bool(github_token)} (length: {len(github_token) if github_token else 0})"
+    )
 
     if not github_token:
         logger.warning("❌ No GitHub token provided")
@@ -534,30 +537,36 @@ def get_pr_status(repo_url, github_token, branch="main", search_by_base=False):
             # Search for PRs from this branch as head
             api_url = f"https://api.github.com/repos/{owner}/{repo}/pulls?head={owner}:{branch}&state=open"
             logger.info(f"🔍 Searching for PRs from head branch '{owner}:{branch}'")
-        
+
         logger.info(f"🔍 API URL: {api_url}")
-        
+
         pr_response = requests.get(api_url, headers=headers, timeout=10)
         logger.info(f"🔍 Response status: {pr_response.status_code}")
-        
+
         if pr_response.status_code != 200:
-            logger.warning(f"❌ GitHub API request failed: {pr_response.status_code} - {pr_response.text[:200]}")
+            logger.warning(
+                f"❌ GitHub API request failed: {pr_response.status_code} - {pr_response.text[:200]}"
+            )
             return None
-        
+
         prs = pr_response.json()
         logger.info(f"🔍 Found {len(prs)} PRs")
-        
+
         if not prs:
             logger.info(f"ℹ️ No open PRs found for {search_type} branch '{branch}'")
             return None
-        
+
         # Log details of found PRs
         for pr in prs:
-            head_info = pr.get('head', {})
-            base_info = pr.get('base', {})
+            head_info = pr.get("head", {})
+            base_info = pr.get("base", {})
             logger.info(f"🔍 PR #{pr['number']}: {pr['title']}")
-            logger.info(f"🔍   Head: {head_info.get('label', 'unknown')} (ref: {head_info.get('ref', 'unknown')})")
-            logger.info(f"🔍   Base: {base_info.get('label', 'unknown')} (ref: {base_info.get('ref', 'unknown')})")
+            logger.info(
+                f"🔍   Head: {head_info.get('label', 'unknown')} (ref: {head_info.get('ref', 'unknown')})"
+            )
+            logger.info(
+                f"🔍   Base: {base_info.get('label', 'unknown')} (ref: {base_info.get('ref', 'unknown')})"
+            )
 
         # Get the first (most recent) PR
         pr = prs[0]
@@ -646,6 +655,8 @@ def get_pr_status(repo_url, github_token, branch="main", search_by_base=False):
     except Exception as e:
         logger.error(f"❌ Unexpected error while fetching PR status: {str(e)}")
         return None
+
+
 def close_github_pr(repo_url, github_token, branch_name):
     """Close GitHub Pull Request for a specific branch"""
     logger.info(f"🔀 Closing PR for branch: {branch_name} in {repo_url}")
@@ -1138,8 +1149,12 @@ def get_app(slug):
 
                 # Get PR status for the current branch
                 branch = app.get("branch", "main")
-                logger.info(f"🔍 APPS ENDPOINT: Getting PR status for app branch: {branch}")
-                logger.info(f"🔍 APPS ENDPOINT: This is the OLD logic that searches for head='{branch}'")
+                logger.info(
+                    f"🔍 APPS ENDPOINT: Getting PR status for app branch: {branch}"
+                )
+                logger.info(
+                    f"🔍 APPS ENDPOINT: This is the OLD logic that searches for head='{branch}'"
+                )
                 pr_status = get_pr_status(app["github_url"], github_token, branch)
 
             # Get Fly.io status if token is available
