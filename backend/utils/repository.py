@@ -342,9 +342,7 @@ def clone_repository(
                     if pr_success:
                         logger.info(f"🔀 Pull request created: {pr_result}")
                     else:
-                        logger.warning(
-                            f"⚠️ Failed to create pull request: {pr_result}"
-                        )
+                        logger.warning(f"⚠️ Failed to create pull request: {pr_result}")
                 else:
                     logger.warning(f"⚠️ Failed to push branch: {push_result.stderr}")
             elif not github_token:
