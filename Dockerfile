@@ -66,6 +66,9 @@ RUN mkdir -p /data && chown -R www-data:www-data /data
 # Copy nginx configuration
 COPY nginx.conf /etc/nginx/sites-available/default
 
+# Copy htpasswd file for basic authentication
+COPY .htpasswd /etc/nginx/.htpasswd
+
 # Copy supervisor configuration
 COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 
