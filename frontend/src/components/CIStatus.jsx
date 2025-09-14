@@ -86,13 +86,6 @@ function CIStatus({ prStatus }) {
   const modalRef = useRef(null)
   const triggerRef = useRef(null)
 
-  if (!prStatus || (!prStatus.checks && !prStatus.ci_status)) {
-    return null
-  }
-
-  const overallStatus = getOverallCIStatus(prStatus.checks, prStatus.ci_status)
-  const statusDisplay = getStatusDisplay(overallStatus)
-
   const handleClick = (e) => {
     e.stopPropagation()
     setShowModal(true)
@@ -137,6 +130,13 @@ function CIStatus({ prStatus }) {
       }
     }
   }, [showModal])
+
+  if (!prStatus || (!prStatus.checks && !prStatus.ci_status)) {
+    return null
+  }
+
+  const overallStatus = getOverallCIStatus(prStatus.checks, prStatus.ci_status)
+  const statusDisplay = getStatusDisplay(overallStatus)
 
   return (
     <>
