@@ -13,7 +13,15 @@ from utils.logging import get_logger
 # Add the site-packages to the path for openhands imports
 sys.path.insert(0, ".venv/lib/python3.12/site-packages")
 
-from openhands.sdk import Agent, Conversation, LLM, Message, TextContent, AgentContext
+from openhands.sdk import (
+    Agent,
+    Conversation,
+    LLM,
+    Message,
+    TextContent,
+    AgentContext,
+    LocalFileStore,
+)
 from openhands.tools import FileEditorTool, TaskTrackerTool, BashTool
 
 logger = get_logger(__name__)
@@ -31,6 +39,9 @@ When using the FileEditor tool, always use absolute paths.
 
 <WORKFLOW>
 Only work on the current branch. Commit and your work whenver you've made an improvement.
+
+Whenever you push substantial changes, update the PR title and description as necessary,
+especially if they're currently blank. Keep it short!
 </WORKFLOW>
 """
 
@@ -76,6 +87,12 @@ class AgentLoop:
             raise ValueError("workspace_path is required and cannot be None or empty")
         self.workspace_path = workspace_path
 
+        # Create state directory as sibling of workspace
+        # workspace_path is like: /data/{user_uuid}/apps/{app_slug}/riffs/{riff_slug}/workspace
+        # state_path should be:    /data/{user_uuid}/apps/{app_slug}/riffs/{riff_slug}/state
+        workspace_parent = os.path.dirname(workspace_path)
+        self.state_path = os.path.join(workspace_parent, "state")
+
         # Create Agent with development tools
         # Use workspace path for file operations and task tracking
         task_dir = os.path.join(self.workspace_path, "tasks")
@@ -97,10 +114,18 @@ class AgentLoop:
         if message_callback:
             callbacks.append(self._event_callback)
 
-        # Create Conversation
+        # Create LocalFileStore for persistence in state directory
+        self.file_store = LocalFileStore(self.state_path)
+
+        # Generate conversation ID based on user, app, and riff
+        conversation_id = f"{user_uuid}:{app_slug}:{riff_slug}"
+
+        # Create Conversation with persistence
         self.conversation = Conversation(
             agent=self.agent,
             callbacks=callbacks,
+            persist_filestore=self.file_store,
+            conversation_id=conversation_id,
             visualize=False,  # Disable default visualization since we handle events ourselves
         )
 
@@ -109,7 +134,100 @@ class AgentLoop:
         self.running = False
         self._thread_lock = threading.Lock()
 
-        logger.info(f"🤖 Created AgentLoop for {user_uuid[:8]}/{app_slug}/{riff_slug}")
+        logger.info(
+            f"🤖 Created AgentLoop for {user_uuid[:8]}/{app_slug}/{riff_slug} with state at {self.state_path}"
+        )
+
+    @classmethod
+    def from_existing_state(
+        cls,
+        user_uuid: str,
+        app_slug: str,
+        riff_slug: str,
+        llm: LLM,
+        workspace_path: str,
+        message_callback: Optional[Callable] = None,
+    ):
+        """
+        Create an AgentLoop from existing persisted state.
+        This method reconstructs the agent from its serialization instead of creating a new one.
+
+        Args:
+            user_uuid: Unique identifier for the user
+            app_slug: Slug identifier for the app
+            riff_slug: Slug identifier for the riff/conversation
+            llm: LLM instance from openhands-sdk
+            workspace_path: Required path to the workspace directory (cloned repository)
+            message_callback: Optional callback function to handle events/messages
+
+        Returns:
+            AgentLoop instance reconstructed from existing state
+        """
+        # Create state directory path as sibling of workspace
+        workspace_parent = os.path.dirname(workspace_path)
+        state_path = os.path.join(workspace_parent, "state")
+
+        # Check if state exists
+        if not os.path.exists(state_path):
+            logger.warning(
+                f"⚠️ No existing state found at {state_path}, creating new AgentLoop"
+            )
+            return cls(
+                user_uuid, app_slug, riff_slug, llm, workspace_path, message_callback
+            )
+
+        # Create instance without calling __init__
+        instance = cls.__new__(cls)
+
+        # Set basic attributes
+        instance.user_uuid = user_uuid
+        instance.app_slug = app_slug
+        instance.riff_slug = riff_slug
+        instance.llm = llm
+        instance.message_callback = message_callback
+        instance.workspace_path = workspace_path
+        instance.state_path = state_path
+
+        # Create Agent with development tools (same as in __init__)
+        task_dir = os.path.join(workspace_path, "tasks")
+        tools: list = [
+            FileEditorTool.create(),
+            TaskTrackerTool.create(save_dir=task_dir),
+            BashTool.create(working_dir=os.path.join(workspace_path, "project")),
+        ]
+
+        # Create agent with development tools and workspace configuration
+        instance.agent = create_agent(llm, tools, workspace_path)
+
+        # Create conversation callbacks
+        callbacks = []
+        if message_callback:
+            callbacks.append(instance._event_callback)
+
+        # Create LocalFileStore for persistence
+        instance.file_store = LocalFileStore(state_path)
+
+        # Generate conversation ID based on user, app, and riff
+        conversation_id = f"{user_uuid}:{app_slug}:{riff_slug}"
+
+        # Create Conversation with persistence - this will automatically load existing state
+        instance.conversation = Conversation(
+            agent=instance.agent,
+            callbacks=callbacks,
+            persist_filestore=instance.file_store,
+            conversation_id=conversation_id,
+            visualize=False,
+        )
+
+        # Thread management
+        instance.thread = None
+        instance.running = False
+        instance._thread_lock = threading.Lock()
+
+        logger.info(
+            f"🔄 Reconstructed AgentLoop for {user_uuid[:8]}/{app_slug}/{riff_slug} from existing state at {state_path}"
+        )
+        return instance
 
     def _event_callback(self, event):
         """Internal callback to handle events from the conversation"""
@@ -402,6 +520,50 @@ class AgentLoopManager:
             self.agent_loops[key] = agent_loop
 
             logger.info(f"✅ Created and stored AgentLoop for {key}")
+            logger.info(f"📊 Total agent loops: {len(self.agent_loops)}")
+            logger.info(f"🔑 All stored keys: {list(self.agent_loops.keys())}")
+
+            return agent_loop
+
+    def create_agent_loop_from_state(
+        self,
+        user_uuid: str,
+        app_slug: str,
+        riff_slug: str,
+        llm: LLM,
+        workspace_path: str,
+        message_callback: Optional[Callable] = None,
+    ) -> AgentLoop:
+        """
+        Create an AgentLoop from existing persisted state and store it in the dictionary.
+        This method reconstructs the agent from its serialization instead of creating a new one.
+
+        Args:
+            user_uuid: Unique identifier for the user
+            app_slug: Slug identifier for the app
+            riff_slug: Slug identifier for the riff/conversation
+            llm: LLM instance from openhands-sdk
+            workspace_path: Required path to the workspace directory (cloned repository)
+            message_callback: Optional callback function to handle events/messages
+
+        Returns:
+            The reconstructed AgentLoop instance
+        """
+        key = self._get_key(user_uuid, app_slug, riff_slug)
+
+        with self._lock:
+            if key in self.agent_loops:
+                logger.warning(f"⚠️ AgentLoop already exists for {key}, replacing it")
+                # Stop the existing agent thread before replacing
+                old_loop = self.agent_loops[key]
+                old_loop.stop_agent_thread()
+
+            agent_loop = AgentLoop.from_existing_state(
+                user_uuid, app_slug, riff_slug, llm, workspace_path, message_callback
+            )
+            self.agent_loops[key] = agent_loop
+
+            logger.info(f"✅ Reconstructed and stored AgentLoop for {key}")
             logger.info(f"📊 Total agent loops: {len(self.agent_loops)}")
             logger.info(f"🔑 All stored keys: {list(self.agent_loops.keys())}")
 

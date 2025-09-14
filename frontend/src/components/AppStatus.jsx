@@ -9,17 +9,22 @@ import {
   getDeployStatus 
 } from '../utils/statusUtils'
 
-function AppStatus({ app, riff }) {
+function AppStatus({ app, riff, prStatus = null }) {
   const [prData, setPrData] = useState(null)
 
   useEffect(() => {
-    // Extract PR data from app
-    if (app?.pr_status) {
+    // Use passed prStatus prop first, then fall back to app.pr_status
+    if (prStatus) {
+      console.log('🔍 AppStatus: Using riff-specific PR status:', prStatus)
+      setPrData(prStatus)
+    } else if (app?.pr_status) {
+      console.log('🔍 AppStatus: Using app-level PR status:', app.pr_status)
       setPrData(app.pr_status)
+    } else {
+      console.log('🔍 AppStatus: No PR status available')
+      setPrData(null)
     }
-
-
-  }, [app])
+  }, [app, prStatus])
 
 
 
@@ -284,6 +289,21 @@ AppStatus.propTypes = {
     created_by: PropTypes.string,
     last_message_at: PropTypes.string,
     message_count: PropTypes.number
+  }),
+  prStatus: PropTypes.shape({
+    number: PropTypes.number,
+    title: PropTypes.string,
+    html_url: PropTypes.string,
+    draft: PropTypes.bool,
+    mergeable: PropTypes.bool,
+    changed_files: PropTypes.number,
+    ci_status: PropTypes.string,
+    deploy_status: PropTypes.string,
+    checks: PropTypes.arrayOf(PropTypes.shape({
+      name: PropTypes.string,
+      status: PropTypes.string,
+      details_url: PropTypes.string
+    }))
   })
 }
 

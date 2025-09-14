@@ -399,3 +399,85 @@ class TestRiffsEndpoints:
         riff_names = [riff["name"] for riff in data["riffs"]]
         assert "App1 Riff" in riff_names
         assert f"rename-to-{app1_slug}" in riff_names
+
+    def test_delete_riff_success(self, client, mock_api_keys):
+        """Test successful riff deletion"""
+        unique_headers = {
+            "X-User-UUID": "test-delete-riff-uuid",
+            "Content-Type": "application/json",
+        }
+        app_slug = self.setup_app_for_riffs(
+            client, unique_headers, mock_api_keys, "Delete Test App"
+        )
+
+        # Create a riff
+        riff_data = {"name": "Test Riff to Delete"}
+        response = client.post(
+            f"/api/apps/{app_slug}/riffs", headers=unique_headers, json=riff_data
+        )
+        assert response.status_code == 201
+        riff_slug = response.get_json()["riff"]["slug"]
+
+        # Verify riff exists (1 manual + 1 automatic)
+        response = client.get(f"/api/apps/{app_slug}/riffs", headers=unique_headers)
+        assert response.status_code == 200
+        assert response.get_json()["count"] == 2
+
+        # Delete the riff
+        response = client.delete(
+            f"/api/apps/{app_slug}/riffs/{riff_slug}", headers=unique_headers
+        )
+        assert response.status_code == 200
+        data = response.get_json()
+
+        assert "deleted successfully" in data["message"]
+        assert data["riff_name"] == "Test Riff to Delete"
+        assert data["riff_slug"] == riff_slug
+        assert data["app_slug"] == app_slug
+
+        # Verify manual riff is gone, but automatic riff remains
+        response = client.get(f"/api/apps/{app_slug}/riffs", headers=unique_headers)
+        assert response.status_code == 200
+        assert response.get_json()["count"] == 1  # Only automatic riff remains
+
+    def test_delete_riff_not_found(self, client, mock_api_keys):
+        """Test deleting a non-existent riff"""
+        unique_headers = {
+            "X-User-UUID": "test-delete-riff-not-found-uuid",
+            "Content-Type": "application/json",
+        }
+        app_slug = self.setup_app_for_riffs(
+            client, unique_headers, mock_api_keys, "Delete Not Found App"
+        )
+
+        # Try to delete non-existent riff
+        response = client.delete(
+            f"/api/apps/{app_slug}/riffs/non-existent-riff", headers=unique_headers
+        )
+        assert response.status_code == 404
+        data = response.get_json()
+        assert "not found" in data["error"].lower()
+
+    def test_delete_riff_missing_uuid_header(self, client, mock_api_keys):
+        """Test deleting riff without UUID header"""
+        headers = {"Content-Type": "application/json"}
+
+        response = client.delete("/api/apps/test-app/riffs/test-riff", headers=headers)
+        assert response.status_code == 400
+        data = response.get_json()
+        assert "X-User-UUID header is required" in data["error"]
+
+    def test_delete_riff_app_not_found(self, client, mock_api_keys):
+        """Test deleting riff from non-existent app"""
+        unique_headers = {
+            "X-User-UUID": "test-delete-riff-app-not-found-uuid",
+            "Content-Type": "application/json",
+        }
+
+        # Try to delete riff from non-existent app
+        response = client.delete(
+            "/api/apps/non-existent-app/riffs/test-riff", headers=unique_headers
+        )
+        assert response.status_code == 404
+        data = response.get_json()
+        assert "not found" in data["error"].lower()
