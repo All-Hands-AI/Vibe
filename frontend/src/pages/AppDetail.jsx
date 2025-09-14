@@ -116,8 +116,8 @@ function AppDetail() {
       return
     }
 
-    const riffSlug = createSlug(newRiffName.trim())
-    console.log('📝 Riff details:', { name: newRiffName.trim(), slug: riffSlug })
+    const riffSlug = newRiffName.trim()
+    console.log('📝 Riff details:', { name: riffSlug, slug: riffSlug })
     
     if (!riffSlug) {
       console.warn('❌ Invalid riff slug generated')
@@ -134,7 +134,7 @@ function AppDetail() {
       console.log('🆔 User UUID:', uuid)
 
       const requestData = {
-        name: newRiffName.trim(),
+        name: riffSlug,
         slug: riffSlug
       }
       
@@ -162,7 +162,7 @@ function AppDetail() {
       }
 
       console.log('✅ Riff created successfully:', data.riff)
-      setSuccess(`Riff "${newRiffName}" created successfully!`)
+      setSuccess(`Riff "${riffSlug}" created successfully!`)
       setNewRiffName('')
       
       // Refresh riffs list
@@ -387,18 +387,17 @@ function AppDetail() {
                       <input
                         type="text"
                         value={newRiffName}
-                        onChange={(e) => setNewRiffName(e.target.value)}
+                        onChange={(e) => {
+                          const inputValue = e.target.value
+                          const slug = createSlug(inputValue)
+                          setNewRiffName(slug)
+                        }}
                         placeholder="Enter riff name"
                         disabled={creating}
                         className={`w-full px-4 py-3 bg-gray-700 text-cyber-text rounded-md border transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-cyber-muted focus:border-transparent ${
                           error ? 'border-red-500' : 'border-gray-600'
                         }`}
                       />
-                      {newRiffName && (
-                        <div className="mt-2 text-sm text-cyber-muted">
-                          Slug: <code className="bg-gray-700 px-2 py-1 rounded text-cyber-muted">{createSlug(newRiffName)}</code>
-                        </div>
-                      )}
                     </div>
                     
                     <button 
