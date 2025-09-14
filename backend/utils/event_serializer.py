@@ -371,6 +371,13 @@ def _safe_extract_observation_details(observation) -> Dict[str, Any]:
                 if isinstance(value, str) and len(value) > 1000:
                     value = value[:1000] + "... (truncated)"
                 details[attr] = value
+
+        # Special handling for exit_code: if it's None or missing, try to get it from metadata
+        if details.get("exit_code") is None and hasattr(observation, "metadata"):
+            metadata = getattr(observation, "metadata")
+            if metadata and hasattr(metadata, "exit_code"):
+                details["exit_code"] = getattr(metadata, "exit_code")
+
         return details
     except Exception as e:
         logger.error(f"❌ Error extracting observation details: {e}")

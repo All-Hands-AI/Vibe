@@ -2,10 +2,9 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { useParams, Link, useLocation } from 'react-router-dom'
 import { useSetup } from '../context/SetupContext'
 import { getUserUUID } from '../utils/uuid'
-import AppStatus from '../components/AppStatus'
 import ChatWindow from '../components/ChatWindow'
 import LLMErrorModal from '../components/LLMErrorModal'
-import AgentStatusPanel from '../components/AgentStatusPanel'
+import CompactStatusPanel from '../components/CompactStatusPanel'
 import { startLLMPolling, checkLLMReady } from '../utils/llmService'
 
 function RiffDetail() {
@@ -229,9 +228,9 @@ function RiffDetail() {
 
   return (
     <div className="min-h-screen bg-black text-cyber-text">
-      <div className="max-w-6xl mx-auto px-8 py-8">
+      <div className="max-w-7xl mx-auto px-6 py-6">
         {/* Navigation */}
-        <nav className="mb-8">
+        <nav className="mb-4">
           <div className="flex items-center space-x-2 text-sm">
             <Link to="/" className="text-cyber-muted hover:text-neon-green transition-colors duration-200">
               Apps
@@ -246,10 +245,10 @@ function RiffDetail() {
         </nav>
 
         {/* Riff Header */}
-        <header className="mb-6">
-          <div className="flex flex-wrap items-baseline justify-between gap-4 mb-6">
+        <header className="mb-4">
+          <div className="flex flex-wrap items-baseline justify-between gap-4 mb-4">
             <div>
-              <h1 className="text-4xl font-bold text-cyber-text mb-2 font-mono">{riff.name}</h1>
+              <h1 className="text-3xl font-bold text-cyber-text mb-2 font-mono">{riff.name}</h1>
             </div>
             <p className="text-cyber-muted font-mono text-sm">
               Created {new Date(riff.created_at).toLocaleDateString()}
@@ -257,20 +256,21 @@ function RiffDetail() {
           </div>
         </header>
 
-        {/* Main Content Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Sidebar */}
-          <div className="lg:col-span-1 space-y-6">
-            {/* App Status */}
-            <AppStatus app={app} riff={riff} prStatus={prStatus} />
-            
-            {/* Agent Status Panel */}
-            <AgentStatusPanel appSlug={appSlug} riffSlug={riffSlug} />
-          </div>
+        {/* Main Content Grid - 2 columns */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-[calc(100vh-200px)]">
+          {/* Left Sidebar - Status and Chat */}
+          <div className="flex flex-col space-y-3">
+            {/* Compact Status Panel */}
+            <CompactStatusPanel 
+              app={app} 
+              riff={riff} 
+              prStatus={prStatus} 
+              appSlug={appSlug} 
+              riffSlug={riffSlug} 
+            />
 
-          {/* Chat Window */}
-          <div className="lg:col-span-2">
-            <div className="h-[600px]">
+            {/* Chat Window */}
+            <div className="flex-1 min-h-0">
               {userUUID ? (
                 <ChatWindow 
                   app={app} 
@@ -285,6 +285,24 @@ function RiffDetail() {
                   </div>
                 </div>
               )}
+            </div>
+          </div>
+
+          {/* Right Side - Iframe */}
+          <div className="flex flex-col">
+            <div className="mb-2">
+              <h3 className="text-lg font-semibold text-cyber-text font-mono">🚀 Live App Preview</h3>
+              <p className="text-cyber-muted font-mono text-xs">
+                {app.name}-{riff.name}.fly.dev
+              </p>
+            </div>
+            <div className="flex-1 border border-gray-700 rounded-lg overflow-hidden">
+              <iframe
+                src={`https://${app.name}-${riff.name}.fly.dev`}
+                className="w-full h-full"
+                title="Live App Preview"
+                sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox"
+              />
             </div>
           </div>
         </div>
