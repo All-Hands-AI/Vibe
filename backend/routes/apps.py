@@ -558,9 +558,16 @@ def get_pr_status(repo_url, github_token, branch="main", search_by_base=False):
 
         # Log details of found PRs
         for pr in prs:
+            # Handle case where mock returns strings instead of dicts
+            if isinstance(pr, str):
+                logger.warning(f"🔍 PR data is string instead of dict: {pr}")
+                continue
+
             head_info = pr.get("head", {})
             base_info = pr.get("base", {})
-            logger.info(f"🔍 PR #{pr['number']}: {pr['title']}")
+            logger.info(
+                f"🔍 PR #{pr.get('number', 'unknown')}: {pr.get('title', 'unknown')}"
+            )
             logger.info(
                 f"🔍   Head: {head_info.get('label', 'unknown')} (ref: {head_info.get('ref', 'unknown')})"
             )
@@ -568,8 +575,17 @@ def get_pr_status(repo_url, github_token, branch="main", search_by_base=False):
                 f"🔍   Base: {base_info.get('label', 'unknown')} (ref: {base_info.get('ref', 'unknown')})"
             )
 
-        # Get the first (most recent) PR
-        pr = prs[0]
+        # Get the first (most recent) PR that's a valid dict
+        pr = None
+        for p in prs:
+            if isinstance(p, dict) and "number" in p:
+                pr = p
+                break
+
+        if not pr:
+            logger.warning("❌ No valid PR data found in response")
+            return None
+
         pr_number = pr["number"]
 
         logger.debug(f"🔍 Selected PR #{pr_number}: {pr['title']}")
