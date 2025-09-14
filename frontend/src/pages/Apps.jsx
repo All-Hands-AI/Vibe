@@ -27,14 +27,42 @@ function Apps() {
     isDeleting: false
   })
 
-  // Create slug from app name for preview
-  const createSlug = (name) => {
-    return name
+  // Create slug for real-time display (allows trailing hyphens)
+  const createSlugForDisplay = (name) => {
+    console.log('🔧 createSlugForDisplay input:', JSON.stringify(name))
+    
+    const step1 = name.toLowerCase()
+    console.log('🔧 Step 1 (toLowerCase):', JSON.stringify(step1))
+    
+    const step2 = step1.replace(/[^a-zA-Z0-9\s-]/g, '')
+    console.log('🔧 Step 2 (remove invalid chars):', JSON.stringify(step2))
+    
+    const step3 = step2.replace(/\s+/g, '-')
+    console.log('🔧 Step 3 (spaces to hyphens):', JSON.stringify(step3))
+    
+    const step4 = step3.replace(/-+/g, '-')
+    console.log('🔧 Step 4 (collapse multiple hyphens):', JSON.stringify(step4))
+    
+    const step5 = step4.replace(/^-/g, '') // Only remove leading hyphens, keep trailing
+    console.log('🔧 Step 5 (remove leading hyphens only):', JSON.stringify(step5))
+    
+    console.log('🔧 createSlugForDisplay final result:', JSON.stringify(step5))
+    return step5
+  }
+
+  // Create final slug for submission (removes trailing hyphens)
+  const createFinalSlug = (name) => {
+    console.log('🔧 createFinalSlug input:', JSON.stringify(name))
+    
+    const result = name
       .toLowerCase()
       .replace(/[^a-zA-Z0-9\s-]/g, '')
       .replace(/\s+/g, '-')
       .replace(/-+/g, '-')
-      .replace(/^-|-$/g, '')
+      .replace(/^-|-$/g, '') // Remove both leading and trailing hyphens
+    
+    console.log('🔧 createFinalSlug result:', JSON.stringify(result))
+    return result
   }
 
 
@@ -162,8 +190,8 @@ function Apps() {
       return
     }
 
-    const slug = createSlug(newAppName.trim())
-    console.log('📝 App details:', { name: newAppName.trim(), slug })
+    const slug = createFinalSlug(newAppName.trim())
+    console.log('📝 App details:', { name: slug, slug })
     
     if (!slug) {
       console.warn('❌ Invalid slug generated')
@@ -180,7 +208,7 @@ function Apps() {
       console.log('🆔 User UUID:', uuid)
 
       const requestData = {
-        name: newAppName.trim()
+        name: slug
       }
       
       const requestOptions = {
@@ -210,7 +238,7 @@ function Apps() {
       }
 
       console.log('✅ App created successfully:', data.app)
-      setSuccess(`App "${newAppName}" created successfully!`)
+      setSuccess(`App "${slug}" created successfully!`)
       setNewAppName('')
       
       // Refresh apps list
@@ -362,18 +390,19 @@ function Apps() {
                   type="text"
                   id="appName"
                   value={newAppName}
-                  onChange={(e) => setNewAppName(e.target.value)}
+                  onChange={(e) => {
+                    const inputValue = e.target.value
+                    console.log('📝 App name input onChange - raw input:', JSON.stringify(inputValue))
+                    const slug = createSlugForDisplay(inputValue)
+                    console.log('📝 App name input onChange - setting state to:', JSON.stringify(slug))
+                    setNewAppName(slug)
+                  }}
                   placeholder="Enter app name"
                   disabled={creating}
                   className={`w-full px-4 py-3 bg-black text-cyber-text font-mono border-2 transition-colors duration-200 focus:outline-none focus:border-neon-green ${
                     error ? 'border-red-500' : 'border-cyber-border'
                   }`}
                 />
-                {newAppName && (
-                  <div className="mt-2 text-sm text-cyber-muted font-mono">
-                    Slug: <code className="bg-cyber-accent px-2 py-1 rounded text-cyber-text">{createSlug(newAppName)}</code>
-                  </div>
-                )}
               </div>
               
               <button 
