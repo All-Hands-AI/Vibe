@@ -1162,9 +1162,7 @@ def get_riff_pr_status(slug, riff_slug):
 
             # Use riff slug as branch name (this is the typical pattern)
             riff_branch = riff_slug
-            logger.info(
-                f"🔍 Looking for PR from riff branch '{riff_branch}' to main"
-            )
+            logger.info(f"🔍 Looking for PR from riff branch '{riff_branch}' to main")
 
             # Search for PRs FROM the riff branch TO main (the typical workflow)
             # This means: head=riff_branch, base=main

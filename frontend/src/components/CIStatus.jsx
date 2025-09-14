@@ -91,12 +91,17 @@ function CIStatus({ prStatus }) {
   const overallStatus = getOverallCIStatus(prStatus.checks, prStatus.ci_status)
   const statusDisplay = getStatusDisplay(overallStatus)
 
+  const handleMouseEnter = () => setShowPopover(true)
+  const handleMouseLeave = () => setShowPopover(false)
+
   return (
-    <div className="relative inline-block">
+    <div 
+      className="relative inline-block"
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
+    >
       <div
         className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-sm font-mono cursor-pointer transition-all duration-200 ${statusDisplay.color} ${statusDisplay.bgColor} hover:bg-opacity-30`}
-        onMouseEnter={() => setShowPopover(true)}
-        onMouseLeave={() => setShowPopover(false)}
       >
         <span className="text-xs">{statusDisplay.icon}</span>
         <span>CI: {statusDisplay.label}</span>
