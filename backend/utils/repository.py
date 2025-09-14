@@ -1,6 +1,9 @@
 """
 Repository management utilities for OpenVibe backend.
 Handles cloning and managing GitHub repositories for riffs.
+
+When cloning repositories, the GITHUB_TOKEN environment variable is automatically
+embedded in the remote URL to enable authenticated push/pull operations.
 """
 
 import os
@@ -42,6 +45,9 @@ def clone_repository(
 ) -> Tuple[bool, Optional[str]]:
     """
     Clone a GitHub repository to the workspace and checkout the specified branch.
+    
+    The cloned repository will have the GITHUB_TOKEN embedded in its remote URL
+    to enable authenticated push/pull operations for all users.
 
     Args:
         github_url: GitHub repository URL
@@ -63,10 +69,18 @@ def clone_repository(
             logger.info(f"🧹 Cleaning existing project directory: {project_path}")
             shutil.rmtree(project_path)
 
-        logger.info(f"📥 Cloning repository {github_url} to {project_path}")
+        # Modify GitHub URL to include token for authentication
+        github_token = os.environ.get('GITHUB_TOKEN')
+        if github_token and github_url.startswith('https://github.com/'):
+            # Insert token into URL for authenticated cloning
+            authenticated_url = github_url.replace('https://github.com/', f'https://{github_token}@github.com/')
+            logger.info(f"📥 Cloning repository with authentication to {project_path}")
+        else:
+            authenticated_url = github_url
+            logger.info(f"📥 Cloning repository {github_url} to {project_path}")
 
         # Clone the repository into the project subdirectory
-        clone_cmd = ["git", "clone", github_url, project_path]
+        clone_cmd = ["git", "clone", authenticated_url, project_path]
         result = subprocess.run(
             clone_cmd, capture_output=True, text=True, timeout=300  # 5 minute timeout
         )
