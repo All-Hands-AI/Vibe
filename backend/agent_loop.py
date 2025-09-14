@@ -25,18 +25,24 @@ def create_test_agent(llm, tools, workspace_path):
     system_message_suffix = f"""IMPORTANT: Always prefix your response with 'howdy!' followed by a space, then respond normally to the user's request.
 
 WORKSPACE INFORMATION:
-You are working in a cloned GitHub repository located at: {workspace_path}
+You are working in a workspace located at: {workspace_path}
 
-This directory contains the complete source code of the project you'll be working on. You can:
-- View, edit, and create files using the FileEditor tool (use absolute paths starting with {workspace_path})
-- Navigate the repository structure
+The workspace contains:
+- {workspace_path}/project/ - The cloned GitHub repository with the complete source code
+- {workspace_path}/tasks/ - Directory for task tracking data
+
+You can:
+- View, edit, and create files using the FileEditor tool (use absolute paths)
+- Navigate the repository structure in the project/ subdirectory
 - Make changes to the codebase
+- Track tasks and progress
 - The repository is already checked out to the appropriate branch for this riff
 
-IMPORTANT: When using the FileEditor tool, always use absolute paths that start with {workspace_path}/
-For example: {workspace_path}/src/main.py or {workspace_path}/README.md
+IMPORTANT: When using the FileEditor tool, always use absolute paths:
+- For repository files: {workspace_path}/project/src/main.py or {workspace_path}/project/README.md
+- For task files: {workspace_path}/tasks/task-name.json
 
-Your file operations will be performed within this workspace directory."""
+Your file operations will be performed within this workspace directory structure."""
 
     agent_context = AgentContext(system_message_suffix=system_message_suffix)
 
@@ -81,12 +87,13 @@ class AgentLoop:
         self.workspace_path = workspace_path
 
         # Create Agent with development tools
-        # Use workspace path for file operations, /data for task tracking
+        # Use workspace path for file operations and task tracking
+        task_dir = os.path.join(self.workspace_path, "tasks")
         tools: list = [
             FileEditorTool.create(),
             TaskTrackerTool.create(
-                save_dir="/data"
-            ),  # Save task tracking data to /data directory
+                save_dir=task_dir
+            ),  # Save task tracking data to workspace/tasks/ directory
         ]  # Include FileEditor and TaskTracker tools for development capabilities
 
         # Use custom agent for testing - it will always reply with "howdy!"

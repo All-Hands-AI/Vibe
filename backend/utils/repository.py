@@ -52,16 +52,21 @@ def clone_repository(
         Tuple[bool, Optional[str]]: (success, error_message)
     """
     try:
-        # Remove existing content if any
-        if os.path.exists(workspace_path) and os.listdir(workspace_path):
-            logger.info(f"🧹 Cleaning existing workspace: {workspace_path}")
-            shutil.rmtree(workspace_path)
-            Path(workspace_path).mkdir(parents=True, exist_ok=True)
+        # Ensure workspace directory exists
+        Path(workspace_path).mkdir(parents=True, exist_ok=True)
 
-        logger.info(f"📥 Cloning repository {github_url} to {workspace_path}")
+        # Define project directory within workspace
+        project_path = os.path.join(workspace_path, "project")
 
-        # Clone the repository
-        clone_cmd = ["git", "clone", github_url, workspace_path]
+        # Remove existing project directory if any
+        if os.path.exists(project_path):
+            logger.info(f"🧹 Cleaning existing project directory: {project_path}")
+            shutil.rmtree(project_path)
+
+        logger.info(f"📥 Cloning repository {github_url} to {project_path}")
+
+        # Clone the repository into the project subdirectory
+        clone_cmd = ["git", "clone", github_url, project_path]
         result = subprocess.run(
             clone_cmd, capture_output=True, text=True, timeout=300  # 5 minute timeout
         )
@@ -71,12 +76,12 @@ def clone_repository(
             logger.error(f"❌ {error_msg}")
             return False, error_msg
 
-        logger.info(f"✅ Successfully cloned repository to {workspace_path}")
+        logger.info(f"✅ Successfully cloned repository to {project_path}")
 
-        # Change to the workspace directory
+        # Change to the project directory for git operations
         original_cwd = os.getcwd()
         try:
-            os.chdir(workspace_path)
+            os.chdir(project_path)
 
             # Check if branch exists (try remote first, then local)
             check_remote_branch_cmd = [
