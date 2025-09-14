@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { getUserUUID } from '../utils/uuid'
 import ConfirmationModal from '../components/ConfirmationModal'
+import { useDocumentTitle, formatPageTitle } from '../utils/useDocumentTitle'
 import { 
   getStatusIcon, 
   getStatusText, 
@@ -19,6 +20,9 @@ function Apps() {
   const [newAppName, setNewAppName] = useState('')
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
+  
+  // Set page title
+  useDocumentTitle(formatPageTitle('apps'))
   
   // Delete modal state
   const [deleteModal, setDeleteModal] = useState({

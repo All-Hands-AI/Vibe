@@ -764,6 +764,21 @@ def get_pr_status(repo_url, github_token, branch="main", search_by_base=False):
             status_data = status_response.json()
             ci_status = status_data.get("state", "unknown")
 
+        # Get commit details for the PR head
+        commit_response = requests.get(
+            f"https://api.github.com/repos/{owner}/{repo}/commits/{head_sha}",
+            headers=headers,
+            timeout=10,
+        )
+
+        commit_hash_short = head_sha[:7] if head_sha else ""
+        commit_message = ""
+        if commit_response.status_code == 200:
+            commit_data = commit_response.json()
+            commit_message = commit_data.get("commit", {}).get("message", "")
+            # Take only the first line of the commit message for display
+            commit_message = commit_message.split("\n")[0] if commit_message else ""
+
         # Get check runs for more detailed CI information
         checks_response = requests.get(
             f"https://api.github.com/repos/{owner}/{repo}/commits/{head_sha}/check-runs",
@@ -804,6 +819,9 @@ def get_pr_status(repo_url, github_token, branch="main", search_by_base=False):
             "ci_status": ci_status,
             "deploy_status": deploy_status,
             "checks": checks,
+            "commit_hash": head_sha,
+            "commit_hash_short": commit_hash_short,
+            "commit_message": commit_message,
         }
 
         logger.info(f"✅ PR status retrieved for #{pr_number}")
