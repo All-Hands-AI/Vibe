@@ -360,7 +360,9 @@ function Apps() {
                   value={newAppName}
                   onChange={(e) => {
                     const inputValue = e.target.value
+                    console.log('📝 App name input onChange - raw input:', JSON.stringify(inputValue))
                     const slug = createSlug(inputValue)
+                    console.log('📝 App name input onChange - setting state to:', JSON.stringify(slug))
                     setNewAppName(slug)
                   }}
                   placeholder="Enter app name"

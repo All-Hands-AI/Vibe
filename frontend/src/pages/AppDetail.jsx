@@ -402,7 +402,9 @@ function AppDetail() {
                         value={newRiffName}
                         onChange={(e) => {
                           const inputValue = e.target.value
+                          console.log('📝 Riff name input onChange - raw input:', JSON.stringify(inputValue))
                           const slug = createSlug(inputValue)
+                          console.log('📝 Riff name input onChange - setting state to:', JSON.stringify(slug))
                           setNewRiffName(slug)
                         }}
                         placeholder="Enter riff name"
