@@ -98,7 +98,9 @@ def add_user_message(user_uuid, app_slug, riff_slug, message):
     return storage.add_message(app_slug, riff_slug, message)
 
 
-def create_initial_riff_and_message(user_uuid, app_slug, app_name, github_url):
+def create_initial_riff_and_message(
+    user_uuid, app_slug, app_slug_for_message, github_url
+):
     """Create initial riff and message for a new app"""
     try:
         # Import here to avoid circular imports
@@ -115,7 +117,6 @@ def create_initial_riff_and_message(user_uuid, app_slug, app_name, github_url):
         # Create riff record
         riff = {
             "slug": riff_slug,
-            "name": riff_name,
             "app_slug": app_slug,
             "created_at": datetime.now(timezone.utc).isoformat(),
             "created_by": user_uuid,
@@ -132,13 +133,13 @@ def create_initial_riff_and_message(user_uuid, app_slug, app_name, github_url):
         message_id = str(uuid.uuid4())
         created_at = datetime.now(timezone.utc).isoformat()
 
-        initial_message_content = f"""Please complete the following tasks to customize this app template for "{app_name}":
+        initial_message_content = f"""Please complete the following tasks to customize this app template for "{app_slug_for_message}":
 
 1. **Read TEMPLATE.md** - First, read the TEMPLATE.md file to understand the specific instructions for this template.
 
 2. **Follow the template instructions** - Execute the instructions in TEMPLATE.md to change the app name everywhere in the repository. The template should contain a helpful command or script to automate this process.
 
-3. **Change the app name** - Update all references from the template name to "{app_name}" throughout the codebase. This typically includes:
+3. **Change the app name** - Update all references from the template name to "{app_slug_for_message}" throughout the codebase. This typically includes:
    - Package.json or similar dependency files
    - Configuration files
    - README files
@@ -206,7 +207,9 @@ Please work through these steps systematically and let me know if you encounter 
         except Exception as e:
             logger.warning(f"⚠️ Failed to send initial message to agent: {str(e)}")
 
-        logger.info(f"✅ Created initial riff and message for app: {app_name}")
+        logger.info(
+            f"✅ Created initial riff and message for app: {app_slug_for_message}"
+        )
         return True, {"riff": riff, "message": message}
 
     except Exception as e:
@@ -614,7 +617,6 @@ def get_fly_status(project_slug, fly_token):
             "deployed": app_status in ["running", "deployed"],
             "app_url": app_url,
             "status": app_status,
-            "name": app_data.get("name"),
             "organization": app_data.get("organization", {}).get("slug"),
         }
 
@@ -1285,7 +1287,7 @@ def get_app(slug):
             logger.warning(f"❌ App not found: {slug} for user {user_uuid[:8]}")
             return jsonify({"error": "App not found"}), 404
 
-        logger.info(f"📊 Found app: {app['name']} for user {user_uuid[:8]}")
+        logger.info(f"📊 Found app: {app['slug']} for user {user_uuid[:8]}")
 
         # Get user's API keys for status information
         github_status = None
@@ -1358,23 +1360,14 @@ def create_app():
 
         # Get request data
         data = request.get_json()
-        if not data or "name" not in data:
-            logger.warning("❌ App name is required")
-            return jsonify({"error": "App name is required"}), 400
+        if not data or "slug" not in data:
+            logger.warning("❌ App slug is required")
+            return jsonify({"error": "App slug is required"}), 400
 
-        app_name = data["name"].strip()
-        if not app_name:
-            logger.warning("❌ App name cannot be empty")
-            return jsonify({"error": "App name cannot be empty"}), 400
-
-        # Create slug from name (use provided slug if available, otherwise generate)
-        app_slug = data.get("slug", create_slug(app_name)).strip()
+        app_slug = data["slug"].strip()
         if not app_slug:
-            app_slug = create_slug(app_name)
-
-        if not app_slug:
-            logger.warning("❌ Invalid app name - cannot create slug")
-            return jsonify({"error": "Invalid app name"}), 400
+            logger.warning("❌ App slug cannot be empty")
+            return jsonify({"error": "App slug cannot be empty"}), 400
 
         # Validate slug format
         if not is_valid_slug(app_slug):
@@ -1388,16 +1381,14 @@ def create_app():
                 400,
             )
 
-        logger.info(
-            f"🔄 Creating app: {app_name} -> {app_slug} for user {user_uuid[:8]}"
-        )
+        logger.info(f"🔄 Creating app: {app_slug} for user {user_uuid[:8]}")
 
         # Check if app with same slug already exists for this user
         if user_app_exists(user_uuid, app_slug):
             logger.warning(
                 f"❌ App with slug '{app_slug}' already exists for user {user_uuid[:8]}"
             )
-            return jsonify({"error": f'App with name "{app_name}" already exists'}), 409
+            return jsonify({"error": f'App with slug "{app_slug}" already exists'}), 409
 
         # Get user's API keys
         user_keys = load_user_keys(user_uuid)
@@ -1460,7 +1451,6 @@ def create_app():
 
         # Create app record
         app = {
-            "name": app_name,
             "slug": app_slug,
             "github_url": github_url,
             "fly_app_name": fly_app_name,
@@ -1474,9 +1464,9 @@ def create_app():
             return jsonify({"error": "Failed to save app"}), 500
 
         # Create initial riff and message for the new app
-        logger.info(f"🆕 Creating initial riff for app: {app_name}")
+        logger.info(f"🆕 Creating initial riff for app: {app_slug}")
         riff_success, riff_result = create_initial_riff_and_message(
-            user_uuid, app_slug, app_name, github_url
+            user_uuid, app_slug, app_slug, github_url
         )
 
         warnings = []
@@ -1487,9 +1477,9 @@ def create_app():
             logger.warning(f"⚠️ Failed to create initial riff: {riff_result}")
             warnings.append(f"Initial riff creation failed: {riff_result}")
         else:
-            logger.info(f"✅ Initial riff created successfully for app: {app_name}")
+            logger.info(f"✅ Initial riff created successfully for app: {app_slug}")
 
-        logger.info(f"✅ App created successfully: {app_name}")
+        logger.info(f"✅ App created successfully: {app_slug}")
         return (
             jsonify(
                 {
@@ -1530,7 +1520,7 @@ def delete_app(slug):
             logger.warning(f"❌ App not found: {slug} for user {user_uuid[:8]}")
             return jsonify({"error": "App not found"}), 404
 
-        logger.info(f"🔍 Found app to delete: {app['name']} for user {user_uuid[:8]}")
+        logger.info(f"🔍 Found app to delete: {app['slug']} for user {user_uuid[:8]}")
 
         # Get user's API keys
         user_keys = load_user_keys(user_uuid)

@@ -255,7 +255,7 @@ function ChatWindow({ app, riff, userUuid }) {
         <MessageInput 
           onSendMessage={sendMessage}
           disabled={sending}
-          placeholder={`Message ${riff.name}...`}
+          placeholder={`Message ${riff.slug}...`}
         />
       </div>
     </div>
@@ -264,12 +264,10 @@ function ChatWindow({ app, riff, userUuid }) {
 
 ChatWindow.propTypes = {
   app: PropTypes.shape({
-    slug: PropTypes.string.isRequired,
-    name: PropTypes.string.isRequired
+    slug: PropTypes.string.isRequired
   }).isRequired,
   riff: PropTypes.shape({
-    slug: PropTypes.string.isRequired,
-    name: PropTypes.string.isRequired
+    slug: PropTypes.string.isRequired
   }).isRequired,
   userUuid: PropTypes.string.isRequired
 }

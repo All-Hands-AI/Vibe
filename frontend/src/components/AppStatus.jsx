@@ -91,7 +91,7 @@ function AppStatus({ app, riff, prStatus = null }) {
   }
 
   const getProjectName = () => {
-    return app?.name || 'project'
+    return app?.slug || 'project'
   }
 
   const getConversationId = () => {
@@ -312,7 +312,6 @@ function AppStatus({ app, riff, prStatus = null }) {
 
 AppStatus.propTypes = {
   app: PropTypes.shape({
-    name: PropTypes.string,
     slug: PropTypes.string,
     conversation_id: PropTypes.string,
     branch: PropTypes.string,
@@ -343,7 +342,6 @@ AppStatus.propTypes = {
     })
   }),
   riff: PropTypes.shape({
-    name: PropTypes.string,
     slug: PropTypes.string,
     app_slug: PropTypes.string,
     created_at: PropTypes.string,
