@@ -182,4 +182,59 @@ describe('AppStatus', () => {
     expect(screen.queryByText('No active pull request found')).not.toBeInTheDocument() // Should not show for main
     expect(screen.getByText('🚀 https://project-main.fly.dev')).toBeInTheDocument()
   })
+
+  it('displays riff name as branch when riff is provided', () => {
+    const app = {
+      name: 'Test App',
+      slug: 'test-app',
+      github_url: 'https://github.com/user/test-app',
+      github_status: {
+        branch: 'main',
+        tests_passing: true,
+        last_commit: 'abc123'
+      },
+      deployment_status: {
+        deploy_status: 'success',
+        deployed: true
+      }
+    }
+
+    const riff = {
+      name: 'My Test Riff',
+      slug: 'my-test-riff',
+      app_slug: 'test-app',
+      created_at: '2025-09-14T01:30:00.000Z',
+      created_by: 'test-user-123'
+    }
+
+    render(<AppStatus app={app} riff={riff} />)
+    
+    // Should display the riff name instead of the app branch
+    expect(screen.getByText('🌿 My Test Riff')).toBeInTheDocument()
+    expect(screen.queryByText('🌿 main')).not.toBeInTheDocument()
+  })
+
+  it('falls back to app branch when riff has no name', () => {
+    const app = {
+      name: 'Test App',
+      slug: 'test-app',
+      github_status: {
+        branch: 'main',
+        tests_passing: true
+      }
+    }
+
+    const riff = {
+      slug: 'my-test-riff',
+      app_slug: 'test-app',
+      created_at: '2025-09-14T01:30:00.000Z',
+      created_by: 'test-user-123'
+      // name is missing
+    }
+
+    render(<AppStatus app={app} riff={riff} />)
+    
+    // Should fall back to app branch when riff name is not available
+    expect(screen.getByText('🌿 main')).toBeInTheDocument()
+  })
 })

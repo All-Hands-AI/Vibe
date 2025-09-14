@@ -9,7 +9,7 @@ import {
   getDeployStatus 
 } from '../utils/statusUtils'
 
-function AppStatus({ app }) {
+function AppStatus({ app, riff }) {
   const [prData, setPrData] = useState(null)
 
   useEffect(() => {
@@ -68,12 +68,12 @@ function AppStatus({ app }) {
   }
 
   const shouldShowNoPRMessage = () => {
-    const branch = getBranchName(app)
+    const branch = getBranchName(app, riff)
     return !prData && branch !== 'main'
   }
 
   const getBranchUrl = () => {
-    const branch = getBranchName(app)
+    const branch = getBranchName(app, riff)
     const githubUrl = app?.github_url
     if (!githubUrl) return null
     
@@ -99,11 +99,11 @@ function AppStatus({ app }) {
               rel="noopener noreferrer"
               className="text-cyber-text hover:text-blue-400 font-mono text-sm transition-colors duration-200"
             >
-              🌿 {getBranchName(app)}
+              🌿 {getBranchName(app, riff)}
             </a>
           ) : (
             <span className="text-cyber-text font-mono text-sm">
-              🌿 {getBranchName(app)}
+              🌿 {getBranchName(app, riff)}
             </span>
           )}
         </div>
@@ -275,6 +275,15 @@ AppStatus.propTypes = {
       deployed: PropTypes.bool,
       app_url: PropTypes.string
     })
+  }),
+  riff: PropTypes.shape({
+    name: PropTypes.string,
+    slug: PropTypes.string,
+    app_slug: PropTypes.string,
+    created_at: PropTypes.string,
+    created_by: PropTypes.string,
+    last_message_at: PropTypes.string,
+    message_count: PropTypes.number
   })
 }
 

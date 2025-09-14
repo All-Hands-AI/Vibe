@@ -229,7 +229,7 @@ function RiffDetail() {
           {/* Sidebar */}
           <div className="lg:col-span-1 space-y-6">
             {/* App Status */}
-            <AppStatus app={app} />
+            <AppStatus app={app} riff={riff} />
             
             {/* Agent Status Panel */}
             <AgentStatusPanel appSlug={appSlug} riffSlug={riffSlug} />
