@@ -4,6 +4,7 @@ import { useSetup } from '../context/SetupContext'
 import { getUserUUID } from '../utils/uuid'
 import ChatWindow from '../components/ChatWindow'
 import LLMErrorModal from '../components/LLMErrorModal'
+import FirstRiffModal from '../components/FirstRiffModal'
 import CIStatus from '../components/CIStatus'
 import { startLLMPolling, checkLLMReady } from '../utils/llmService'
 
@@ -20,6 +21,7 @@ function RiffDetail() {
   const [error, setError] = useState('')
   const [, setLlmReady] = useState(true)
   const [showLLMError, setShowLLMError] = useState(false)
+  const [showFirstRiffModal, setShowFirstRiffModal] = useState(false)
   const stopPollingRef = useRef(null)
   const prStatusPollingRef = useRef(null)
   const deploymentStatusPollingRef = useRef(null)
@@ -73,6 +75,13 @@ function RiffDetail() {
       }
       
       setRiff(foundRiff)
+      
+      // Check if this is a "rename-to" riff and show the modal
+      if (foundRiff.slug.startsWith('rename-to-')) {
+        console.log('🎯 This is a rename-to riff, showing first riff modal')
+        setShowFirstRiffModal(true)
+      }
+      
       console.log('✅ Data loaded successfully')
     } catch (err) {
       console.error('❌ Error fetching data:', err)
@@ -296,6 +305,10 @@ function RiffDetail() {
 
   const handleCloseLLMError = useCallback(() => {
     setShowLLMError(false)
+  }, [])
+
+  const handleCloseFirstRiffModal = useCallback(() => {
+    setShowFirstRiffModal(false)
   }, [])
 
   if (loading) {
@@ -528,6 +541,13 @@ function RiffDetail() {
         appSlug={appSlug}
         riffSlug={riffSlug}
         onReset={handleLLMReset}
+      />
+
+      {/* First Riff Modal */}
+      <FirstRiffModal
+        isOpen={showFirstRiffModal}
+        onClose={handleCloseFirstRiffModal}
+        appName={app?.slug}
       />
     </div>
   )

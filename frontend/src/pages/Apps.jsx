@@ -245,9 +245,10 @@ function Apps() {
       console.log('🔄 Refreshing apps list...')
       await fetchApps()
       
-      // Redirect to the new app's page
-      console.log('🔄 Redirecting to new app:', data.app.slug)
-      navigate(`/apps/${data.app.slug}`)
+      // Redirect to the new app's rename-to riff page
+      const renameToRiffSlug = `rename-to-${data.app.slug}`
+      console.log('🔄 Redirecting to rename-to riff:', renameToRiffSlug)
+      navigate(`/apps/${data.app.slug}/riffs/${renameToRiffSlug}`)
       
       // Clear success message after 5 seconds
       setTimeout(() => setSuccess(''), 5000)
