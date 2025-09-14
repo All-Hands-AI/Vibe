@@ -1476,12 +1476,12 @@ def create_app():
 
         # Wait 5 seconds before creating the first riff to allow for proper setup
         logger.info(
-            f"⏳ Waiting 5 seconds before creating initial riff for app: {app_name}"
+            f"⏳ Waiting 5 seconds before creating initial riff for app: {app['name']}"
         )
         time.sleep(5)
 
         # Create initial riff and message for the new app
-        logger.info(f"🆕 Creating initial riff for app: {app_name}")
+        logger.info(f"🆕 Creating initial riff for app: {app['name']}")
         riff_success, riff_result = create_initial_riff_and_message(
             user_uuid, app_slug, app_name, github_url
         )
