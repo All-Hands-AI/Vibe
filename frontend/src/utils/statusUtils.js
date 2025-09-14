@@ -48,7 +48,12 @@ export const getStatusColor = (status) => {
   }
 }
 
-export const getBranchName = (app) => {
+export const getBranchName = (app, riff) => {
+  // If we have riff data, use the riff name as the branch name
+  if (riff?.name) {
+    return riff.name
+  }
+  // Otherwise, fall back to app branch information
   return app?.branch || app?.github_status?.branch || 'main'
 }
 
