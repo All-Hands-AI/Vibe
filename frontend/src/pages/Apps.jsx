@@ -30,12 +30,25 @@ function Apps() {
 
   // Create slug from app name for preview
   const createSlug = (name) => {
-    return name
-      .toLowerCase()
-      .replace(/[^a-zA-Z0-9\s-]/g, '')
-      .replace(/\s+/g, '-')
-      .replace(/-+/g, '-')
-      .replace(/^-|-$/g, '')
+    console.log('🔧 createSlug input:', JSON.stringify(name))
+    
+    const step1 = name.toLowerCase()
+    console.log('🔧 Step 1 (toLowerCase):', JSON.stringify(step1))
+    
+    const step2 = step1.replace(/[^a-zA-Z0-9\s-]/g, '')
+    console.log('🔧 Step 2 (remove invalid chars):', JSON.stringify(step2))
+    
+    const step3 = step2.replace(/\s+/g, '-')
+    console.log('🔧 Step 3 (spaces to hyphens):', JSON.stringify(step3))
+    
+    const step4 = step3.replace(/-+/g, '-')
+    console.log('🔧 Step 4 (collapse multiple hyphens):', JSON.stringify(step4))
+    
+    const step5 = step4.replace(/^-|-$/g, '')
+    console.log('🔧 Step 5 (remove leading/trailing hyphens):', JSON.stringify(step5))
+    
+    console.log('🔧 createSlug final result:', JSON.stringify(step5))
+    return step5
   }
 
 
