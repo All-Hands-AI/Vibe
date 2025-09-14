@@ -52,12 +52,14 @@ def get_llm_instance(api_key: str, model: str = "claude-3-haiku-20240307"):
 
 from utils.logging import get_logger, log_api_request, log_api_response
 
-# Import functions from apps.py for GitHub and Fly.io operations
+# Import functions from apps.py for GitHub and Fly.io operations and PR status
 from routes.apps import (
     close_github_pr,
     delete_github_branch,
     delete_fly_app,
     load_user_app,
+    get_pr_status,
+    user_app_exists,
 )
 
 logger = get_logger(__name__)
@@ -342,12 +344,6 @@ def delete_user_riff(user_uuid, app_slug, riff_slug):
     """Delete riff for a specific user"""
     storage = get_riffs_storage(user_uuid)
     return storage.delete_riff(app_slug, riff_slug)
-
-
-def user_app_exists(user_uuid, app_slug):
-    """Check if app exists for user"""
-    storage = get_apps_storage(user_uuid)
-    return storage.app_exists(app_slug)
 
 
 def create_slug(name):
@@ -1083,6 +1079,113 @@ def pause_agent(slug, riff_slug):
             logger, "POST", f"/api/apps/{slug}/riffs/{riff_slug}/pause", 500
         )
         return jsonify({"error": "Failed to pause agent"}), 500
+
+
+@riffs_bp.route("/api/apps/<slug>/riffs/<riff_slug>/pr-status", methods=["GET"])
+def get_riff_pr_status(slug, riff_slug):
+    """Get GitHub Pull Request status for a specific riff (using riff name as branch)"""
+    log_api_request(logger, "GET", f"/api/apps/{slug}/riffs/{riff_slug}/pr-status")
+
+    try:
+        # Get UUID from headers
+        user_uuid = request.headers.get("X-User-UUID")
+        if not user_uuid:
+            logger.warning("❌ X-User-UUID header is required")
+            log_api_response(
+                logger, "GET", f"/api/apps/{slug}/riffs/{riff_slug}/pr-status", 400
+            )
+            return jsonify({"error": "X-User-UUID header is required"}), 400
+
+        user_uuid = user_uuid.strip()
+        if not user_uuid:
+            logger.warning("❌ Empty UUID provided in header")
+            log_api_response(
+                logger, "GET", f"/api/apps/{slug}/riffs/{riff_slug}/pr-status", 400
+            )
+            return jsonify({"error": "UUID cannot be empty"}), 400
+
+        # Load app to get GitHub URL
+        apps_storage = get_apps_storage(user_uuid)
+        app = apps_storage.load_app(slug)
+        if not app:
+            logger.warning(f"❌ App not found: {slug} for user {user_uuid[:8]}")
+            log_api_response(
+                logger, "GET", f"/api/apps/{slug}/riffs/{riff_slug}/pr-status", 404
+            )
+            return jsonify({"error": "App not found"}), 404
+
+        # Check if app has GitHub URL
+        github_url = app.get("github_url")
+        if not github_url:
+            logger.info(f"ℹ️ No GitHub URL configured for app {slug}")
+            log_api_response(
+                logger, "GET", f"/api/apps/{slug}/riffs/{riff_slug}/pr-status", 200
+            )
+            return jsonify({"pr_status": None, "message": "No GitHub URL configured"})
+
+        # Get user's GitHub token
+        try:
+            user_keys = load_user_keys(user_uuid)
+            github_token = user_keys.get("github")
+
+            if not github_token:
+                logger.info(f"ℹ️ No GitHub token found for user {user_uuid[:8]}")
+                log_api_response(
+                    logger, "GET", f"/api/apps/{slug}/riffs/{riff_slug}/pr-status", 200
+                )
+                return jsonify(
+                    {"pr_status": None, "message": "No GitHub token configured"}
+                )
+
+            # Use riff name as the HEAD branch name (source branch)
+            riff_branch = riff_slug
+            logger.info(f"🔍 RIFF ENDPOINT: Getting PR status for riff: {riff_branch}")
+            logger.info(
+                f"🔍 RIFF ENDPOINT: Looking for PRs with head='{riff_branch}' and base='main'"
+            )
+            logger.info(
+                f"🔍 RIFF ENDPOINT: This should find PRs FROM '{riff_branch}' TO 'main'"
+            )
+
+            # Search for PRs FROM the riff branch TO main (the typical workflow)
+            # This means: head=riff_branch, base=main
+            pr_status = get_pr_status(
+                github_url, github_token, riff_branch, search_by_base=False
+            )
+
+            if pr_status:
+                logger.info(f"✅ Found PR from riff branch '{riff_branch}' to main")
+            else:
+                logger.info(f"ℹ️ No PR found from riff branch '{riff_branch}' to main")
+                # Note: We don't try base search here because riffs are source branches, not target branches
+
+            if pr_status:
+                logger.info(
+                    f"✅ Found PR status for riff {riff_slug}: #{pr_status['number']}"
+                )
+            else:
+                logger.info(
+                    f"ℹ️ No PR found for riff {riff_slug} (branch: {riff_branch})"
+                )
+
+            log_api_response(
+                logger, "GET", f"/api/apps/{slug}/riffs/{riff_slug}/pr-status", 200
+            )
+            return jsonify({"pr_status": pr_status})
+
+        except Exception as e:
+            logger.warning(f"⚠️ Error getting PR status: {str(e)}")
+            log_api_response(
+                logger, "GET", f"/api/apps/{slug}/riffs/{riff_slug}/pr-status", 200
+            )
+            return jsonify({"pr_status": None, "error": str(e)})
+
+    except Exception as e:
+        logger.error(f"💥 Error getting riff PR status: {str(e)}")
+        log_api_response(
+            logger, "GET", f"/api/apps/{slug}/riffs/{riff_slug}/pr-status", 500
+        )
+        return jsonify({"error": "Failed to get PR status"}), 500
 
 
 @riffs_bp.route("/api/apps/<slug>/riffs/<riff_slug>", methods=["DELETE"])
