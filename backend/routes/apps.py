@@ -776,7 +776,7 @@ def get_pr_status(repo_url, github_token, branch="main", search_by_base=False):
             commit_data = commit_response.json()
             commit_message = commit_data.get("commit", {}).get("message", "")
             # Take only the first line of the commit message for display
-            commit_message = commit_message.split('\n')[0] if commit_message else ""
+            commit_message = commit_message.split("\n")[0] if commit_message else ""
 
         # Get check runs for more detailed CI information
         checks_response = requests.get(
