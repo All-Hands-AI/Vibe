@@ -2,12 +2,8 @@ import React from 'react'
 import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom'
 import { ThemeProvider } from './context/ThemeContext'
 import { SetupProvider, useSetup } from './context/SetupContext'
-import Header from './components/Header'
 import SetupWindow from './components/SetupWindow'
 import MatrixRain from './components/MatrixRain'
-import Home from './pages/Home'
-import About from './pages/About'
-import Contact from './pages/Contact'
 import Apps from './pages/Apps'
 import AppDetail from './pages/AppDetail'
 import RiffDetail from './pages/RiffDetail'
@@ -62,15 +58,11 @@ function AppContent() {
         {!isSetupComplete && (
           <SetupWindow onSetupComplete={completeSetup} />
         )}
-        <Header />
         <main className="flex-1 relative z-10">
           <Routes>
             <Route path="/" element={<Apps />} />
             <Route path="/apps/:slug" element={<AppDetail />} />
             <Route path="/apps/:slug/riffs/:riffSlug" element={<RiffDetail />} />
-            <Route path="/home" element={<Home />} />
-            <Route path="/about" element={<About />} />
-            <Route path="/contact" element={<Contact />} />
           </Routes>
         </main>
       </div>

@@ -14,9 +14,7 @@ describe('Footer', () => {
     render(<Footer />)
     
     expect(screen.getByText('📡 Quick Links')).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: '> Home' })).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: '> About' })).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: '> Contact' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: '> Apps' })).toBeInTheDocument()
   })
 
   it('renders connect section with external links', () => {

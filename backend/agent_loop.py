@@ -4,6 +4,7 @@ Manages agent conversations using openhands-sdk Agent and Conversation.
 """
 
 import sys
+import os
 import threading
 from typing import Dict, Optional, Callable
 from threading import Lock
@@ -13,16 +14,37 @@ from utils.logging import get_logger
 sys.path.insert(0, ".venv/lib/python3.12/site-packages")
 
 from openhands.sdk import Agent, Conversation, LLM, Message, TextContent, AgentContext
+from openhands.tools import FileEditorTool, TaskTrackerTool
 
 logger = get_logger(__name__)
 
 
-def create_test_agent(llm, tools):
-    """Create an agent that prefixes all responses with 'howdy!' for testing"""
-    # Create agent context with custom system message suffix
-    agent_context = AgentContext(
-        system_message_suffix="IMPORTANT: Always prefix your response with 'howdy!' followed by a space, then respond normally to the user's request."
-    )
+def create_test_agent(llm, tools, workspace_path):
+    """Create an agent with FileEditor and TaskTracker tools that prefixes all responses with 'howdy!' for testing"""
+    # Create agent context with custom system message suffix that includes workspace info
+    system_message_suffix = f"""IMPORTANT: Always prefix your response with 'howdy!' followed by a space, then respond normally to the user's request.
+
+WORKSPACE INFORMATION:
+You are working in a workspace located at: {workspace_path}
+
+The workspace contains:
+- {workspace_path}/project/ - The cloned GitHub repository with the complete source code
+- {workspace_path}/tasks/ - Directory for task tracking data
+
+You can:
+- View, edit, and create files using the FileEditor tool (use absolute paths)
+- Navigate the repository structure in the project/ subdirectory
+- Make changes to the codebase
+- Track tasks and progress
+- The repository is already checked out to the appropriate branch for this riff
+
+IMPORTANT: When using the FileEditor tool, always use absolute paths:
+- For repository files: {workspace_path}/project/src/main.py or {workspace_path}/project/README.md
+- For task files: {workspace_path}/tasks/task-name.json
+
+Your file operations will be performed within this workspace directory structure."""
+
+    agent_context = AgentContext(system_message_suffix=system_message_suffix)
 
     return Agent(llm=llm, tools=tools, agent_context=agent_context)
 
@@ -39,6 +61,7 @@ class AgentLoop:
         app_slug: str,
         riff_slug: str,
         llm: LLM,
+        workspace_path: str,
         message_callback: Optional[Callable] = None,
     ):
         """
@@ -49,6 +72,7 @@ class AgentLoop:
             app_slug: Slug identifier for the app
             riff_slug: Slug identifier for the riff/conversation
             llm: LLM instance from openhands-sdk
+            workspace_path: Required path to the workspace directory (cloned repository)
             message_callback: Optional callback function to handle events/messages
         """
         self.user_uuid = user_uuid
@@ -57,13 +81,23 @@ class AgentLoop:
         self.llm = llm
         self.message_callback = message_callback
 
-        # Create Agent with only built-in tools (no bash or file tools)
-        tools: list = (
-            []
-        )  # Empty tools list - agent will only have built-in tools like 'finish' and 'think'
+        # Require workspace_path to be explicitly provided
+        if not workspace_path:
+            raise ValueError("workspace_path is required and cannot be None or empty")
+        self.workspace_path = workspace_path
+
+        # Create Agent with development tools
+        # Use workspace path for file operations and task tracking
+        task_dir = os.path.join(self.workspace_path, "tasks")
+        tools: list = [
+            FileEditorTool.create(),
+            TaskTrackerTool.create(
+                save_dir=task_dir
+            ),  # Save task tracking data to workspace/tasks/ directory
+        ]  # Include FileEditor and TaskTracker tools for development capabilities
 
         # Use custom agent for testing - it will always reply with "howdy!"
-        self.agent = create_test_agent(llm, tools)
+        self.agent = create_test_agent(llm, tools, self.workspace_path)
 
         # Create conversation callbacks
         callbacks = []
@@ -343,6 +377,7 @@ class AgentLoopManager:
         app_slug: str,
         riff_slug: str,
         llm: LLM,
+        workspace_path: str,
         message_callback: Optional[Callable] = None,
     ) -> AgentLoop:
         """
@@ -353,6 +388,7 @@ class AgentLoopManager:
             app_slug: Slug identifier for the app
             riff_slug: Slug identifier for the riff/conversation
             llm: LLM instance from openhands-sdk
+            workspace_path: Required path to the workspace directory (cloned repository)
             message_callback: Optional callback function to handle events/messages
 
         Returns:
@@ -368,7 +404,7 @@ class AgentLoopManager:
                 old_loop.stop_agent_thread()
 
             agent_loop = AgentLoop(
-                user_uuid, app_slug, riff_slug, llm, message_callback
+                user_uuid, app_slug, riff_slug, llm, workspace_path, message_callback
             )
             self.agent_loops[key] = agent_loop
 

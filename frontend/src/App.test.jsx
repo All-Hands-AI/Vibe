@@ -102,32 +102,19 @@ describe('App', () => {
 
     render(<App />)
     
-    // Wait for main app to load
+    // Wait for main app to load by checking for the Apps page content
     await waitFor(() => {
-      expect(screen.getByRole('link', { name: /OpenVibe/ })).toBeInTheDocument()
+      expect(screen.getByRole('heading', { name: '🤙 OpenHands Vibe' })).toBeInTheDocument()
+    })
+    
+    // Wait for the apps to finish loading
+    await waitFor(() => {
+      expect(screen.getByText('No apps yet. Create your first app above!')).toBeInTheDocument()
     })
     
     // Check for apps page content (default route is now Apps)
-    expect(screen.getByRole('heading', { name: 'Apps' })).toBeInTheDocument()
-    expect(screen.getByText('Manage your OpenVibe apps')).toBeInTheDocument()
     expect(screen.getByText('Create New App')).toBeInTheDocument()
-    
-    // Check navigation links in header
-    const nav = screen.getByRole('navigation')
-    expect(nav).toBeInTheDocument()
-    
-    // Use getAllByRole to handle multiple links with same name
-    const appsLinks = screen.getAllByRole('link', { name: '🗂️ Apps' })
-    expect(appsLinks.length).toBeGreaterThan(0)
-    
-    const homeLinks = screen.getAllByRole('link', { name: '🏠 Home' })
-    expect(homeLinks.length).toBeGreaterThan(0)
-    
-    const aboutLinks = screen.getAllByRole('link', { name: 'ℹ️ About' })
-    expect(aboutLinks.length).toBeGreaterThan(0)
-    
-    const contactLinks = screen.getAllByRole('link', { name: '📞 Contact' })
-    expect(contactLinks.length).toBeGreaterThan(0)
+    expect(screen.getByText('Your Apps')).toBeInTheDocument()
   })
 
   it('renders with theme provider', () => {

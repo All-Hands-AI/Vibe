@@ -51,8 +51,7 @@ describe('Apps', () => {
     renderWithRouter(<Apps />)
     
     // Check header content
-    expect(screen.getByText('Apps')).toBeInTheDocument()
-    expect(screen.getByText('Manage your OpenVibe apps')).toBeInTheDocument()
+    expect(screen.getByText('🤙 OpenHands Vibe')).toBeInTheDocument()
     
     // Check form elements
     expect(screen.getByText('Create New App')).toBeInTheDocument()
