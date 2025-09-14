@@ -16,10 +16,33 @@ This implementation adds automatic riff creation and initial message sending whe
 
 ## Initial Message Content
 
-The initial message sent to the agent contains:
+The initial message sent to the agent contains detailed step-by-step instructions:
 
 ```
-Please follow the instructions in TEMPLATE.md to change the app name everywhere from the template name to "{app_name}". After making all the necessary changes, delete the TEMPLATE.md file and push your changes to the repository.
+Please complete the following tasks to customize this app template for "{app_name}":
+
+1. **Read TEMPLATE.md** - First, read the TEMPLATE.md file to understand the specific instructions for this template.
+
+2. **Follow the template instructions** - Execute the instructions in TEMPLATE.md to change the app name everywhere in the repository. The template should contain a helpful command or script to automate this process.
+
+3. **Change the app name** - Update all references from the template name to "{app_name}" throughout the codebase. This typically includes:
+   - Package.json or similar dependency files
+   - Configuration files
+   - README files
+   - HTML title tags
+   - Any hardcoded app names in the code
+
+4. **Verify the changes** - Check that the app name has been successfully changed in key locations:
+   - Check the main package.json or equivalent
+   - Check the README.md file
+   - Check any configuration files
+   - Search for any remaining references to the old template name
+
+5. **Delete TEMPLATE.md** - Once you've followed all the instructions, delete the TEMPLATE.md file as it's no longer needed.
+
+6. **Commit and push changes** - Commit all your changes with a descriptive message and push them to the remote repository.
+
+Please work through these steps systematically and let me know if you encounter any issues or need clarification on any step.
 ```
 
 ## Slug Validation
