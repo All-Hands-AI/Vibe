@@ -5,6 +5,7 @@ import { getUserUUID } from '../utils/uuid'
 import ChatWindow from '../components/ChatWindow'
 import LLMErrorModal from '../components/LLMErrorModal'
 import DeploymentBanner from '../components/DeploymentBanner'
+import CIStatus from '../components/CIStatus'
 import { startLLMPolling, checkLLMReady } from '../utils/llmService'
 import { getDeployStatus } from '../utils/statusUtils'
 
@@ -249,7 +250,11 @@ function RiffDetail() {
         <header className="mb-4">
           <div className="flex flex-wrap items-baseline justify-between gap-4 mb-4">
             <div>
-              <h1 className="text-3xl font-bold text-cyber-text mb-2 font-mono">{riff.name}</h1>
+              <div className="flex items-center gap-4 mb-2">
+                <h1 className="text-3xl font-bold text-cyber-text font-mono">{riff.name}</h1>
+                {/* CI Status */}
+                {prStatus && <CIStatus prStatus={prStatus} />}
+              </div>
               {/* PR Status Subheading */}
               {prStatus && (
                 <div className="flex items-center gap-3 text-sm font-mono">
