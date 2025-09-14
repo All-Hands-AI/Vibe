@@ -43,12 +43,12 @@ function ConfirmationModal({
 
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={handleBackdropClick}>
-      <div className="terminal-window max-w-md w-full">
-        <div className="terminal-header flex items-center justify-between">
+      <div className="creative-window max-w-md w-full">
+        <div className="creative-header flex items-center justify-between">
           <h3 className="text-xl font-semibold font-mono">{title}</h3>
           {!isLoading && (
             <button 
-              className="text-cyber-muted hover:text-cyber-text text-2xl leading-none transition-colors duration-200" 
+              className="text-slate-400 hover:text-slate-200 text-2xl leading-none transition-colors duration-200" 
               onClick={onClose}
               aria-label="Close modal"
             >
@@ -57,15 +57,15 @@ function ConfirmationModal({
           )}
         </div>
         
-        <div className="terminal-content">
-          <div className="text-cyber-text leading-relaxed font-mono">
+        <div className="creative-content">
+          <div className="text-slate-200 leading-relaxed font-mono">
             {message}
           </div>
         </div>
         
-        <div className="flex gap-3 p-6 border-t border-cyber-border">
+        <div className="flex gap-3 p-6 border-t border-slate-600">
           <button 
-            className="flex-1 btn-hacker disabled:opacity-50 disabled:cursor-not-allowed" 
+            className="flex-1 btn-vibe disabled:opacity-50 disabled:cursor-not-allowed" 
             onClick={onClose}
             disabled={isLoading}
           >
@@ -75,7 +75,7 @@ function ConfirmationModal({
             className={`flex-1 px-4 py-2 rounded-md font-medium font-mono transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed border-2 ${
               isDestructive 
                 ? 'bg-red-600 text-white hover:bg-red-700 border-red-600' 
-                : 'btn-hacker-primary'
+                : 'btn-vibe-primary'
             }`}
             onClick={onConfirm}
             disabled={isLoading}

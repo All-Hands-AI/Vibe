@@ -371,20 +371,20 @@ function Apps() {
   }, [newAppName, error])
 
   return (
-    <div className="min-h-screen bg-black text-cyber-text">
+    <div className="min-h-screen bg-slate-900 text-slate-200">
       <div className="max-w-6xl mx-auto px-6 py-8">
         <header className="text-left mb-8">
-          <h1 className="text-4xl font-bold text-cyber-text mb-2 font-mono">🤙 OpenHands Vibe</h1>
+          <h1 className="text-4xl font-bold text-slate-200 mb-2 font-mono">✨ OpenHands Vibe</h1>
         </header>
 
         {/* Create New App Form */}
         <section className="mb-8">
-          <h2 className="text-2xl font-bold text-cyber-text mb-4 font-mono">Create New App</h2>
-          <div className="hacker-card max-w-2xl">
+          <h2 className="text-2xl font-bold text-slate-200 mb-4 font-mono">Create New Vibe</h2>
+          <div className="vibe-card max-w-2xl">
             <form onSubmit={handleCreateApp} className="space-y-4">
               <div>
-                <label htmlFor="appName" className="block text-sm font-medium text-cyber-text mb-2 font-mono">
-                  <span className="text-cyber-muted">{'>'}</span> App Name:
+                <label htmlFor="appName" className="block text-sm font-medium text-slate-200 mb-2 font-mono">
+                  <span className="text-slate-400">{'~'}</span> Vibe Name:
                 </label>
                 <input
                   type="text"
@@ -397,10 +397,10 @@ function Apps() {
                     console.log('📝 App name input onChange - setting state to:', JSON.stringify(slug))
                     setNewAppName(slug)
                   }}
-                  placeholder="Enter app name"
+                  placeholder="Enter your vibe name"
                   disabled={creating}
-                  className={`w-full px-4 py-3 bg-black text-cyber-text font-mono border-2 transition-colors duration-200 focus:outline-none focus:border-neon-green ${
-                    error ? 'border-red-500' : 'border-cyber-border'
+                  className={`w-full px-4 py-3 bg-slate-800 text-slate-200 font-mono border-2 transition-colors duration-200 focus:outline-none focus:border-violet-500 ${
+                    error ? 'border-red-500' : 'border-slate-600'
                   }`}
                 />
               </div>
@@ -408,9 +408,9 @@ function Apps() {
               <button 
                 type="submit" 
                 disabled={creating || !newAppName.trim()}
-                className="btn-hacker-primary w-full disabled:opacity-50 disabled:cursor-not-allowed"
+                className="btn-vibe-primary w-full disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {creating ? 'Creating...' : 'Create App'}
+                {creating ? 'Creating vibe...' : 'Create Vibe'}
               </button>
             </form>
 
@@ -430,16 +430,16 @@ function Apps() {
 
         {/* Apps List */}
         <section>
-          <h2 className="text-2xl font-bold text-cyber-text mb-4 font-mono">Your Apps</h2>
+          <h2 className="text-2xl font-bold text-slate-200 mb-4 font-mono">Your Vibes</h2>
           
           {loading ? (
             <div className="flex flex-col items-center justify-center py-16">
-              <div className="w-10 h-10 border-4 border-cyber-border border-t-transparent rounded-full animate-spin mb-4"></div>
-              <p className="text-cyber-muted font-mono">Loading apps...</p>
+              <div className="w-10 h-10 border-4 border-slate-600 border-t-transparent rounded-full animate-spin mb-4"></div>
+              <p className="text-slate-400 font-mono">Loading vibes...</p>
             </div>
           ) : apps.length === 0 ? (
             <div className="text-center py-16">
-              <p className="text-cyber-muted text-lg font-mono">No apps yet. Create your first app above!</p>
+              <p className="text-slate-400 text-lg font-mono">No vibes yet. Create your first vibe above!</p>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -447,18 +447,18 @@ function Apps() {
                 <Link 
                   key={app.slug} 
                   to={`/apps/${app.slug}`}
-                  className="hacker-card transition-all duration-300 hover:transform hover:-translate-y-1 block cursor-pointer"
+                  className="vibe-card transition-all duration-300 hover:transform hover:-translate-y-1 block cursor-pointer"
                 >
                   <div className="p-6">
                     <div className="flex justify-between items-start mb-4">
                       <div className="flex-1">
-                        <h3 className="text-xl font-semibold text-cyber-text mb-1 font-mono">{app.slug}</h3>
+                        <h3 className="text-xl font-semibold text-slate-200 mb-1 font-mono">{app.slug}</h3>
                       </div>
                       <button 
                         className="text-red-400 hover:text-red-300 text-lg p-2 hover:bg-red-900/20 rounded transition-colors duration-200 z-10 relative"
                         onClick={(e) => handleDeleteClick(app, e)}
-                        title={`Delete app "${app.slug}"`}
-                        aria-label={`Delete app "${app.slug}"`}
+                        title={`Delete vibe "${app.slug}"`}
+                        aria-label={`Delete vibe "${app.slug}"`}
                       >
                         🗑️
                       </button>
@@ -471,15 +471,15 @@ function Apps() {
                         <>
                           {/* Branch */}
                           <div className="flex items-center gap-2">
-                            <span className="text-cyber-muted font-mono text-xs">Branch:</span>
-                            <span className="text-cyber-text font-mono text-xs">
+                            <span className="text-slate-400 font-mono text-xs">Branch:</span>
+                            <span className="text-slate-200 font-mono text-xs">
                               🌿 {getBranchName(app)}
                             </span>
                           </div>
                           
                           {/* CI Status */}
                           <div className="flex items-center gap-2">
-                            <span className="text-cyber-muted font-mono text-xs">CI:</span>
+                            <span className="text-slate-400 font-mono text-xs">CI:</span>
                             <span className={`font-mono text-xs ${getStatusColor(getBranchStatus(app))}`}>
                               {getStatusIcon(getBranchStatus(app))} {getStatusText(getBranchStatus(app))}
                             </span>
@@ -487,7 +487,7 @@ function Apps() {
                           
                           {/* Deploy Status */}
                           <div className="flex items-center gap-2">
-                            <span className="text-cyber-muted font-mono text-xs">Deploy:</span>
+                            <span className="text-slate-400 font-mono text-xs">Deploy:</span>
                             {app.deployment_status ? (
                               <div className="flex items-center gap-1">
                                 {app.deployment_status.status === 'pending' && (
@@ -511,16 +511,16 @@ function Apps() {
                               </div>
                             ) : (
                               <div className="flex items-center gap-1">
-                                <div className="w-2 h-2 border border-cyber-muted border-t-transparent rounded-full animate-spin"></div>
-                                <span className="text-cyber-muted font-mono text-xs">Loading...</span>
+                                <div className="w-2 h-2 border border-slate-400 border-t-transparent rounded-full animate-spin"></div>
+                                <span className="text-slate-400 font-mono text-xs">Loading...</span>
                               </div>
                             )}
                           </div>
                         </>
                       ) : (
                         // Show loading state when detailed data is not yet available
-                        <div className="flex items-center gap-2 text-cyber-muted font-mono text-xs">
-                          <div className="w-3 h-3 border border-cyber-muted border-t-transparent rounded-full animate-spin"></div>
+                        <div className="flex items-center gap-2 text-slate-400 font-mono text-xs">
+                          <div className="w-3 h-3 border border-slate-400 border-t-transparent rounded-full animate-spin"></div>
                           <span>Loading status...</span>
                         </div>
                       )}

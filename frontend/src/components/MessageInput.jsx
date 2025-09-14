@@ -82,7 +82,7 @@ function MessageInput({ onSendMessage, disabled = false, placeholder = 'Type a m
             onKeyPress={handleKeyPress}
             placeholder={placeholder}
             disabled={disabled}
-            className="w-full bg-gray-800 border border-gray-600 rounded-lg px-4 py-2 text-cyber-text placeholder-cyber-muted resize-none focus:outline-none focus:border-neon-green transition-colors duration-200"
+            className="w-full bg-gray-800 border border-gray-600 rounded-lg px-4 py-2 text-slate-200 placeholder-cyber-muted resize-none focus:outline-none focus:border-neon-green transition-colors duration-200"
             style={{ minHeight: '40px', maxHeight: '120px' }}
             rows={1}
           />
@@ -93,7 +93,7 @@ function MessageInput({ onSendMessage, disabled = false, placeholder = 'Type a m
           type="button"
           onClick={() => fileInputRef.current?.click()}
           disabled={disabled}
-          className="h-10 w-10 flex-shrink-0 flex items-center justify-center bg-gray-700 hover:bg-gray-600 border border-gray-600 rounded-lg text-cyber-muted hover:text-cyber-text transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="h-10 w-10 flex-shrink-0 flex items-center justify-center bg-gray-700 hover:bg-gray-600 border border-gray-600 rounded-lg text-slate-400 hover:text-slate-200 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
           title="Upload file"
         >
           📎

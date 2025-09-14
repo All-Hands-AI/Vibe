@@ -84,10 +84,10 @@ function AgentStatusPanel({ appSlug, riffSlug }) {
   if (loading) {
     return (
       <div className="bg-gray-900 border border-gray-700 rounded-lg p-4">
-        <h3 className="text-lg font-semibold text-cyber-text mb-3 font-mono">Agent Status</h3>
+        <h3 className="text-lg font-semibold text-slate-200 mb-3 font-mono">Agent Status</h3>
         <div className="flex items-center space-x-2">
-          <div className="w-4 h-4 border-2 border-gray-600 border-t-cyber-muted rounded-full animate-spin"></div>
-          <span className="text-cyber-muted">Loading status...</span>
+          <div className="w-4 h-4 border-2 border-gray-600 border-t-slate-400 rounded-full animate-spin"></div>
+          <span className="text-slate-400">Loading status...</span>
         </div>
       </div>
     )
@@ -110,7 +110,7 @@ function AgentStatusPanel({ appSlug, riffSlug }) {
 
   return (
     <div className="bg-gray-900 border border-gray-700 rounded-lg p-4">
-      <h3 className="text-lg font-semibold text-cyber-text mb-3 font-mono">Agent Status</h3>
+      <h3 className="text-lg font-semibold text-slate-200 mb-3 font-mono">Agent Status</h3>
       
       {/* Status Display */}
       <div className="mb-4">
@@ -129,7 +129,7 @@ function AgentStatusPanel({ appSlug, riffSlug }) {
         
         {/* Additional Status Info */}
         {status && status.status === 'initialized' && (
-          <div className="text-xs text-cyber-muted space-y-1">
+          <div className="text-xs text-slate-400 space-y-1">
             {status.conversation_id && (
               <div>ID: {status.conversation_id.substring(0, 8)}...</div>
             )}

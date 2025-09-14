@@ -328,10 +328,10 @@ function AppDetail() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-black text-cyber-text">
+      <div className="min-h-screen bg-black text-slate-200">
         <div className="flex flex-col items-center justify-center py-16">
-          <div className="w-10 h-10 border-4 border-cyber-border border-t-transparent rounded-full animate-spin mb-4"></div>
-          <p className="text-cyber-muted font-mono">Loading app...</p>
+          <div className="w-10 h-10 border-4 border-slate-600 border-t-transparent rounded-full animate-spin mb-4"></div>
+          <p className="text-slate-400 font-mono">Loading app...</p>
         </div>
       </div>
     )
@@ -339,12 +339,12 @@ function AppDetail() {
 
   if (error && !app) {
     return (
-      <div className="min-h-screen bg-black text-cyber-text">
+      <div className="min-h-screen bg-black text-slate-200">
         <div className="max-w-4xl mx-auto px-8 py-16">
           <div className="text-center">
             <h2 className="text-3xl font-bold text-red-400 mb-4 font-mono">Error</h2>
-            <p className="text-cyber-muted mb-8 font-mono">{error}</p>
-            <Link to="/" className="inline-flex items-center text-cyber-muted hover:text-neon-green font-medium transition-colors duration-200 font-mono">
+            <p className="text-slate-400 mb-8 font-mono">{error}</p>
+            <Link to="/" className="inline-flex items-center text-slate-400 hover:text-neon-green font-medium transition-colors duration-200 font-mono">
               ← Back to Apps
             </Link>
           </div>
@@ -355,12 +355,12 @@ function AppDetail() {
 
   if (!app) {
     return (
-      <div className="min-h-screen bg-black text-cyber-text">
+      <div className="min-h-screen bg-black text-slate-200">
         <div className="max-w-4xl mx-auto px-8 py-16">
           <div className="text-center">
             <h2 className="text-3xl font-bold text-red-400 mb-4 font-mono">App Not Found</h2>
-            <p className="text-cyber-muted mb-8 font-mono">The app &quot;{slug}&quot; could not be found.</p>
-            <Link to="/" className="inline-flex items-center text-cyber-muted hover:text-neon-green font-medium transition-colors duration-200 font-mono">
+            <p className="text-slate-400 mb-8 font-mono">The app &quot;{slug}&quot; could not be found.</p>
+            <Link to="/" className="inline-flex items-center text-slate-400 hover:text-neon-green font-medium transition-colors duration-200 font-mono">
               ← Back to Apps
             </Link>
           </div>
@@ -370,16 +370,16 @@ function AppDetail() {
   }
 
   return (
-    <div className="min-h-screen bg-black text-cyber-text">
+    <div className="min-h-screen bg-black text-slate-200">
       <div className="max-w-6xl mx-auto px-6 py-6">
         {/* Navigation */}
         <nav className="mb-4">
           <div className="flex items-center space-x-2 text-sm">
-            <Link to="/" className="text-cyber-muted hover:text-neon-green transition-colors duration-200">
+            <Link to="/" className="text-slate-400 hover:text-neon-green transition-colors duration-200">
               Apps
             </Link>
             <span className="text-gray-500">/</span>
-            <span className="text-cyber-muted">{app.slug}</span>
+            <span className="text-slate-400">{app.slug}</span>
           </div>
         </nav>
 
@@ -387,9 +387,9 @@ function AppDetail() {
         <header className="mb-4">
           <div className="flex flex-wrap items-baseline justify-between gap-4 mb-4">
             <div>
-              <h1 className="text-3xl font-bold text-cyber-text mb-2 font-mono">{app.slug}</h1>
+              <h1 className="text-3xl font-bold text-slate-200 mb-2 font-mono">{app.slug}</h1>
             </div>
-            <p className="text-cyber-muted font-mono text-sm">
+            <p className="text-slate-400 font-mono text-sm">
               Created {new Date(app.created_at).toLocaleDateString()}
             </p>
           </div>
@@ -407,8 +407,8 @@ function AppDetail() {
             <section>
               {/* Create New Riff */}
               <div className="mb-12">
-                <h3 className="text-xl font-semibold text-cyber-text mb-4">Create New Riff</h3>
-                <div className="hacker-card p-6 rounded-lg border border-gray-700">
+                <h3 className="text-xl font-semibold text-slate-200 mb-4">Create New Riff</h3>
+                <div className="vibe-card p-6 rounded-lg border border-gray-700">
                   <form onSubmit={handleCreateRiff} className="space-y-6">
                     <div>
                       <input
@@ -423,7 +423,7 @@ function AppDetail() {
                         }}
                         placeholder="Enter riff name"
                         disabled={creating}
-                        className={`w-full px-4 py-3 bg-gray-700 text-cyber-text rounded-md border transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-cyber-muted focus:border-transparent ${
+                        className={`w-full px-4 py-3 bg-gray-700 text-slate-200 rounded-md border transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-cyber-muted focus:border-transparent ${
                           error ? 'border-red-500' : 'border-gray-600'
                         }`}
                       />
@@ -454,38 +454,38 @@ function AppDetail() {
 
               {/* Riffs List */}
               <div>
-                <h3 className="text-xl font-semibold text-cyber-text mb-4">All Riffs</h3>
+                <h3 className="text-xl font-semibold text-slate-200 mb-4">All Riffs</h3>
                 
                 {riffsLoading ? (
                   <div className="flex flex-col items-center justify-center py-16">
-                    <div className="w-10 h-10 border-4 border-gray-600 border-t-cyber-muted rounded-full animate-spin mb-4"></div>
-                    <p className="text-cyber-muted">Loading riffs...</p>
+                    <div className="w-10 h-10 border-4 border-gray-600 border-t-slate-400 rounded-full animate-spin mb-4"></div>
+                    <p className="text-slate-400">Loading riffs...</p>
                   </div>
                 ) : riffs.length === 0 ? (
                   <div className="text-center py-16">
-                    <p className="text-cyber-muted text-lg">No riffs yet. Create your first riff above!</p>
+                    <p className="text-slate-400 text-lg">No riffs yet. Create your first riff above!</p>
                   </div>
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {riffs.map((riff) => (
                       <div 
                         key={riff.slug} 
-                        className="hacker-card rounded-lg border border-gray-700 hover:border-cyber-muted transition-all duration-300 hover:transform hover:-translate-y-1 p-6 relative"
+                        className="vibe-card rounded-lg border border-gray-700 hover:border-slate-400 transition-all duration-300 hover:transform hover:-translate-y-1 p-6 relative"
                       >
                         <Link 
                           to={`/apps/${app.slug}/riffs/${riff.slug}`}
                           className="block"
                         >
                           <div className="mb-4 pr-12">
-                            <h4 className="text-xl font-semibold text-cyber-text mb-1">{riff.slug}</h4>
+                            <h4 className="text-xl font-semibold text-slate-200 mb-1">{riff.slug}</h4>
                           </div>
                           
                           <div className="space-y-2">
-                            <p className="text-sm text-cyber-muted">
+                            <p className="text-sm text-slate-400">
                               Created: {new Date(riff.created_at).toLocaleDateString()}
                             </p>
                             {riff.last_message_at && (
-                              <p className="text-sm text-cyber-muted">
+                              <p className="text-sm text-slate-400">
                                 Last activity: {new Date(riff.last_message_at).toLocaleDateString()}
                               </p>
                             )}
@@ -522,12 +522,12 @@ function AppDetail() {
               <p className="mb-4">
                 Are you sure you want to delete the riff <strong>&quot;{deleteModal.riff.slug}&quot;</strong>?
               </p>
-              <p className="mb-4 text-cyber-muted">
+              <p className="mb-4 text-slate-400">
                 This will permanently delete:
               </p>
-              <ul className="list-disc list-inside text-cyber-muted space-y-1 mb-4">
-                <li>The Fly.io app: <code className="bg-cyber-accent px-1 rounded">{app?.slug}-{deleteModal.riff.slug}</code></li>
-                <li>The GitHub branch: <code className="bg-cyber-accent px-1 rounded">{deleteModal.riff.slug}</code></li>
+              <ul className="list-disc list-inside text-slate-400 space-y-1 mb-4">
+                <li>The Fly.io app: <code className="bg-slate-700 px-1 rounded">{app?.slug}-{deleteModal.riff.slug}</code></li>
+                <li>The GitHub branch: <code className="bg-slate-700 px-1 rounded">{deleteModal.riff.slug}</code></li>
                 <li>Any open pull request for this branch</li>
                 <li>All riff data and chat history</li>
               </ul>

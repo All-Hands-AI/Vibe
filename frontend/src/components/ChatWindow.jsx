@@ -218,8 +218,8 @@ function ChatWindow({ app, riff, userUuid }) {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="w-8 h-8 border-4 border-gray-600 border-t-cyber-muted rounded-full animate-spin"></div>
-        <span className="ml-3 text-cyber-muted">Loading messages...</span>
+        <div className="w-8 h-8 border-4 border-gray-600 border-t-slate-400 rounded-full animate-spin"></div>
+        <span className="ml-3 text-slate-400">Loading messages...</span>
       </div>
     )
   }

@@ -300,10 +300,10 @@ function RiffDetail() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-black text-cyber-text">
+      <div className="min-h-screen bg-black text-slate-200">
         <div className="flex flex-col items-center justify-center py-16">
-          <div className="w-10 h-10 border-4 border-gray-600 border-t-cyber-muted rounded-full animate-spin mb-4"></div>
-          <p className="text-cyber-muted">Loading riff...</p>
+          <div className="w-10 h-10 border-4 border-gray-600 border-t-slate-400 rounded-full animate-spin mb-4"></div>
+          <p className="text-slate-400">Loading riff...</p>
         </div>
       </div>
     )
@@ -311,17 +311,17 @@ function RiffDetail() {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-black text-cyber-text">
+      <div className="min-h-screen bg-black text-slate-200">
         <div className="max-w-4xl mx-auto px-8 py-16">
           <div className="text-center">
             <h2 className="text-3xl font-bold text-red-400 mb-4">Error</h2>
-            <p className="text-cyber-muted mb-8">{error}</p>
+            <p className="text-slate-400 mb-8">{error}</p>
             <div className="flex flex-wrap justify-center gap-4">
-              <Link to="/" className="inline-flex items-center text-cyber-muted hover:text-neon-green font-medium transition-colors duration-200">
+              <Link to="/" className="inline-flex items-center text-slate-400 hover:text-neon-green font-medium transition-colors duration-200">
                 ← Back to Apps
               </Link>
               {app && (
-                <Link to={`/apps/${app.slug}`} className="inline-flex items-center text-cyber-muted hover:text-neon-green font-medium transition-colors duration-200">
+                <Link to={`/apps/${app.slug}`} className="inline-flex items-center text-slate-400 hover:text-neon-green font-medium transition-colors duration-200">
                   ← Back to {app.slug}
                 </Link>
               )}
@@ -334,12 +334,12 @@ function RiffDetail() {
 
   if (!app || !riff) {
     return (
-      <div className="min-h-screen bg-black text-cyber-text">
+      <div className="min-h-screen bg-black text-slate-200">
         <div className="max-w-4xl mx-auto px-8 py-16">
           <div className="text-center">
             <h2 className="text-3xl font-bold text-red-400 mb-4">Not Found</h2>
-            <p className="text-cyber-muted mb-8">The riff could not be found.</p>
-            <Link to="/" className="inline-flex items-center text-cyber-muted hover:text-neon-green font-medium transition-colors duration-200">
+            <p className="text-slate-400 mb-8">The riff could not be found.</p>
+            <Link to="/" className="inline-flex items-center text-slate-400 hover:text-neon-green font-medium transition-colors duration-200">
               ← Back to Apps
             </Link>
           </div>
@@ -349,20 +349,20 @@ function RiffDetail() {
   }
 
   return (
-    <div className="min-h-screen bg-black text-cyber-text">
+    <div className="min-h-screen bg-black text-slate-200">
       <div className="max-w-7xl mx-auto px-6 py-6">
         {/* Navigation */}
         <nav className="mb-4">
           <div className="flex items-center space-x-2 text-sm">
-            <Link to="/" className="text-cyber-muted hover:text-neon-green transition-colors duration-200">
+            <Link to="/" className="text-slate-400 hover:text-neon-green transition-colors duration-200">
               Apps
             </Link>
             <span className="text-gray-500">/</span>
-            <Link to={`/apps/${app.slug}`} className="text-cyber-muted hover:text-neon-green transition-colors duration-200">
+            <Link to={`/apps/${app.slug}`} className="text-slate-400 hover:text-neon-green transition-colors duration-200">
               {app.slug}
             </Link>
             <span className="text-gray-500">/</span>
-            <span className="text-cyber-muted">{riff.slug}</span>
+            <span className="text-slate-400">{riff.slug}</span>
           </div>
         </nav>
 
@@ -370,7 +370,7 @@ function RiffDetail() {
         <header className="mb-4">
           <div className="flex flex-wrap items-baseline justify-between gap-4 mb-4">
             <div>
-              <h1 className="text-3xl font-bold text-cyber-text font-mono mb-2">{riff.slug}</h1>
+              <h1 className="text-3xl font-bold text-slate-200 font-mono mb-2">{riff.slug}</h1>
               {/* PR Status Subheading */}
               {prStatus && (
                 <div className="space-y-1">
@@ -407,7 +407,7 @@ function RiffDetail() {
                 </div>
               )}
             </div>
-            <p className="text-cyber-muted font-mono text-sm">
+            <p className="text-slate-400 font-mono text-sm">
               Created {new Date(riff.created_at).toLocaleDateString()}
             </p>
           </div>
@@ -428,8 +428,8 @@ function RiffDetail() {
               ) : (
                 <div className="flex items-center justify-center h-full border border-gray-700 rounded-lg">
                   <div className="text-center">
-                    <div className="w-8 h-8 border-4 border-gray-600 border-t-cyber-muted rounded-full animate-spin mx-auto mb-4"></div>
-                    <p className="text-cyber-muted">Initializing chat...</p>
+                    <div className="w-8 h-8 border-4 border-gray-600 border-t-slate-400 rounded-full animate-spin mx-auto mb-4"></div>
+                    <p className="text-slate-400">Initializing chat...</p>
                   </div>
                 </div>
               )}
@@ -467,7 +467,7 @@ function RiffDetail() {
                           href={deploymentStatus.details.workflow_url}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="text-cyber-muted hover:text-blue-400 font-mono transition-colors duration-200 underline"
+                          className="text-slate-400 hover:text-blue-400 font-mono transition-colors duration-200 underline"
                         >
                           GitHub
                         </a>
@@ -476,7 +476,7 @@ function RiffDetail() {
                         href={`https://fly.io/apps/${app.slug}-${riff.slug}`}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-cyber-muted hover:text-blue-400 font-mono transition-colors duration-200 underline"
+                        className="text-slate-400 hover:text-blue-400 font-mono transition-colors duration-200 underline"
                       >
                         Fly.io
                       </a>
@@ -486,7 +486,7 @@ function RiffDetail() {
                     href={`https://${app.slug}-${riff.slug}.fly.dev`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-cyber-muted hover:text-blue-400 font-mono text-xs transition-colors duration-200 underline"
+                    className="text-slate-400 hover:text-blue-400 font-mono text-xs transition-colors duration-200 underline"
                   >
                     {app.slug}-{riff.slug}.fly.dev
                   </a>
@@ -494,13 +494,13 @@ function RiffDetail() {
               ) : (
                 <div className="flex items-center justify-between mb-1">
                   <div className="flex items-center gap-2">
-                    <h3 className="text-sm font-semibold text-cyber-text font-mono">🚀 Live App</h3>
+                    <h3 className="text-sm font-semibold text-slate-200 font-mono">🚀 Live App</h3>
                     <div className="flex items-center gap-3 text-xs">
                       <a
                         href="https://github.com/rbren/OpenVibe/actions"
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-cyber-muted hover:text-blue-400 font-mono transition-colors duration-200 underline"
+                        className="text-slate-400 hover:text-blue-400 font-mono transition-colors duration-200 underline"
                       >
                         GitHub
                       </a>
@@ -508,7 +508,7 @@ function RiffDetail() {
                         href={`https://fly.io/apps/${app.slug}-${riff.slug}`}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-cyber-muted hover:text-blue-400 font-mono transition-colors duration-200 underline"
+                        className="text-slate-400 hover:text-blue-400 font-mono transition-colors duration-200 underline"
                       >
                         Fly.io
                       </a>
@@ -518,7 +518,7 @@ function RiffDetail() {
                     href={`https://${app.slug}-${riff.slug}.fly.dev`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-cyber-muted hover:text-blue-400 font-mono text-xs transition-colors duration-200 underline"
+                    className="text-slate-400 hover:text-blue-400 font-mono text-xs transition-colors duration-200 underline"
                   >
                     {app.slug}-{riff.slug}.fly.dev
                   </a>

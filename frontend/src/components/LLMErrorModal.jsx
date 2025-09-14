@@ -55,10 +55,10 @@ function LLMErrorModal({ isOpen, onClose, appSlug, riffSlug, onReset }) {
 
         {/* Content */}
         <div className="mb-6">
-          <p className="text-cyber-muted mb-4">
+          <p className="text-slate-400 mb-4">
             The AI assistant is not ready for this conversation. This can happen if the server was restarted or there was a connection issue.
           </p>
-          <p className="text-cyber-muted">
+          <p className="text-slate-400">
             Click &quot;Reset LLM&quot; to reinitialize the AI assistant and continue your conversation.
           </p>
         </div>
@@ -75,7 +75,7 @@ function LLMErrorModal({ isOpen, onClose, appSlug, riffSlug, onReset }) {
           <button
             onClick={onClose}
             disabled={isResetting}
-            className="px-4 py-2 text-cyber-muted hover:text-cyber-text border border-gray-600 hover:border-gray-500 rounded transition-colors duration-200 disabled:opacity-50"
+            className="px-4 py-2 text-slate-400 hover:text-slate-200 border border-gray-600 hover:border-gray-500 rounded transition-colors duration-200 disabled:opacity-50"
           >
             Cancel
           </button>

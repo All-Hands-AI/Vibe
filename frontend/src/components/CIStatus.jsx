@@ -184,7 +184,7 @@ function CIStatus({ prStatus }) {
                       <div key={index} className="flex items-center justify-between gap-3 p-2 bg-gray-800 rounded">
                         <div className="flex items-center gap-2 flex-1 min-w-0">
                           <span className="text-xs">{checkDisplay.icon}</span>
-                          <span className="text-xs text-cyber-muted truncate">{check.name}</span>
+                          <span className="text-xs text-slate-400 truncate">{check.name}</span>
                         </div>
                         <div className="flex items-center gap-2">
                           <span className={`text-xs ${checkDisplay.color}`}>{checkDisplay.label}</span>
@@ -208,7 +208,7 @@ function CIStatus({ prStatus }) {
                 {/* Overall status summary */}
                 <div className="border-t border-gray-700 pt-3">
                   <div className="flex items-center gap-2 text-xs font-mono">
-                    <span className="text-cyber-muted">Overall:</span>
+                    <span className="text-slate-400">Overall:</span>
                     <span className={`${statusDisplay.color}`}>
                       {statusDisplay.icon} {statusDisplay.label}
                     </span>

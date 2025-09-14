@@ -7,59 +7,55 @@ export default {
   theme: {
     extend: {
       colors: {
-        // 🔥 Hacker/Cyberpunk Color Palette
-        matrix: {
-          50: '#f0fff4',
-          100: '#dcfce7',
-          200: '#bbf7d0',
-          300: '#86efac',
-          400: '#4ade80',
-          500: '#22c55e',
-          600: '#16a34a',
-          700: '#15803d',
-          800: '#166534',
-          900: '#14532d',
+        // ✨ Vibecoding Color Palette
+        vibe: {
+          purple: '#8b5cf6',
+          pink: '#ec4899',
+          orange: '#f97316',
+          blue: '#3b82f6',
+          green: '#10b981',
+          yellow: '#f59e0b',
+          dark: '#0f172a',
+          darker: '#020617',
+          text: '#e2e8f0',      // Warm text color
+          muted: '#94a3b8',     // Warm secondary text
+          border: '#475569',    // Warm border color
+          accent: '#334155',    // Warm accent background
         },
+        // Keep neon for accent colors
         neon: {
-          green: '#00ff41', // Keep for links only
-          cyan: '#00ffff',
-          pink: '#ff0080',
-          purple: '#8000ff',
-          orange: '#ff8000',
-          yellow: '#ffff00',
+          green: '#10b981', // Warmer green for links
+          cyan: '#06b6d4',
+          pink: '#ec4899',
+          purple: '#8b5cf6',
+          orange: '#f97316',
+          yellow: '#f59e0b',
         },
-        terminal: {
-          black: '#000000',
-          darkgray: '#0a0a0a',
-          gray: '#1a1a1a',
-          lightgray: '#2a2a2a',
-          green: '#00ff00',
-          brightgreen: '#00ff41',
-        },
+        // Keep cyber for backward compatibility but with warmer tones
         cyber: {
-          dark: '#0d1117',
-          darker: '#010409',
-          blue: '#58a6ff',
-          purple: '#bc8cff',
-          pink: '#f85149',
-          orange: '#ff7b72',
-          text: '#c9d1d9',      // Muted text color
-          muted: '#8b949e',     // Muted secondary text
-          border: '#30363d',    // Subtle border color
-          accent: '#21262d',    // Subtle accent background
+          dark: '#0f172a',
+          darker: '#020617',
+          blue: '#3b82f6',
+          purple: '#8b5cf6',
+          pink: '#ec4899',
+          orange: '#f97316',
+          text: '#e2e8f0',      // Warm text color
+          muted: '#94a3b8',     // Warm secondary text
+          border: '#475569',    // Warm border color
+          accent: '#334155',    // Warm accent background
         },
         // Keep some original colors for compatibility
         primary: {
-          50: '#f0fff4',
-          100: '#dcfce7',
-          200: '#bbf7d0',
-          300: '#00ff41', // Matrix green
-          400: '#22c55e',
-          500: '#16a34a',
-          600: '#15803d',
-          700: '#166534',
-          800: '#14532d',
-          900: '#052e16',
+          50: '#f8fafc',
+          100: '#f1f5f9',
+          200: '#e2e8f0',
+          300: '#8b5cf6', // Vibe purple
+          400: '#7c3aed',
+          500: '#6d28d9',
+          600: '#5b21b6',
+          700: '#4c1d95',
+          800: '#3730a3',
+          900: '#312e81',
         },
         dark: {
           50: '#f8fafc',
@@ -80,7 +76,7 @@ export default {
         }
       },
       fontFamily: {
-        // 💻 Hacker Monospace Fonts
+        // ✨ Vibecoding Monospace Fonts
         mono: [
           'Fira Code',
           'JetBrains Mono',
@@ -107,19 +103,19 @@ export default {
           'DejaVu Sans Mono',
           'monospace'
         ],
-        hacker: [
-          'Courier New',
-          'Courier',
+        vibe: [
+          'Fira Code',
+          'JetBrains Mono',
           'monospace'
         ],
       },
       animation: {
-        'pulse-neon': 'pulse-neon 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
-        'glitch': 'glitch 0.3s infinite',
-        'matrix-rain': 'matrix-rain 20s linear infinite',
+        'pulse-vibe': 'pulse-vibe 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+        'shimmer': 'shimmer 0.8s infinite',
+        'vibe-flow': 'vibe-flow 25s linear infinite',
       },
       keyframes: {
-        'pulse-neon': {
+        'pulse-vibe': {
           '0%, 100%': {
             opacity: '1',
             textShadow: '0 0 5px currentColor, 0 0 10px currentColor, 0 0 15px currentColor',
@@ -129,18 +125,17 @@ export default {
             textShadow: '0 0 2px currentColor, 0 0 5px currentColor, 0 0 8px currentColor',
           },
         },
-        'glitch': {
-          '0%': { transform: 'translate(0)' },
-          '20%': { transform: 'translate(-2px, 2px)' },
-          '40%': { transform: 'translate(-2px, -2px)' },
-          '60%': { transform: 'translate(2px, 2px)' },
-          '80%': { transform: 'translate(2px, -2px)' },
-          '100%': { transform: 'translate(0)' },
+        'shimmer': {
+          '0%': { transform: 'translate(0)', opacity: '0.3' },
+          '25%': { transform: 'translate(-1px, -0.5px)', opacity: '0.6' },
+          '50%': { transform: 'translate(0)', opacity: '0.3' },
+          '75%': { transform: 'translate(1px, 0.5px)', opacity: '0.6' },
+          '100%': { transform: 'translate(0)', opacity: '0.3' },
         },
       },
       textShadow: {
-        'neon': '0 0 5px currentColor, 0 0 10px currentColor, 0 0 15px currentColor',
-        'neon-strong': '0 0 5px currentColor, 0 0 10px currentColor, 0 0 15px currentColor, 0 0 20px currentColor',
+        'vibe': '0 0 5px currentColor, 0 0 10px currentColor, 0 0 15px currentColor',
+        'vibe-strong': '0 0 5px currentColor, 0 0 10px currentColor, 0 0 15px currentColor, 0 0 20px currentColor',
       },
     },
   },
@@ -148,10 +143,10 @@ export default {
     // Add text shadow plugin
     function({ addUtilities }) {
       const newUtilities = {
-        '.text-shadow-neon': {
+        '.text-shadow-vibe': {
           textShadow: '0 0 5px currentColor, 0 0 10px currentColor, 0 0 15px currentColor',
         },
-        '.text-shadow-neon-strong': {
+        '.text-shadow-vibe-strong': {
           textShadow: '0 0 5px currentColor, 0 0 10px currentColor, 0 0 15px currentColor, 0 0 20px currentColor',
         },
       }

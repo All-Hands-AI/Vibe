@@ -131,22 +131,22 @@ function AppStatus({ app, riff, prStatus = null }) {
   }
 
   return (
-    <div className="hacker-card">
+    <div className="vibe-card">
       <div className="space-y-4">
         {/* Branch Information */}
         <div className="flex items-center gap-3">
-          <span className="text-cyber-muted font-mono text-sm min-w-[100px]">Branch:</span>
+          <span className="text-slate-400 font-mono text-sm min-w-[100px]">Branch:</span>
           {getBranchUrl() ? (
             <a
               href={getBranchUrl()}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-cyber-text hover:text-blue-400 font-mono text-sm transition-colors duration-200"
+              className="text-slate-200 hover:text-blue-400 font-mono text-sm transition-colors duration-200"
             >
               🌿 {getBranchName(app, riff)}
             </a>
           ) : (
-            <span className="text-cyber-text font-mono text-sm">
+            <span className="text-slate-200 font-mono text-sm">
               🌿 {getBranchName(app, riff)}
             </span>
           )}
@@ -155,12 +155,12 @@ function AppStatus({ app, riff, prStatus = null }) {
         {/* PR Information (if exists) */}
         {prData && (
           <div className="flex items-center gap-3">
-            <span className="text-cyber-muted font-mono text-sm min-w-[100px]">PR:</span>
+            <span className="text-slate-400 font-mono text-sm min-w-[100px]">PR:</span>
             <a
               href={prData.html_url}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-cyber-text hover:text-blue-400 font-mono text-sm transition-colors duration-200"
+              className="text-slate-200 hover:text-blue-400 font-mono text-sm transition-colors duration-200"
             >
               🔗 #{prData.number} - {prData.title}
             </a>
@@ -170,8 +170,8 @@ function AppStatus({ app, riff, prStatus = null }) {
         {/* No PR message (only for non-main branches) */}
         {shouldShowNoPRMessage() && (
           <div className="flex items-center gap-3">
-            <span className="text-cyber-muted font-mono text-sm min-w-[100px]">PR:</span>
-            <span className="text-cyber-muted font-mono text-sm">
+            <span className="text-slate-400 font-mono text-sm min-w-[100px]">PR:</span>
+            <span className="text-slate-400 font-mono text-sm">
               ❌ No active pull request found
             </span>
           </div>
@@ -180,8 +180,8 @@ function AppStatus({ app, riff, prStatus = null }) {
         {/* Last Commit (if available) */}
         {getLastCommit() && (
           <div className="flex items-center gap-3">
-            <span className="text-cyber-muted font-mono text-sm min-w-[100px]">Last commit:</span>
-            <span className="text-cyber-text font-mono text-sm">
+            <span className="text-slate-400 font-mono text-sm min-w-[100px]">Last commit:</span>
+            <span className="text-slate-200 font-mono text-sm">
               📝 {getLastCommit().substring(0, 7)}
             </span>
           </div>
@@ -190,7 +190,7 @@ function AppStatus({ app, riff, prStatus = null }) {
         {/* CI Status */}
         <div className="space-y-2">
           <div className="flex items-center gap-3">
-            <span className="text-cyber-muted font-mono text-sm min-w-[100px]">CI Status:</span>
+            <span className="text-slate-400 font-mono text-sm min-w-[100px]">CI Status:</span>
             <span className={`font-mono text-sm ${getStatusColor(getBranchStatus(app))}`}>
               {getStatusIcon(getBranchStatus(app))} {getStatusText(getBranchStatus(app))}
             </span>
@@ -205,14 +205,14 @@ function AppStatus({ app, riff, prStatus = null }) {
                     <span className={`text-sm ${getStatusColor(check.status)}`}>
                       {getStatusIcon(check.status)}
                     </span>
-                    <span className="text-cyber-text font-mono text-xs">{check.name}</span>
+                    <span className="text-slate-200 font-mono text-xs">{check.name}</span>
                   </div>
                   {check.details_url && (
                     <a
                       href={check.details_url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-cyber-muted hover:text-blue-400 text-xs font-mono transition-colors duration-200"
+                      className="text-slate-400 hover:text-blue-400 text-xs font-mono transition-colors duration-200"
                     >
                       View →
                     </a>
@@ -230,7 +230,7 @@ function AppStatus({ app, riff, prStatus = null }) {
           <>
             {/* Draft/Open Status */}
             <div className="flex items-center gap-3">
-              <span className="text-cyber-muted font-mono text-sm min-w-[100px]">Status:</span>
+              <span className="text-slate-400 font-mono text-sm min-w-[100px]">Status:</span>
               <span className={`font-mono text-sm ${getDraftStatusColor(prData.draft)}`}>
                 {getDraftStatusIcon(prData.draft)} {prData.draft ? 'Draft' : 'Open'}
               </span>
@@ -238,7 +238,7 @@ function AppStatus({ app, riff, prStatus = null }) {
 
             {/* Mergeable Status */}
             <div className="flex items-center gap-3">
-              <span className="text-cyber-muted font-mono text-sm min-w-[100px]">Mergeable:</span>
+              <span className="text-slate-400 font-mono text-sm min-w-[100px]">Mergeable:</span>
               <span className={`font-mono text-sm ${getMergeableStatusColor(prData.mergeable)}`}>
                 {getMergeableStatusIcon(prData.mergeable)} {getMergeableText(prData.mergeable)}
               </span>
@@ -247,7 +247,7 @@ function AppStatus({ app, riff, prStatus = null }) {
             {/* Files Changed */}
             {prData.changed_files && (
               <div className="flex items-center gap-3">
-                <span className="text-cyber-muted font-mono text-sm min-w-[100px]">Files Changed:</span>
+                <span className="text-slate-400 font-mono text-sm min-w-[100px]">Files Changed:</span>
                 <a
                   href={`${prData.html_url}/files`}
                   target="_blank"
@@ -263,7 +263,7 @@ function AppStatus({ app, riff, prStatus = null }) {
 
         {/* Deploy CI Status */}
         <div className="flex items-center gap-3">
-          <span className="text-cyber-muted font-mono text-sm min-w-[100px]">Deploy:</span>
+          <span className="text-slate-400 font-mono text-sm min-w-[100px]">Deploy:</span>
           <div className="flex items-center gap-2">
             <span className={`font-mono text-sm ${getStatusColor(getDeployStatus(deploymentStatus))}`}>
               {getStatusIcon(getDeployStatus(deploymentStatus))} {getStatusText(getDeployStatus(deploymentStatus))}
@@ -273,7 +273,7 @@ function AppStatus({ app, riff, prStatus = null }) {
                 href={deploymentStatus.details.workflow_url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-cyber-muted hover:text-blue-400 text-xs font-mono transition-colors duration-200"
+                className="text-slate-400 hover:text-blue-400 text-xs font-mono transition-colors duration-200"
               >
                 View →
               </a>
@@ -284,8 +284,8 @@ function AppStatus({ app, riff, prStatus = null }) {
         {/* Deployment Status Message (if error or additional info) */}
         {deploymentStatus?.message && deploymentStatus.status !== 'success' && (
           <div className="flex items-start gap-3">
-            <span className="text-cyber-muted font-mono text-sm min-w-[100px]">Status:</span>
-            <span className="text-cyber-muted font-mono text-xs">
+            <span className="text-slate-400 font-mono text-sm min-w-[100px]">Status:</span>
+            <span className="text-slate-400 font-mono text-xs">
               {deploymentStatus.message}
             </span>
           </div>
@@ -293,7 +293,7 @@ function AppStatus({ app, riff, prStatus = null }) {
 
         {/* Fly.io App Link */}
         <div className="flex items-center gap-3">
-          <span className="text-cyber-muted font-mono text-sm min-w-[100px]">App:</span>
+          <span className="text-slate-400 font-mono text-sm min-w-[100px]">App:</span>
           <a
             href={getFlyAppUrl()}
             target="_blank"

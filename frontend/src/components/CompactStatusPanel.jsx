@@ -86,7 +86,7 @@ function CompactStatusPanel({ app, prStatus = null, appSlug, riffSlug }) {
   const isRunning = agentStatus && agentStatus.running && !agentStatus.agent_paused && !agentStatus.agent_finished
 
   return (
-    <div className="hacker-card space-y-2">
+    <div className="vibe-card space-y-2">
       {/* Agent Status Row */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
@@ -140,7 +140,7 @@ function CompactStatusPanel({ app, prStatus = null, appSlug, riffSlug }) {
             #{prData.number} {prData.title}
           </a>
           {getLastCommit() && (
-            <span className="text-cyber-muted">
+            <span className="text-slate-400">
               {getLastCommit().substring(0, 7)}
             </span>
           )}

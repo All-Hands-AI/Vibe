@@ -3,7 +3,7 @@ import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-route
 import { ThemeProvider } from './context/ThemeContext'
 import { SetupProvider, useSetup } from './context/SetupContext'
 import SetupWindow from './components/SetupWindow'
-import MatrixRain from './components/MatrixRain'
+import VibeFlow from './components/VibeFlow'
 import Apps from './pages/Apps'
 import AppDetail from './pages/AppDetail'
 import RiffDetail from './pages/RiffDetail'
@@ -31,18 +31,18 @@ function AppContent() {
 
   if (isLoading) {
     return (
-      <div className="fixed inset-0 bg-black flex items-center justify-center z-50 matrix-bg">
-        <div className="text-center terminal-window">
-          <div className="terminal-header">
-            💻 SYSTEM BOOT
+      <div className="fixed inset-0 bg-slate-900 flex items-center justify-center z-50 vibe-bg">
+        <div className="text-center creative-window">
+          <div className="creative-header">
+            ✨ VIBE LOADING
           </div>
-          <div className="terminal-content">
-            <div className="w-10 h-10 border-4 border-cyber-border border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-            <p className="text-cyber-text text-base font-mono">
-              <span>{'>'}</span> Initializing OpenVibe...
+          <div className="creative-content">
+            <div className="w-10 h-10 border-4 border-slate-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+            <p className="text-slate-200 text-base font-mono">
+              <span>{'~'}</span> Warming up the vibes...
             </p>
-            <p className="text-cyber-muted text-sm mt-2">
-              🔐 Loading hacker protocols...
+            <p className="text-slate-400 text-sm mt-2">
+              🎨 Loading creative energy...
             </p>
           </div>
         </div>
@@ -53,8 +53,8 @@ function AppContent() {
   return (
     <Router>
       <ScrollToTop />
-      <div className="min-h-screen flex flex-col bg-black text-cyber-text transition-colors duration-300 relative">
-        <MatrixRain />
+      <div className="min-h-screen flex flex-col bg-slate-900 text-slate-200 transition-colors duration-300 relative">
+        <VibeFlow />
         {!isSetupComplete && (
           <SetupWindow onSetupComplete={completeSetup} />
         )}

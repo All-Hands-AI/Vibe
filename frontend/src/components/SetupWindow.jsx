@@ -104,21 +104,21 @@ const SetupWindow = ({ onSetupComplete }) => {
     if (status.loading) return 'border-yellow-500 bg-yellow-50/10'
     if (status.valid) return 'border-green-500 bg-green-50/10'
     if (status.message && !status.valid) return 'border-red-500 bg-red-50/10'
-    return 'border-cyber-border'
+    return 'border-slate-600'
   }
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="terminal-window max-w-md w-full max-h-[90vh] overflow-y-auto">
-        <div className="terminal-header">
-          <h2 className="text-2xl font-bold mb-2">🚀 Welcome to OpenVibe</h2>
-          <p className="text-cyber-muted">Please configure your API keys to get started</p>
+    <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <div className="creative-window max-w-md w-full max-h-[90vh] overflow-y-auto">
+        <div className="creative-header">
+          <h2 className="text-2xl font-bold mb-2">✨ Welcome to OpenVibe</h2>
+          <p className="text-slate-400">Please configure your API keys to get started</p>
         </div>
 
-        <form onSubmit={handleSubmit} className="terminal-content">
+        <form onSubmit={handleSubmit} className="creative-content">
           <div className="space-y-6">
             <div>
-              <label htmlFor="anthropic-key" className="flex items-center text-sm font-medium text-cyber-text mb-2 font-mono">
+              <label htmlFor="anthropic-key" className="flex items-center text-sm font-medium text-slate-200 mb-2 font-mono">
                 <span className="mr-2">🤖</span>
                 Anthropic API Key
               </label>
@@ -130,7 +130,7 @@ const SetupWindow = ({ onSetupComplete }) => {
                   value={apiKeys.anthropic}
                   onChange={(e) => handleInputChange('anthropic', e.target.value)}
                   onBlur={() => handleInputBlur('anthropic')}
-                  className={`w-full px-3 py-2 bg-black text-cyber-text font-mono border-2 transition-colors duration-200 focus:outline-none focus:border-neon-green ${getStatusClass(validationStatus.anthropic)}`}
+                  className={`w-full px-3 py-2 bg-slate-800 text-slate-200 font-mono border-2 transition-colors duration-200 focus:outline-none focus:border-violet-500 ${getStatusClass(validationStatus.anthropic)}`}
                 />
                 <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-lg">
                   {getStatusIcon(validationStatus.anthropic)}
@@ -150,7 +150,7 @@ const SetupWindow = ({ onSetupComplete }) => {
             </div>
 
             <div>
-              <label htmlFor="github-key" className="flex items-center text-sm font-medium text-cyber-text mb-2 font-mono">
+              <label htmlFor="github-key" className="flex items-center text-sm font-medium text-slate-200 mb-2 font-mono">
                 <span className="mr-2">🐙</span>
                 GitHub API Key
               </label>
@@ -162,7 +162,7 @@ const SetupWindow = ({ onSetupComplete }) => {
                   value={apiKeys.github}
                   onChange={(e) => handleInputChange('github', e.target.value)}
                   onBlur={() => handleInputBlur('github')}
-                  className={`w-full px-3 py-2 bg-black text-cyber-text font-mono border-2 transition-colors duration-200 focus:outline-none focus:border-neon-green ${getStatusClass(validationStatus.github)}`}
+                  className={`w-full px-3 py-2 bg-slate-800 text-slate-200 font-mono border-2 transition-colors duration-200 focus:outline-none focus:border-violet-500 ${getStatusClass(validationStatus.github)}`}
                 />
                 <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-lg">
                   {getStatusIcon(validationStatus.github)}
@@ -182,7 +182,7 @@ const SetupWindow = ({ onSetupComplete }) => {
             </div>
 
             <div>
-              <label htmlFor="fly-key" className="flex items-center text-sm font-medium text-cyber-text mb-2 font-mono">
+              <label htmlFor="fly-key" className="flex items-center text-sm font-medium text-slate-200 mb-2 font-mono">
                 <span className="mr-2">🪰</span>
                 Fly.io API Key
               </label>
@@ -194,7 +194,7 @@ const SetupWindow = ({ onSetupComplete }) => {
                   value={apiKeys.fly}
                   onChange={(e) => handleInputChange('fly', e.target.value)}
                   onBlur={() => handleInputBlur('fly')}
-                  className={`w-full px-3 py-2 bg-black text-cyber-text font-mono border-2 transition-colors duration-200 focus:outline-none focus:border-neon-green ${getStatusClass(validationStatus.fly)}`}
+                  className={`w-full px-3 py-2 bg-slate-800 text-slate-200 font-mono border-2 transition-colors duration-200 focus:outline-none focus:border-violet-500 ${getStatusClass(validationStatus.fly)}`}
                 />
                 <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-lg">
                   {getStatusIcon(validationStatus.fly)}
@@ -214,13 +214,13 @@ const SetupWindow = ({ onSetupComplete }) => {
             </div>
           </div>
 
-          <div className="mt-8 border-t border-cyber-border pt-6">
+          <div className="mt-8 border-t border-slate-600 pt-6">
             <button 
               type="submit" 
               className={`w-full py-3 px-4 font-medium font-mono transition-all duration-200 ${
                 allKeysValid 
-                  ? 'btn-hacker-primary' 
-                  : 'bg-cyber-accent text-cyber-muted cursor-not-allowed border-2 border-cyber-border'
+                  ? 'btn-vibe-primary' 
+                  : 'bg-slate-700 text-slate-400 cursor-not-allowed border-2 border-slate-600'
               }`}
               disabled={!allKeysValid}
             >
@@ -228,14 +228,14 @@ const SetupWindow = ({ onSetupComplete }) => {
             </button>
             
             <div className="mt-6 text-center">
-              <p className="text-cyber-muted text-sm mb-3 font-mono">Need help getting your API keys?</p>
+              <p className="text-slate-400 text-sm mb-3 font-mono">Need help getting your API keys?</p>
               <ul className="space-y-2 text-sm font-mono">
                 <li>
                   <a 
                     href="https://console.anthropic.com/" 
                     target="_blank" 
                     rel="noopener noreferrer"
-                    className="text-cyber-muted hover:text-neon-green transition-colors duration-200"
+                    className="text-slate-400 hover:text-violet-400 transition-colors duration-200"
                   >
                     Get Anthropic API Key
                   </a>
@@ -245,7 +245,7 @@ const SetupWindow = ({ onSetupComplete }) => {
                     href="https://github.com/settings/tokens" 
                     target="_blank" 
                     rel="noopener noreferrer"
-                    className="text-cyber-muted hover:text-neon-green transition-colors duration-200"
+                    className="text-slate-400 hover:text-violet-400 transition-colors duration-200"
                   >
                     Get GitHub API Key
                   </a>
@@ -255,7 +255,7 @@ const SetupWindow = ({ onSetupComplete }) => {
                     href="https://fly.io/user/personal_access_tokens" 
                     target="_blank" 
                     rel="noopener noreferrer"
-                    className="text-cyber-muted hover:text-neon-green transition-colors duration-200"
+                    className="text-slate-400 hover:text-violet-400 transition-colors duration-200"
                   >
                     Get Fly.io API Key
                   </a>

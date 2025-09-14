@@ -74,8 +74,8 @@ function MessageList({ messages, userUuid, scrollContainerRef, onScroll, message
       <div className="flex-1 flex items-center justify-center p-8">
         <div className="text-center">
           <div className="text-6xl mb-4">💬</div>
-          <h3 className="text-xl font-semibold text-cyber-muted mb-2">No messages yet</h3>
-          <p className="text-cyber-muted">Start the conversation by sending a message below.</p>
+          <h3 className="text-xl font-semibold text-slate-400 mb-2">No messages yet</h3>
+          <p className="text-slate-400">Start the conversation by sending a message below.</p>
         </div>
       </div>
     )
@@ -93,7 +93,7 @@ function MessageList({ messages, userUuid, scrollContainerRef, onScroll, message
           {/* Date Separator */}
           <div className="flex items-center justify-center my-4">
             <div className="flex-1 border-t border-gray-700"></div>
-            <span className="px-3 text-xs text-cyber-muted font-mono bg-black">
+            <span className="px-3 text-xs text-slate-400 font-mono bg-black">
               {date}
             </span>
             <div className="flex-1 border-t border-gray-700"></div>
@@ -109,8 +109,8 @@ function MessageList({ messages, userUuid, scrollContainerRef, onScroll, message
                 <div
                   className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
                     isOwnMessage(message)
-                      ? 'bg-neon-green/20 text-cyber-text border border-neon-green/30'
-                      : 'bg-gray-800 text-cyber-text border border-gray-600'
+                      ? 'bg-neon-green/20 text-slate-200 border border-neon-green/30'
+                      : 'bg-gray-800 text-slate-200 border border-gray-600'
                   }`}
                 >
                   {/* Message Header */}
@@ -119,11 +119,11 @@ function MessageList({ messages, userUuid, scrollContainerRef, onScroll, message
                       <span className="text-xs">
                         {getMessageTypeIcon(message)}
                       </span>
-                      <span className="text-xs text-cyber-muted font-mono">
+                      <span className="text-xs text-slate-400 font-mono">
                         {isOwnMessage(message) ? 'You' : 'Agent'}
                       </span>
                     </div>
-                    <span className="text-xs text-cyber-muted font-mono">
+                    <span className="text-xs text-slate-400 font-mono">
                       {formatTime(message.created_at)}
                     </span>
                   </div>
@@ -152,7 +152,7 @@ function MessageList({ messages, userUuid, scrollContainerRef, onScroll, message
                   {/* Message Metadata */}
                   {message.metadata && Object.keys(message.metadata).length > 0 && (
                     <div className={`mt-2 pt-2 ${isOwnMessage(message) ? 'border-t border-gray-600/50' : ''}`}>
-                      <div className="text-xs text-cyber-muted font-mono">
+                      <div className="text-xs text-slate-400 font-mono">
                         {message.metadata.filename && (
                           <div>File: {message.metadata.filename}</div>
                         )}
