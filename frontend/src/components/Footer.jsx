@@ -20,17 +20,7 @@ function Footer() {
             <ul className="list-none p-0 m-0 font-mono">
               <li className="mb-2">
                 <a href="/" className="text-cyber-muted no-underline transition-all duration-300 hover:text-neon-green">
-                  {'>'} Home
-                </a>
-              </li>
-              <li className="mb-2">
-                <a href="/about" className="text-cyber-muted no-underline transition-all duration-300 hover:text-neon-green">
-                  {'>'} About
-                </a>
-              </li>
-              <li className="mb-2">
-                <a href="/contact" className="text-cyber-muted no-underline transition-all duration-300 hover:text-neon-green">
-                  {'>'} Contact
+                  {'>'} Apps
                 </a>
               </li>
             </ul>
