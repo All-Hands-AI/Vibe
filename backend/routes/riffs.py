@@ -424,23 +424,20 @@ def create_riff(slug):
 
         # Get request data
         data = request.get_json()
-        if not data or "name" not in data:
-            logger.warning("❌ Riff name is required")
-            return jsonify({"error": "Riff name is required"}), 400
+        if not data or "text" not in data:
+            logger.warning("❌ Riff text is required")
+            return jsonify({"error": "Riff text is required"}), 400
 
-        riff_name = data["name"].strip()
-        if not riff_name:
-            logger.warning("❌ Riff name cannot be empty")
-            return jsonify({"error": "Riff name cannot be empty"}), 400
+        riff_text = data["text"].strip()
+        if not riff_text:
+            logger.warning("❌ Riff text cannot be empty")
+            return jsonify({"error": "Riff text cannot be empty"}), 400
 
-        # Create slug from name (use provided slug if available, otherwise generate)
-        riff_slug = data.get("slug", create_slug(riff_name)).strip()
+        # Create slug from text input
+        riff_slug = create_slug(riff_text)
         if not riff_slug:
-            riff_slug = create_slug(riff_name)
-
-        if not riff_slug:
-            logger.warning("❌ Invalid riff name - cannot create slug")
-            return jsonify({"error": "Invalid riff name"}), 400
+            logger.warning("❌ Invalid riff text - cannot create slug")
+            return jsonify({"error": "Invalid riff text"}), 400
 
         # Validate slug format
         if not is_valid_slug(riff_slug):
@@ -455,7 +452,7 @@ def create_riff(slug):
             )
 
         logger.info(
-            f"🔄 Creating riff: {riff_name} -> {riff_slug} for user {user_uuid[:8]}"
+            f"🔄 Creating riff: {riff_text} -> {riff_slug} for user {user_uuid[:8]}"
         )
 
         # Check if riff with same slug already exists for this user
@@ -464,14 +461,13 @@ def create_riff(slug):
                 f"❌ Riff with slug '{riff_slug}' already exists for user {user_uuid[:8]}"
             )
             return (
-                jsonify({"error": f'Riff with name "{riff_name}" already exists'}),
+                jsonify({"error": f'Riff with slug "{riff_slug}" already exists'}),
                 409,
             )
 
         # Create riff record
         riff = {
             "slug": riff_slug,
-            "name": riff_name,
             "app_slug": slug,
             "created_at": datetime.now(timezone.utc).isoformat(),
             "created_by": user_uuid,
@@ -497,7 +493,7 @@ def create_riff(slug):
             )
             return jsonify({"error": error_message}), status_code
 
-        logger.info(f"✅ Riff created successfully: {riff_name}")
+        logger.info(f"✅ Riff created successfully: {riff_slug}")
         return jsonify({"message": "Riff created successfully", "riff": riff}), 201
 
     except Exception as e:
@@ -1238,7 +1234,7 @@ def delete_riff(slug, riff_slug):
             logger.warning(f"❌ Riff not found: {riff_slug} for user {user_uuid[:8]}")
             return jsonify({"error": "Riff not found"}), 404
 
-        logger.info(f"🔍 Found riff to delete: {riff['name']} for user {user_uuid[:8]}")
+        logger.info(f"🔍 Found riff to delete: {riff['slug']} for user {user_uuid[:8]}")
 
         # Load app data to get GitHub URL
         app = load_user_app(user_uuid, slug)
@@ -1325,8 +1321,7 @@ def delete_riff(slug, riff_slug):
 
         # Prepare response
         response_data = {
-            "message": f'Riff "{riff.get("name")}" deleted successfully',
-            "riff_name": riff.get("name"),
+            "message": f'Riff "{riff.get("slug")}" deleted successfully',
             "riff_slug": riff_slug,
             "app_slug": slug,
             "deletion_results": deletion_results,

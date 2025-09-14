@@ -24,7 +24,7 @@ class TestRiffsEndpoints:
             )
 
         # Create an app
-        app_data = {"name": app_name}
+        app_data = {"text": app_name}
         response = client.post("/api/apps", headers=headers, json=app_data)
         assert response.status_code == 201
 
@@ -52,7 +52,6 @@ class TestRiffsEndpoints:
 
         # Check that the automatic riff was created
         automatic_riff = data["riffs"][0]
-        assert automatic_riff["name"] == f"rename-to-{app_slug}"
         assert automatic_riff["slug"] == f"rename-to-{app_slug}"
         assert automatic_riff["app_slug"] == app_slug
 
@@ -95,7 +94,7 @@ class TestRiffsEndpoints:
             client, unique_headers, mock_api_keys, "Create Riff App"
         )
 
-        riff_data = {"name": "Test Riff", "description": "A test riff"}
+        riff_data = {"text": "Test Riff", "description": "A test riff"}
 
         response = client.post(
             f"/api/apps/{app_slug}/riffs", headers=unique_headers, json=riff_data
@@ -108,7 +107,6 @@ class TestRiffsEndpoints:
         assert "riff" in data
 
         riff = data["riff"]
-        assert riff["name"] == "Test Riff"
         assert riff["slug"] == "test-riff"
         assert riff["app_slug"] == app_slug
         assert "created_at" in riff
@@ -133,7 +131,7 @@ class TestRiffsEndpoints:
         assert response.status_code == 400
         data = response.get_json()
 
-        assert data["error"] == "Riff name is required"
+        assert data["error"] == "Riff text is required"
 
     def test_create_riff_empty_name(self, client, mock_api_keys):
         """Test creating riff with empty name"""
@@ -146,13 +144,13 @@ class TestRiffsEndpoints:
         )
 
         response = client.post(
-            f"/api/apps/{app_slug}/riffs", headers=unique_headers, json={"name": ""}
+            f"/api/apps/{app_slug}/riffs", headers=unique_headers, json={"text": ""}
         )
 
         assert response.status_code == 400
         data = response.get_json()
 
-        assert data["error"] == "Riff name cannot be empty"
+        assert data["error"] == "Riff text cannot be empty"
 
     def test_create_riff_whitespace_name(self, client, mock_api_keys):
         """Test creating riff with whitespace-only name"""
@@ -165,20 +163,20 @@ class TestRiffsEndpoints:
         )
 
         response = client.post(
-            f"/api/apps/{app_slug}/riffs", headers=unique_headers, json={"name": "   "}
+            f"/api/apps/{app_slug}/riffs", headers=unique_headers, json={"text": "   "}
         )
 
         assert response.status_code == 400
         data = response.get_json()
 
-        assert data["error"] == "Riff name cannot be empty"
+        assert data["error"] == "Riff text cannot be empty"
 
     def test_create_riff_nonexistent_app(self, client, sample_headers):
         """Test creating riff for nonexistent app"""
         response = client.post(
             "/api/apps/nonexistent-app/riffs",
             headers=sample_headers,
-            json={"name": "Test Riff"},
+            json={"text": "Test Riff"},
         )
 
         assert response.status_code == 404
@@ -188,7 +186,7 @@ class TestRiffsEndpoints:
 
     def test_create_riff_missing_uuid_header(self, client):
         """Test creating riff without UUID header"""
-        response = client.post("/api/apps/test-app/riffs", json={"name": "Test Riff"})
+        response = client.post("/api/apps/test-app/riffs", json={"text": "Test Riff"})
 
         assert response.status_code == 400
         data = response.get_json()
@@ -205,7 +203,7 @@ class TestRiffsEndpoints:
             client, unique_headers, mock_api_keys, "Duplicate Name App"
         )
 
-        riff_data = {"name": "Duplicate Riff"}
+        riff_data = {"text": "Duplicate Riff"}
 
         # Create first riff
         response1 = client.post(
@@ -220,7 +218,7 @@ class TestRiffsEndpoints:
         assert response2.status_code == 409
 
         data = response2.get_json()
-        assert data["error"] == 'Riff with name "Duplicate Riff" already exists'
+        assert data["error"] == 'Riff with slug "duplicate-riff" already exists'
 
     def test_create_and_list_riffs(self, client, mock_api_keys):
         """Test creating riffs and then listing them"""
@@ -234,9 +232,9 @@ class TestRiffsEndpoints:
 
         # Create multiple riffs
         riffs_to_create = [
-            {"name": "Riff One"},
-            {"name": "Riff Two"},
-            {"name": "Riff Three"},
+            {"text": "Riff One"},
+            {"text": "Riff Two"},
+            {"text": "Riff Three"},
         ]
 
         for riff_data in riffs_to_create:
@@ -256,12 +254,12 @@ class TestRiffsEndpoints:
         assert data["app_slug"] == app_slug
 
         # Check that riffs are present
-        riff_names = [riff["name"] for riff in data["riffs"]]
-        assert "Riff One" in riff_names
-        assert "Riff Two" in riff_names
-        assert "Riff Three" in riff_names
+        riff_slugs = [riff["slug"] for riff in data["riffs"]]
+        assert "riff-one" in riff_slugs
+        assert "riff-two" in riff_slugs
+        assert "riff-three" in riff_slugs
         # Also check for the automatic rename riff
-        assert f"rename-to-{app_slug}" in riff_names
+        assert f"rename-to-{app_slug}" in riff_slugs
 
     def test_riff_slug_generation(self, client, mock_api_keys):
         """Test that riff slugs are generated correctly from names"""
@@ -303,7 +301,7 @@ class TestRiffsEndpoints:
             client, unique_headers, mock_api_keys, "Custom Slug App"
         )
 
-        riff_data = {"name": "Custom Slug Riff", "slug": "my-custom-slug"}
+        riff_data = {"text": "Custom Slug Riff", "slug": "my-custom-slug"}
 
         response = client.post(
             f"/api/apps/{app_slug}/riffs", headers=unique_headers, json=riff_data
@@ -313,7 +311,6 @@ class TestRiffsEndpoints:
         data = response.get_json()
 
         assert data["riff"]["slug"] == "my-custom-slug"
-        assert data["riff"]["name"] == "Custom Slug Riff"
 
     def test_different_users_isolated_riffs(self, client, mock_api_keys):
         """Test that riffs are isolated between different users"""
@@ -338,7 +335,7 @@ class TestRiffsEndpoints:
         response = client.post(
             f"/api/apps/{app1_slug}/riffs",
             headers=user1_headers,
-            json={"name": "User1 Riff"},
+            json={"text": "user1-riff"},
         )
         assert response.status_code == 201
 
@@ -357,9 +354,9 @@ class TestRiffsEndpoints:
         assert response.status_code == 200
         data = response.get_json()
         assert data["count"] == 2  # User1 Riff + automatic rename riff
-        riff_names = [riff["name"] for riff in data["riffs"]]
-        assert "User1 Riff" in riff_names
-        assert f"rename-to-{app1_slug}" in riff_names
+        riff_slugs = [riff["slug"] for riff in data["riffs"]]
+        assert "user1-riff" in riff_slugs
+        assert f"rename-to-{app1_slug}" in riff_slugs
 
     def test_riffs_different_apps_same_user(
         self, client, sample_headers, mock_api_keys
@@ -377,7 +374,7 @@ class TestRiffsEndpoints:
         response = client.post(
             f"/api/apps/{app1_slug}/riffs",
             headers=sample_headers,
-            json={"name": "App1 Riff"},
+            json={"text": "app1-riff"},
         )
         assert response.status_code == 201
 
@@ -396,9 +393,9 @@ class TestRiffsEndpoints:
         assert response.status_code == 200
         data = response.get_json()
         assert data["count"] == 2  # App1 Riff + automatic rename riff
-        riff_names = [riff["name"] for riff in data["riffs"]]
-        assert "App1 Riff" in riff_names
-        assert f"rename-to-{app1_slug}" in riff_names
+        riff_slugs = [riff["slug"] for riff in data["riffs"]]
+        assert "app1-riff" in riff_slugs
+        assert f"rename-to-{app1_slug}" in riff_slugs
 
     def test_delete_riff_success(self, client, mock_api_keys):
         """Test successful riff deletion"""
@@ -411,7 +408,7 @@ class TestRiffsEndpoints:
         )
 
         # Create a riff
-        riff_data = {"name": "Test Riff to Delete"}
+        riff_data = {"text": "Test Riff to Delete"}
         response = client.post(
             f"/api/apps/{app_slug}/riffs", headers=unique_headers, json=riff_data
         )
@@ -431,8 +428,8 @@ class TestRiffsEndpoints:
         data = response.get_json()
 
         assert "deleted successfully" in data["message"]
-        assert data["riff_name"] == "Test Riff to Delete"
-        assert data["riff_slug"] == riff_slug
+        assert data["riff_slug"] == "test-riff-to-delete"
+
         assert data["app_slug"] == app_slug
 
         # Verify manual riff is gone, but automatic riff remains

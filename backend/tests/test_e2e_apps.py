@@ -60,9 +60,7 @@ class TestAppsEndpoints:
             )
 
         app_data = {
-            "name": "Test App",
-            "description": "A test application",
-            "github_url": "https://github.com/testuser/test-app",
+            "text": "Test App",
         }
 
         response = client.post("/api/apps", headers=unique_headers, json=app_data)
@@ -74,7 +72,6 @@ class TestAppsEndpoints:
         assert "app" in data
 
         app = data["app"]
-        assert app["name"] == "Test App"
         assert app["slug"] == "test-app"
         assert (
             app["github_url"] == "https://github.com/mockuser/test-app"
@@ -90,31 +87,31 @@ class TestAppsEndpoints:
         assert response.status_code == 400
         data = response.get_json()
 
-        assert data["error"] == "App name is required"
+        assert data["error"] == "App text is required"
 
-    def test_create_app_empty_name(self, client, sample_headers):
-        """Test creating app with empty name"""
-        response = client.post("/api/apps", headers=sample_headers, json={"name": ""})
+    def test_create_app_empty_text(self, client, sample_headers):
+        """Test creating app with empty text"""
+        response = client.post("/api/apps", headers=sample_headers, json={"text": ""})
 
         assert response.status_code == 400
         data = response.get_json()
 
-        assert data["error"] == "App name cannot be empty"
+        assert data["error"] == "App text cannot be empty"
 
-    def test_create_app_whitespace_name(self, client, sample_headers):
-        """Test creating app with whitespace-only name"""
+    def test_create_app_whitespace_text(self, client, sample_headers):
+        """Test creating app with whitespace-only text"""
         response = client.post(
-            "/api/apps", headers=sample_headers, json={"name": "   "}
+            "/api/apps", headers=sample_headers, json={"text": "   "}
         )
 
         assert response.status_code == 400
         data = response.get_json()
 
-        assert data["error"] == "App name cannot be empty"
+        assert data["error"] == "App text cannot be empty"
 
     def test_create_app_missing_uuid_header(self, client):
         """Test creating app without UUID header"""
-        response = client.post("/api/apps", json={"name": "Test App"})
+        response = client.post("/api/apps", json={"text": "Test App"})
 
         assert response.status_code == 400
         data = response.get_json()
@@ -131,7 +128,7 @@ class TestAppsEndpoints:
                 json={"api_key": key},
             )
 
-        app_data = {"name": "Duplicate Test App"}
+        app_data = {"text": "Duplicate Test App"}
 
         # Create first app
         response1 = client.post("/api/apps", headers=sample_headers, json=app_data)
@@ -142,7 +139,7 @@ class TestAppsEndpoints:
         assert response2.status_code == 409
 
         data = response2.get_json()
-        assert data["error"] == 'App with name "Duplicate Test App" already exists'
+        assert data["error"] == 'App with slug "duplicate-test-app" already exists'
 
     def test_create_and_list_apps(self, client, mock_api_keys):
         """Test creating apps and then listing them"""
@@ -162,9 +159,9 @@ class TestAppsEndpoints:
 
         # Create multiple apps
         apps_to_create = [
-            {"name": "App One", "description": "First app"},
-            {"name": "App Two", "description": "Second app"},
-            {"name": "App Three", "description": "Third app"},
+            {"text": "App One", "description": "First app"},
+            {"text": "App Two", "description": "Second app"},
+            {"text": "App Three", "description": "Third app"},
         ]
 
         for app_data in apps_to_create:
@@ -180,10 +177,10 @@ class TestAppsEndpoints:
         assert len(data["apps"]) == 3
 
         # Check that apps are sorted by creation date (newest first)
-        app_names = [app["name"] for app in data["apps"]]
-        assert "App One" in app_names
-        assert "App Two" in app_names
-        assert "App Three" in app_names
+        app_slugs = [app["slug"] for app in data["apps"]]
+        assert "app-one" in app_slugs
+        assert "app-two" in app_slugs
+        assert "app-three" in app_slugs
 
     def test_get_specific_app(self, client, sample_headers, mock_api_keys):
         """Test getting a specific app by slug"""
@@ -196,7 +193,7 @@ class TestAppsEndpoints:
             )
 
         # Create an app
-        app_data = {"name": "Specific App", "description": "A specific test app"}
+        app_data = {"text": "Specific App", "description": "A specific test app"}
 
         create_response = client.post(
             "/api/apps", headers=sample_headers, json=app_data
@@ -208,7 +205,7 @@ class TestAppsEndpoints:
         assert response.status_code == 200
 
         data = response.get_json()
-        assert data["name"] == "Specific App"
+        assert data["slug"] == "specific-app"
         assert data["slug"] == "specific-app"
         # Description is not returned in the API response
         # assert data["description"] == "A specific test app"
@@ -233,7 +230,7 @@ class TestAppsEndpoints:
             )
 
         # Create an app
-        app_data = {"name": "App to Delete"}
+        app_data = {"text": "App to Delete"}
         create_response = client.post(
             "/api/apps", headers=sample_headers, json=app_data
         )
@@ -279,7 +276,7 @@ class TestAppsEndpoints:
 
         # Create app for user1
         response = client.post(
-            "/api/apps", headers=user1_headers, json={"name": "User1 App"}
+            "/api/apps", headers=user1_headers, json={"text": "User1 App"}
         )
         assert response.status_code == 201
 
@@ -295,7 +292,7 @@ class TestAppsEndpoints:
         assert response.status_code == 200
         data = response.get_json()
         assert data["count"] == 1
-        assert data["apps"][0]["name"] == "User1 App"
+        assert data["apps"][0]["slug"] == "User1 App"
 
     def test_app_slug_generation(self, client, sample_headers, mock_api_keys):
         """Test that app slugs are generated correctly from names"""
