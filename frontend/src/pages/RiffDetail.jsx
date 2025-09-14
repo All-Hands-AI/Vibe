@@ -320,34 +320,62 @@ function RiffDetail() {
                 <div className="flex items-center gap-2 mb-1">
                   {deploymentStatus.status === 'pending' && (
                     <>
-                      <div className="w-4 h-4 border-2 border-yellow-400 border-t-transparent rounded-full animate-spin"></div>
-                      <h3 className="text-lg font-semibold text-yellow-400 font-mono">🚀 Deploying...</h3>
+                      <div className="w-3 h-3 border-2 border-yellow-400 border-t-transparent rounded-full animate-spin"></div>
+                      <h3 className="text-sm font-semibold text-yellow-400 font-mono">🚀 Deploying...</h3>
                     </>
                   )}
                   {deploymentStatus.status === 'success' && (
                     <>
-                      <div className="w-4 h-4 bg-green-400 rounded-full"></div>
-                      <h3 className="text-lg font-semibold text-green-400 font-mono">🚀 Live App</h3>
+                      <div className="w-3 h-3 bg-green-400 rounded-full"></div>
+                      <h3 className="text-sm font-semibold text-green-400 font-mono">🚀 Live App</h3>
                     </>
                   )}
                   {deploymentStatus.status === 'error' && (
                     <>
-                      <div className="w-4 h-4 bg-red-400 rounded-full"></div>
-                      <h3 className="text-lg font-semibold text-red-400 font-mono">🚀 Deployment Failed</h3>
+                      <div className="w-3 h-3 bg-red-400 rounded-full"></div>
+                      <h3 className="text-sm font-semibold text-red-400 font-mono">🚀 Deployment Failed</h3>
                     </>
                   )}
+                  <a
+                    href={`https://${app.name}-${riff.name}.fly.dev`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-cyber-muted hover:text-blue-400 font-mono text-xs transition-colors duration-200 underline"
+                  >
+                    {app.name}-{riff.name}.fly.dev
+                  </a>
                 </div>
               ) : (
-                <h3 className="text-lg font-semibold text-cyber-text font-mono mb-1">🚀 Live App</h3>
+                <div className="flex items-center gap-2 mb-1">
+                  <h3 className="text-sm font-semibold text-cyber-text font-mono">🚀 Live App</h3>
+                  <a
+                    href={`https://${app.name}-${riff.name}.fly.dev`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-cyber-muted hover:text-blue-400 font-mono text-xs transition-colors duration-200 underline"
+                  >
+                    {app.name}-{riff.name}.fly.dev
+                  </a>
+                </div>
               )}
-              <a
-                href={`https://${app.name}-${riff.name}.fly.dev`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-cyber-muted hover:text-blue-400 font-mono text-xs transition-colors duration-200 underline"
-              >
-                {app.name}-{riff.name}.fly.dev
-              </a>
+              <div className="flex items-center gap-3 text-xs">
+                <a
+                  href="https://github.com/rbren/OpenVibe/actions"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-cyber-muted hover:text-blue-400 font-mono transition-colors duration-200 underline"
+                >
+                  GitHub
+                </a>
+                <a
+                  href={`https://fly.io/apps/${app.name}-${riff.name}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-cyber-muted hover:text-blue-400 font-mono transition-colors duration-200 underline"
+                >
+                  Fly.io
+                </a>
+              </div>
             </div>
             
             <div className="flex-1 border border-gray-700 rounded-lg overflow-hidden">
