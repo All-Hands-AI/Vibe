@@ -78,6 +78,9 @@ def create_agent_for_user(user_uuid, app_slug, riff_slug):
             logger.warning(f"⚠️ No Anthropic token found for user {user_uuid[:8]}")
             return False, "Anthropic API key required"
 
+        # Get user's GitHub token (optional for push/PR operations)
+        github_token = get_user_key(user_uuid, "github")
+
         # Get app data to retrieve GitHub URL
         apps_storage = get_apps_storage(user_uuid)
         app_data = apps_storage.load_app(app_slug)
@@ -93,7 +96,7 @@ def create_agent_for_user(user_uuid, app_slug, riff_slug):
         # Setup workspace: create directory and clone repository
         logger.info(f"🏗️ Setting up workspace for riff {riff_slug}")
         workspace_success, workspace_path, workspace_error = setup_riff_workspace(
-            user_uuid, app_slug, riff_slug, github_url
+            user_uuid, app_slug, riff_slug, github_url, github_token
         )
 
         if not workspace_success:
