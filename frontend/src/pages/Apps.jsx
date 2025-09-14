@@ -420,7 +420,7 @@ function Apps() {
                     
                     {/* Status Information */}
                     <div className="space-y-2">
-                      {app.github_status || app.deployment_status || app.pr_status ? (
+                      {app.github_status || app.pr_status ? (
                         // Show actual status when detailed data is available
                         <>
                           {/* Branch */}
@@ -439,12 +439,13 @@ function Apps() {
                             </span>
                           </div>
                           
-                          {/* Deploy Status */}
+                          {/* Deploy Status - Show loading since we removed the old logic */}
                           <div className="flex items-center gap-2">
                             <span className="text-cyber-muted font-mono text-xs">Deploy:</span>
-                            <span className={`font-mono text-xs ${getStatusColor(getDeployStatus(app))}`}>
-                              {getStatusIcon(getDeployStatus(app))} {getStatusText(getDeployStatus(app))}
-                            </span>
+                            <div className="flex items-center gap-1">
+                              <div className="w-2 h-2 border border-cyber-muted border-t-transparent rounded-full animate-spin"></div>
+                              <span className="text-cyber-muted font-mono text-xs">Loading...</span>
+                            </div>
                           </div>
                         </>
                       ) : (

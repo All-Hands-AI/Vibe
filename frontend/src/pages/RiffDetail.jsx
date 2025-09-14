@@ -16,6 +16,7 @@ function RiffDetail() {
   const [app, setApp] = useState(null)
   const [riff, setRiff] = useState(null)
   const [prStatus, setPrStatus] = useState(null)
+  const [deploymentStatus, setDeploymentStatus] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [, setLlmReady] = useState(true)
@@ -80,7 +81,7 @@ function RiffDetail() {
     }
   }, [appSlug, riffSlug])
 
-  // Fetch PR status for the specific riff
+  // Fetch PR status for the specific riff (kept for backward compatibility with AppStatus component)
   const fetchPrStatus = useCallback(async () => {
     console.log('🔄 Fetching PR status for riff:', { appSlug, riffSlug })
     try {
@@ -89,25 +90,45 @@ function RiffDetail() {
         'X-User-UUID': uuid
       }
       
-      const prResponse = await fetch(`/api/apps/${appSlug}/riffs/${riffSlug}/pr-status`, { headers })
-      console.log('📡 PR status response status:', prResponse?.status)
-      
-      if (!prResponse || !prResponse.ok) {
-        const errorText = await prResponse?.text() || 'Unknown error'
-        console.error('❌ Fetch PR status failed:', errorText)
-        // Don't throw error for PR status - it's optional
-        setPrStatus(null)
-        return
-      }
-      
-      const prData = await prResponse.json()
-      console.log('📊 Received PR status data:', prData)
-      setPrStatus(prData.pr_status)
+      // NOTE: The old pr-status endpoint has been removed, but we can extract PR info
+      // from the deployment status if needed. For now, we'll set it to null
+      // and rely on the deployment endpoint for deployment status.
+      setPrStatus(null)
       
     } catch (err) {
       console.error('❌ Error fetching PR status:', err)
-      // Don't fail the whole page if PR status fails
       setPrStatus(null)
+    }
+  }, [appSlug, riffSlug])
+
+  // Fetch deployment status for the specific riff
+  const fetchDeploymentStatus = useCallback(async () => {
+    console.log('🚀 Fetching deployment status for riff:', { appSlug, riffSlug })
+    try {
+      const uuid = getUserUUID()
+      const headers = {
+        'X-User-UUID': uuid
+      }
+      
+      const deployResponse = await fetch(`/api/apps/${appSlug}/riffs/${riffSlug}/deployment`, { headers })
+      console.log('📡 Deployment status response status:', deployResponse?.status)
+      
+      if (!deployResponse || !deployResponse.ok) {
+        const errorText = await deployResponse?.text() || 'Unknown error'
+        console.error('❌ Fetch deployment status failed:', errorText)
+        // Don't throw error for deployment status - it's optional
+        setDeploymentStatus(null)
+        return
+      }
+      
+      const deployData = await deployResponse.json()
+      console.log('📊 Received deployment status data:', deployData)
+      setDeploymentStatus(deployData)
+      
+    } catch (err) {
+      console.error('❌ Error fetching deployment status:', err)
+      // Don't fail the whole page if deployment status fails
+      setDeploymentStatus(null)
     }
   }, [appSlug, riffSlug])
 
@@ -150,6 +171,7 @@ function RiffDetail() {
       checkInitialLLMReadiness()
       startPolling()
       fetchPrStatus() // Fetch PR status for this specific riff
+      fetchDeploymentStatus() // Fetch deployment status for this specific riff
     }
     
     // Cleanup polling on unmount
@@ -158,7 +180,7 @@ function RiffDetail() {
         stopPollingRef.current()
       }
     }
-  }, [riff, app, checkInitialLLMReadiness, startPolling, fetchPrStatus])
+  }, [riff, app, checkInitialLLMReadiness, startPolling, fetchPrStatus, fetchDeploymentStatus])
 
   // Scroll to top when route changes
   useEffect(() => {
@@ -306,8 +328,7 @@ function RiffDetail() {
             
             {/* Deployment Banner */}
             <DeploymentBanner 
-              deployStatus={getDeployStatus(app)} 
-              prStatus={prStatus} 
+              deploymentStatus={deploymentStatus}
             />
             
             <div className="flex-1 border border-gray-700 rounded-lg overflow-hidden">

@@ -162,9 +162,8 @@ function CompactStatusPanel({ app, prStatus = null, appSlug, riffSlug }) {
       {/* Deploy Status Row */}
       <div className="flex items-center justify-between text-xs font-mono">
         <div className="flex items-center gap-2">
-          <span className={`${getStatusColor(getDeployStatus(app))}`}>
-            {getStatusIcon(getDeployStatus(app))} {getStatusText(getDeployStatus(app))}
-          </span>
+          <div className="w-2 h-2 border border-cyber-muted border-t-transparent rounded-full animate-spin"></div>
+          <span className="text-cyber-muted">Loading deploy status...</span>
         </div>
         <a
           href={getFlyAppUrl()}

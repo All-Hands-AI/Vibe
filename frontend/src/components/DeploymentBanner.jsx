@@ -1,32 +1,13 @@
 import PropTypes from 'prop-types'
 
-function DeploymentBanner({ deployStatus, prStatus }) {
-  // Only show banner when deployment is in "running" status
-  if (deployStatus !== 'running') {
+function DeploymentBanner({ deploymentStatus }) {
+  // Only show banner when deployment is in "pending" status (which maps to "running")
+  if (!deploymentStatus || deploymentStatus.status !== 'pending') {
     return null
   }
 
-  // Find the GitHub Actions URL from PR status checks
-  const getGitHubActionUrl = () => {
-    if (!prStatus?.checks) {
-      return null
-    }
-
-    // Look for deployment-related checks first
-    const deployCheck = prStatus.checks.find(check => 
-      check.name && check.name.toLowerCase().includes('deploy')
-    )
-    
-    if (deployCheck?.details_url) {
-      return deployCheck.details_url
-    }
-
-    // If no deploy check found, look for any check with a details_url
-    const anyCheck = prStatus.checks.find(check => check.details_url)
-    return anyCheck?.details_url || null
-  }
-
-  const actionUrl = getGitHubActionUrl()
+  // Get the GitHub Actions URL from deployment status
+  const actionUrl = deploymentStatus.details?.workflow_url
 
   return (
     <div className="bg-yellow-900 bg-opacity-30 border border-yellow-400 rounded-lg p-3 mb-4">
@@ -53,14 +34,14 @@ function DeploymentBanner({ deployStatus, prStatus }) {
 }
 
 DeploymentBanner.propTypes = {
-  deployStatus: PropTypes.string,
-  prStatus: PropTypes.shape({
-    checks: PropTypes.arrayOf(PropTypes.shape({
-      name: PropTypes.string,
-      status: PropTypes.string,
-      conclusion: PropTypes.string,
-      details_url: PropTypes.string
-    }))
+  deploymentStatus: PropTypes.shape({
+    status: PropTypes.string,
+    message: PropTypes.string,
+    details: PropTypes.shape({
+      workflow_url: PropTypes.string,
+      commit_sha: PropTypes.string,
+      workflow_name: PropTypes.string
+    })
   })
 }
 
