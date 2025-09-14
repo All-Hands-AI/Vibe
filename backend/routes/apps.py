@@ -647,7 +647,7 @@ def close_github_pr(repo_url, github_token, branch_name):
             return False, f"Failed to get PRs: {pr_response.status_code}"
 
         prs = pr_response.json()
-        
+
         if not prs:
             logger.info(f"ℹ️ No open PRs found for branch: {branch_name}")
             return True, "No open PRs found for this branch"
@@ -657,7 +657,7 @@ def close_github_pr(repo_url, github_token, branch_name):
         for pr in prs:
             pr_number = pr["number"]
             logger.info(f"🔀 Closing PR #{pr_number} for branch: {branch_name}")
-            
+
             close_data = {"state": "closed"}
             close_response = requests.patch(
                 f"https://api.github.com/repos/{owner}/{repo}/pulls/{pr_number}",
@@ -670,7 +670,9 @@ def close_github_pr(repo_url, github_token, branch_name):
                 logger.info(f"✅ Successfully closed PR #{pr_number}")
                 closed_prs.append(pr_number)
             else:
-                logger.error(f"❌ Failed to close PR #{pr_number}: {close_response.status_code}")
+                logger.error(
+                    f"❌ Failed to close PR #{pr_number}: {close_response.status_code}"
+                )
                 return False, f"Failed to close PR #{pr_number}"
 
         if closed_prs:
@@ -702,7 +704,7 @@ def delete_github_branch(repo_url, github_token, branch_name):
         logger.debug(f"🔍 GitHub repo: {owner}/{repo}, branch: {branch_name}")
 
         # Don't delete main/master branches
-        if branch_name.lower() in ['main', 'master']:
+        if branch_name.lower() in ["main", "master"]:
             logger.warning(f"⚠️ Cannot delete protected branch: {branch_name}")
             return False, f"Cannot delete protected branch: {branch_name}"
 
@@ -724,12 +726,17 @@ def delete_github_branch(repo_url, github_token, branch_name):
             return True, f"Branch '{branch_name}' deleted successfully"
         elif delete_response.status_code == 404:
             logger.warning(f"⚠️ Branch not found: {branch_name}")
-            return True, f"Branch '{branch_name}' not found (may have been already deleted)"
+            return (
+                True,
+                f"Branch '{branch_name}' not found (may have been already deleted)",
+            )
         elif delete_response.status_code == 422:
             logger.warning(f"⚠️ Cannot delete branch: {branch_name} (may be protected)")
             return False, f"Cannot delete branch '{branch_name}' (may be protected)"
         else:
-            logger.error(f"❌ Failed to delete branch: {delete_response.status_code} - {delete_response.text}")
+            logger.error(
+                f"❌ Failed to delete branch: {delete_response.status_code} - {delete_response.text}"
+            )
             return False, f"GitHub API error: {delete_response.status_code}"
 
     except Exception as e:

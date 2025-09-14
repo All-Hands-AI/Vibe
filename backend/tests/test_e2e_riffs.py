@@ -440,7 +440,7 @@ class TestRiffsEndpoints:
     def test_delete_riff_missing_uuid_header(self, client, mock_api_keys):
         """Test deleting riff without UUID header"""
         headers = {"Content-Type": "application/json"}
-        
+
         response = client.delete("/api/apps/test-app/riffs/test-riff", headers=headers)
         assert response.status_code == 400
         data = response.get_json()

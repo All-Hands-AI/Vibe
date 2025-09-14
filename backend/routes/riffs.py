@@ -53,7 +53,12 @@ def get_llm_instance(api_key: str, model: str = "claude-3-haiku-20240307"):
 from utils.logging import get_logger, log_api_request, log_api_response
 
 # Import functions from apps.py for GitHub and Fly.io operations
-from routes.apps import close_github_pr, delete_github_branch, delete_fly_app, load_user_app
+from routes.apps import (
+    close_github_pr,
+    delete_github_branch,
+    delete_fly_app,
+    load_user_app,
+)
 
 logger = get_logger(__name__)
 
@@ -1084,9 +1089,7 @@ def delete_riff(slug, riff_slug):
         # Add warnings if some deletions failed
         warnings = []
         if deletion_results["github_pr_error"]:
-            warnings.append(
-                f"PR closure failed: {deletion_results['github_pr_error']}"
-            )
+            warnings.append(f"PR closure failed: {deletion_results['github_pr_error']}")
         if deletion_results["github_branch_error"]:
             warnings.append(
                 f"Branch deletion failed: {deletion_results['github_branch_error']}"
