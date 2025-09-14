@@ -31,7 +31,7 @@ class TestRiffsEndpoints:
         return response.get_json()["app"]["slug"]
 
     def test_get_riffs_empty_list(self, client, mock_api_keys):
-        """Test getting riffs when none exist"""
+        """Test getting riffs when only automatic riff exists"""
         unique_headers = {
             "X-User-UUID": "test-riffs-empty-list-uuid",
             "Content-Type": "application/json",
@@ -45,9 +45,16 @@ class TestRiffsEndpoints:
         assert response.status_code == 200
         data = response.get_json()
 
-        assert data["riffs"] == []
-        assert data["count"] == 0
+        # Should have 1 riff (the automatic rename riff)
+        assert data["count"] == 1
         assert data["app_slug"] == app_slug
+        assert len(data["riffs"]) == 1
+
+        # Check that the automatic riff was created
+        automatic_riff = data["riffs"][0]
+        assert automatic_riff["name"] == f"rename-to-{app_slug}"
+        assert automatic_riff["slug"] == f"rename-to-{app_slug}"
+        assert automatic_riff["app_slug"] == app_slug
 
     def test_get_riffs_nonexistent_app(self, client, sample_headers):
         """Test getting riffs for nonexistent app"""
@@ -243,8 +250,9 @@ class TestRiffsEndpoints:
         assert response.status_code == 200
 
         data = response.get_json()
-        assert data["count"] == 3
-        assert len(data["riffs"]) == 3
+        # Should have 4 riffs (3 manual + 1 automatic rename riff)
+        assert data["count"] == 4
+        assert len(data["riffs"]) == 4
         assert data["app_slug"] == app_slug
 
         # Check that riffs are present
@@ -252,6 +260,8 @@ class TestRiffsEndpoints:
         assert "Riff One" in riff_names
         assert "Riff Two" in riff_names
         assert "Riff Three" in riff_names
+        # Also check for the automatic rename riff
+        assert f"rename-to-{app_slug}" in riff_names
 
     def test_riff_slug_generation(self, client, mock_api_keys):
         """Test that riff slugs are generated correctly from names"""
@@ -332,19 +342,24 @@ class TestRiffsEndpoints:
         )
         assert response.status_code == 201
 
-        # Check that user2 doesn't see user1's riff in their app
+        # Check that user2 doesn't see user1's riff in their app (but has their own automatic riff)
         response = client.get(f"/api/apps/{app2_slug}/riffs", headers=user2_headers)
         assert response.status_code == 200
         data = response.get_json()
-        assert data["count"] == 0
-        assert data["riffs"] == []
+        assert data["count"] == 1  # Only the automatic rename riff
+        assert len(data["riffs"]) == 1
+        assert (
+            data["riffs"][0]["name"] == f"rename-to-{app2_slug}"
+        )  # Only the automatic riff
 
-        # Check that user1 still sees their riff
+        # Check that user1 still sees their riff (plus the automatic one)
         response = client.get(f"/api/apps/{app1_slug}/riffs", headers=user1_headers)
         assert response.status_code == 200
         data = response.get_json()
-        assert data["count"] == 1
-        assert data["riffs"][0]["name"] == "User1 Riff"
+        assert data["count"] == 2  # User1 Riff + automatic rename riff
+        riff_names = [riff["name"] for riff in data["riffs"]]
+        assert "User1 Riff" in riff_names
+        assert f"rename-to-{app1_slug}" in riff_names
 
     def test_riffs_different_apps_same_user(
         self, client, sample_headers, mock_api_keys
@@ -366,15 +381,21 @@ class TestRiffsEndpoints:
         )
         assert response.status_code == 201
 
-        # Check that second app doesn't have the riff
+        # Check that second app doesn't have the first app's riff (but has its own automatic riff)
         response = client.get(f"/api/apps/{app2_slug}/riffs", headers=sample_headers)
         assert response.status_code == 200
         data = response.get_json()
-        assert data["count"] == 0
+        assert data["count"] == 1  # Only the automatic rename riff
+        assert len(data["riffs"]) == 1
+        assert (
+            data["riffs"][0]["name"] == f"rename-to-{app2_slug}"
+        )  # Only the automatic riff
 
-        # Check that first app still has the riff
+        # Check that first app still has the riff (plus the automatic one)
         response = client.get(f"/api/apps/{app1_slug}/riffs", headers=sample_headers)
         assert response.status_code == 200
         data = response.get_json()
-        assert data["count"] == 1
-        assert data["riffs"][0]["name"] == "App1 Riff"
+        assert data["count"] == 2  # App1 Riff + automatic rename riff
+        riff_names = [riff["name"] for riff in data["riffs"]]
+        assert "App1 Riff" in riff_names
+        assert f"rename-to-{app1_slug}" in riff_names
