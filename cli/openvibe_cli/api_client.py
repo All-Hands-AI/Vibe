@@ -11,7 +11,7 @@ import requests
 from rich.console import Console
 from rich.progress import Progress, SpinnerColumn, TextColumn
 
-from .config import Config
+from openvibe_cli.config import Config
 
 console = Console()
 

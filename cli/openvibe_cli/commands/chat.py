@@ -19,7 +19,7 @@ from prompt_toolkit.widgets import TextArea, Frame
 from rich.console import Console
 from rich.progress import Progress, SpinnerColumn, TextColumn
 
-from ..api_client import get_api_client, APIError
+from openvibe_cli.api_client import get_api_client, APIError
 
 console = Console()
 

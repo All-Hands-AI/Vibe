@@ -28,7 +28,25 @@ rm -rf build/ dist/
 
 # Build binary
 echo "🚀 Building binary with PyInstaller..."
-pyinstaller --clean --noconfirm openvibe.spec
+pyinstaller --onefile --name openvibe \
+  --hidden-import=openvibe_cli.main \
+  --hidden-import=openvibe_cli.config \
+  --hidden-import=openvibe_cli.api_client \
+  --hidden-import=openvibe_cli.commands.setup \
+  --hidden-import=openvibe_cli.commands.apps \
+  --hidden-import=openvibe_cli.commands.riffs \
+  --hidden-import=openvibe_cli.commands.chat \
+  --hidden-import=openvibe_cli.commands.integrations \
+  --hidden-import=openvibe_cli.commands.status \
+  --hidden-import=rich.console \
+  --hidden-import=rich.table \
+  --hidden-import=rich.panel \
+  --hidden-import=rich.progress \
+  --hidden-import=prompt_toolkit \
+  --hidden-import=click \
+  --hidden-import=requests \
+  --hidden-import=pydantic \
+  openvibe_cli/main.py
 
 # Test the binary
 echo "🧪 Testing binary..."

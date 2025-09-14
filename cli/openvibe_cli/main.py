@@ -5,18 +5,18 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.text import Text
 
-from .commands.setup import setup
-from .commands.apps import apps
-from .commands.riffs import riffs
-from .commands.chat import chat
-from .commands.integrations import integrations
-from .commands.status import status
+from openvibe_cli.commands.setup import setup
+from openvibe_cli.commands.apps import apps
+from openvibe_cli.commands.riffs import riffs
+from openvibe_cli.commands.chat import chat
+from openvibe_cli.commands.integrations import integrations
+from openvibe_cli.commands.status import status
 
 console = Console()
 
 
 @click.group()
-@click.version_option()
+@click.version_option(version="1.0.0")
 def main():
     """🤙 OpenVibe CLI - Command line interface for OpenVibe.
     

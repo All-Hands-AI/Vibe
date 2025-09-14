@@ -4,8 +4,8 @@ import click
 from rich.console import Console
 from rich.progress import Progress, SpinnerColumn, TextColumn
 
-from ..api_client import get_api_client, APIError
-from ..config import Config
+from openvibe_cli.api_client import get_api_client, APIError
+from openvibe_cli.config import Config
 
 console = Console()
 

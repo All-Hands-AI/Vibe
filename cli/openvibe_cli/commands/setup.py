@@ -7,7 +7,7 @@ from rich.prompt import Prompt, Confirm
 from rich.table import Table
 from rich.text import Text
 
-from ..config import Config
+from openvibe_cli.config import Config
 
 console = Console()
 

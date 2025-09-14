@@ -7,8 +7,8 @@ from rich.panel import Panel
 from rich.progress import Progress, SpinnerColumn, TextColumn
 from rich.text import Text
 
-from ..api_client import get_api_client, APIError
-from ..config import Config
+from openvibe_cli.api_client import get_api_client, APIError
+from openvibe_cli.config import Config
 
 console = Console()
 
