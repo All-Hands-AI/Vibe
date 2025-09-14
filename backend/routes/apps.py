@@ -1070,6 +1070,8 @@ def get_app(slug):
 
                 # Get PR status for the current branch
                 branch = app.get("branch", "main")
+                logger.info(f"🔍 APPS ENDPOINT: Getting PR status for app branch: {branch}")
+                logger.info(f"🔍 APPS ENDPOINT: This is the OLD logic that searches for head='{branch}'")
                 pr_status = get_pr_status(app["github_url"], github_token, branch)
 
             # Get Fly.io status if token is available

@@ -1003,20 +1003,21 @@ def get_riff_pr_status(slug, riff_slug):
                 log_api_response(logger, "GET", f"/api/apps/{slug}/riffs/{riff_slug}/pr-status", 200)
                 return jsonify({"pr_status": None, "message": "No GitHub token configured"})
 
-            # Use riff name as branch name (this is the key fix!)
-            branch_name = riff_slug
-            logger.info(f"🔍 Getting PR status for riff branch: {branch_name}")
+            # Use riff name as the HEAD branch name (source branch)
+            riff_branch = riff_slug
+            logger.info(f"🔍 RIFF ENDPOINT: Getting PR status for riff: {riff_branch}")
+            logger.info(f"🔍 RIFF ENDPOINT: Looking for PRs with head='{riff_branch}' and base='main'")
+            logger.info(f"🔍 RIFF ENDPOINT: This should find PRs FROM '{riff_branch}' TO 'main'")
             
-            # First try searching for PRs FROM this branch (head search)
-            logger.info(f"🔍 Trying head search: PRs from branch '{branch_name}'")
-            pr_status = get_pr_status(github_url, github_token, branch_name, search_by_base=False)
+            # Search for PRs FROM the riff branch TO main (the typical workflow)
+            # This means: head=riff_branch, base=main
+            pr_status = get_pr_status(github_url, github_token, riff_branch, search_by_base=False)
             
-            # If no PRs found, try searching for PRs TO this branch (base search)
-            # This handles cases where the riff branch is the target branch
-            if not pr_status:
-                logger.info(f"🔍 No PRs found from branch '{branch_name}', trying base search")
-                logger.info(f"🔍 Trying base search: PRs targeting branch '{branch_name}'")
-                pr_status = get_pr_status(github_url, github_token, branch_name, search_by_base=True)
+            if pr_status:
+                logger.info(f"✅ Found PR from riff branch '{riff_branch}' to main")
+            else:
+                logger.info(f"ℹ️ No PR found from riff branch '{riff_branch}' to main")
+                # Note: We don't try base search here because riffs are source branches, not target branches
             
             if pr_status:
                 logger.info(f"✅ Found PR status for riff {riff_slug}: #{pr_status['number']}")
