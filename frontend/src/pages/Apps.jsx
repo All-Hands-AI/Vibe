@@ -327,16 +327,16 @@ function Apps() {
 
   return (
     <div className="min-h-screen bg-black text-cyber-text">
-      <div className="max-w-6xl mx-auto px-8 py-16">
-        <header className="text-left mb-16">
-          <h1 className="text-5xl font-bold text-cyber-text mb-4 font-mono">🤙 OpenHands Vibe</h1>
+      <div className="max-w-6xl mx-auto px-6 py-8">
+        <header className="text-left mb-8">
+          <h1 className="text-4xl font-bold text-cyber-text mb-2 font-mono">🤙 OpenHands Vibe</h1>
         </header>
 
         {/* Create New App Form */}
-        <section className="mb-16">
-          <h2 className="text-3xl font-bold text-cyber-text mb-8 font-mono">Create New App</h2>
+        <section className="mb-8">
+          <h2 className="text-2xl font-bold text-cyber-text mb-4 font-mono">Create New App</h2>
           <div className="hacker-card max-w-2xl">
-            <form onSubmit={handleCreateApp} className="space-y-6">
+            <form onSubmit={handleCreateApp} className="space-y-4">
               <div>
                 <label htmlFor="appName" className="block text-sm font-medium text-cyber-text mb-2 font-mono">
                   <span className="text-cyber-muted">{'>'}</span> App Name:
@@ -384,7 +384,7 @@ function Apps() {
 
         {/* Apps List */}
         <section>
-          <h2 className="text-3xl font-bold text-cyber-text mb-8 font-mono">Your Apps</h2>
+          <h2 className="text-2xl font-bold text-cyber-text mb-4 font-mono">Your Apps</h2>
           
           {loading ? (
             <div className="flex flex-col items-center justify-center py-16">
@@ -396,7 +396,7 @@ function Apps() {
               <p className="text-cyber-muted text-lg font-mono">No apps yet. Create your first app above!</p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {(appsWithDetails.length > 0 ? appsWithDetails : apps).map((app) => (
                 <Link 
                   key={app.slug} 

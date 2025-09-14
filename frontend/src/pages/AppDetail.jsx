@@ -344,9 +344,9 @@ function AppDetail() {
 
   return (
     <div className="min-h-screen bg-black text-cyber-text">
-      <div className="max-w-6xl mx-auto px-8 py-8">
+      <div className="max-w-6xl mx-auto px-6 py-6">
         {/* Navigation */}
-        <nav className="mb-8">
+        <nav className="mb-4">
           <div className="flex items-center space-x-2 text-sm">
             <Link to="/" className="text-cyber-muted hover:text-neon-green transition-colors duration-200">
               Apps
@@ -357,10 +357,10 @@ function AppDetail() {
         </nav>
 
         {/* App Header */}
-        <header className="mb-6">
-          <div className="flex flex-wrap items-baseline justify-between gap-4 mb-6">
+        <header className="mb-4">
+          <div className="flex flex-wrap items-baseline justify-between gap-4 mb-4">
             <div>
-              <h1 className="text-4xl font-bold text-cyber-text mb-2 font-mono">{app.name}</h1>
+              <h1 className="text-3xl font-bold text-cyber-text mb-2 font-mono">{app.name}</h1>
             </div>
             <p className="text-cyber-muted font-mono text-sm">
               Created {new Date(app.created_at).toLocaleDateString()}
@@ -369,7 +369,7 @@ function AppDetail() {
         </header>
 
         {/* Main Content Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* App Status */}
           <div className="lg:col-span-1">
             <AppStatus app={app} />
