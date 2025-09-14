@@ -1,9 +1,16 @@
 import { useState, useEffect } from 'react'
 import PropTypes from 'prop-types'
+import { 
+  getStatusIcon, 
+  getStatusText, 
+  getStatusColor, 
+  getBranchName, 
+  getBranchStatus, 
+  getDeployStatus 
+} from '../utils/statusUtils'
 
 function AppStatus({ app }) {
   const [prData, setPrData] = useState(null)
-  const [deploymentData, setDeploymentData] = useState(null)
 
   useEffect(() => {
     // Extract PR data from app
@@ -11,56 +18,10 @@ function AppStatus({ app }) {
       setPrData(app.pr_status)
     }
 
-    // Extract deployment data from app
-    if (app?.deployment_status) {
-      setDeploymentData(app.deployment_status)
-    }
+
   }, [app])
 
-  const getStatusIcon = (status) => {
-    switch (status) {
-      case 'success':
-        return '✅'
-      case 'failure':
-      case 'error':
-        return '❌'
-      case 'pending':
-      case 'running':
-        return '🔄'
-      default:
-        return '🔄'
-    }
-  }
 
-  const getStatusText = (status) => {
-    switch (status) {
-      case 'success':
-        return 'Passing'
-      case 'failure':
-      case 'error':
-        return 'Failing'
-      case 'pending':
-      case 'running':
-        return 'Running'
-      default:
-        return 'Checking...'
-    }
-  }
-
-  const getStatusColor = (status) => {
-    switch (status) {
-      case 'success':
-        return 'text-green-400'
-      case 'failure':
-      case 'error':
-        return 'text-red-400'
-      case 'pending':
-      case 'running':
-        return 'text-yellow-400'
-      default:
-        return 'text-cyber-muted'
-    }
-  }
 
   const getDraftStatusColor = (isDraft) => {
     return isDraft ? 'text-gray-400' : 'text-green-400'
@@ -100,33 +61,19 @@ function AppStatus({ app }) {
     return `https://${project}-${conversation}.fly.dev`
   }
 
-  const getBranchName = () => {
-    return app?.branch || app?.github_status?.branch || 'main'
-  }
 
-  const getBranchStatus = () => {
-    // If we have PR data, use that for CI status
-    if (prData) {
-      return prData.ci_status
-    }
-    // Otherwise, use github_status for branch-level CI
-    if (app?.github_status?.tests_passing === true) return 'success'
-    if (app?.github_status?.tests_passing === false) return 'failure'
-    if (app?.github_status?.tests_passing === null) return 'pending'
-    return 'pending'
-  }
 
   const getLastCommit = () => {
     return app?.github_status?.last_commit
   }
 
   const shouldShowNoPRMessage = () => {
-    const branch = getBranchName()
+    const branch = getBranchName(app)
     return !prData && branch !== 'main'
   }
 
   const getBranchUrl = () => {
-    const branch = getBranchName()
+    const branch = getBranchName(app)
     const githubUrl = app?.github_url
     if (!githubUrl) return null
     
@@ -152,11 +99,11 @@ function AppStatus({ app }) {
               rel="noopener noreferrer"
               className="text-cyber-text hover:text-blue-400 font-mono text-sm transition-colors duration-200"
             >
-              🌿 {getBranchName()}
+              🌿 {getBranchName(app)}
             </a>
           ) : (
             <span className="text-cyber-text font-mono text-sm">
-              🌿 {getBranchName()}
+              🌿 {getBranchName(app)}
             </span>
           )}
         </div>
@@ -200,8 +147,8 @@ function AppStatus({ app }) {
         <div className="space-y-2">
           <div className="flex items-center gap-3">
             <span className="text-cyber-muted font-mono text-sm min-w-[100px]">CI Status:</span>
-            <span className={`font-mono text-sm ${getStatusColor(getBranchStatus())}`}>
-              {getStatusIcon(getBranchStatus())} {getStatusText(getBranchStatus())}
+            <span className={`font-mono text-sm ${getStatusColor(getBranchStatus(app))}`}>
+              {getStatusIcon(getBranchStatus(app))} {getStatusText(getBranchStatus(app))}
             </span>
           </div>
 
@@ -273,8 +220,8 @@ function AppStatus({ app }) {
         {/* Deploy CI Status */}
         <div className="flex items-center gap-3">
           <span className="text-cyber-muted font-mono text-sm min-w-[100px]">Deploy:</span>
-          <span className={`font-mono text-sm ${getStatusColor(deploymentData?.deploy_status || 'pending')}`}>
-            {getStatusIcon(deploymentData?.deploy_status || 'pending')} {getStatusText(deploymentData?.deploy_status || 'pending')}
+          <span className={`font-mono text-sm ${getStatusColor(getDeployStatus(app))}`}>
+            {getStatusIcon(getDeployStatus(app))} {getStatusText(getDeployStatus(app))}
           </span>
         </div>
 

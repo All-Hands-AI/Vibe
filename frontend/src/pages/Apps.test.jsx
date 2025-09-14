@@ -107,14 +107,9 @@ describe('Apps', () => {
     await waitFor(() => {
       expect(screen.getByText('Test App')).toBeInTheDocument()
       expect(screen.getByText('Another App')).toBeInTheDocument()
-      expect(screen.getByText('test-app')).toBeInTheDocument()
-      expect(screen.getByText('another-app')).toBeInTheDocument()
     })
     
-    // Check GitHub info and status information
-    expect(screen.getAllByText('GitHub repository available')).toHaveLength(2)
-    
-    // Check that status information is displayed
+    // Check that status information is displayed (GitHub info and created date removed)
     expect(screen.getAllByText('Branch:')).toHaveLength(2)
     expect(screen.getAllByText('CI:')).toHaveLength(2)
     expect(screen.getAllByText('Deploy:')).toHaveLength(2)
@@ -125,6 +120,10 @@ describe('Apps', () => {
       link.getAttribute('href')?.startsWith('/apps/')
     )
     expect(appCardLinks).toHaveLength(2)
+    
+    // Verify that GitHub info and created date are NOT displayed
+    expect(screen.queryByText('GitHub repository available')).not.toBeInTheDocument()
+    expect(screen.queryByText(/Created:/)).not.toBeInTheDocument()
   })
 
   it('shows slug preview when typing app name', async () => {

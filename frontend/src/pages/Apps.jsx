@@ -2,6 +2,14 @@ import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { getUserUUID } from '../utils/uuid'
 import ConfirmationModal from '../components/ConfirmationModal'
+import { 
+  getStatusIcon, 
+  getStatusText, 
+  getStatusColor, 
+  getBranchName, 
+  getBranchStatus, 
+  getDeployStatus 
+} from '../utils/statusUtils'
 
 function Apps() {
   const [apps, setApps] = useState([])
@@ -28,71 +36,7 @@ function Apps() {
       .replace(/^-|-$/g, '')
   }
 
-  // Status helper functions (extracted from AppStatus component)
-  const getStatusIcon = (status) => {
-    switch (status) {
-      case 'success':
-        return '✅'
-      case 'failure':
-      case 'error':
-        return '❌'
-      case 'pending':
-      case 'running':
-        return '🔄'
-      default:
-        return '🔄'
-    }
-  }
 
-  const getStatusText = (status) => {
-    switch (status) {
-      case 'success':
-        return 'Passing'
-      case 'failure':
-      case 'error':
-        return 'Failing'
-      case 'pending':
-      case 'running':
-        return 'Running'
-      default:
-        return 'Checking...'
-    }
-  }
-
-  const getStatusColor = (status) => {
-    switch (status) {
-      case 'success':
-        return 'text-green-400'
-      case 'failure':
-      case 'error':
-        return 'text-red-400'
-      case 'pending':
-      case 'running':
-        return 'text-yellow-400'
-      default:
-        return 'text-cyber-muted'
-    }
-  }
-
-  const getBranchName = (app) => {
-    return app?.branch || app?.github_status?.branch || 'main'
-  }
-
-  const getBranchStatus = (app) => {
-    // If we have PR data, use that for CI status
-    if (app?.pr_status) {
-      return app.pr_status.ci_status
-    }
-    // Otherwise, use github_status for branch-level CI
-    if (app?.github_status?.tests_passing === true) return 'success'
-    if (app?.github_status?.tests_passing === false) return 'failure'
-    if (app?.github_status?.tests_passing === null) return 'pending'
-    return 'pending'
-  }
-
-  const getDeployStatus = (app) => {
-    return app?.deployment_status?.deploy_status || 'pending'
-  }
 
   // Fetch apps from backend
   const fetchApps = async () => {
@@ -413,7 +357,6 @@ function Apps() {
                     <div className="flex justify-between items-start mb-4">
                       <div className="flex-1">
                         <h3 className="text-xl font-semibold text-cyber-text mb-1 font-mono">{app.name}</h3>
-                        <span className="text-sm text-cyber-muted font-mono">{app.slug}</span>
                       </div>
                       <button 
                         className="text-red-400 hover:text-red-300 text-lg p-2 hover:bg-red-900/20 rounded transition-colors duration-200 z-10 relative"
@@ -425,42 +368,30 @@ function Apps() {
                       </button>
                     </div>
                     
-                    <div className="space-y-3">
-                      <p className="text-sm text-cyber-muted font-mono">
-                        Created: {new Date(app.created_at).toLocaleDateString()}
-                      </p>
+                    {/* Status Information */}
+                    <div className="space-y-2">
+                      {/* Branch */}
+                      <div className="flex items-center gap-2">
+                        <span className="text-cyber-muted font-mono text-xs">Branch:</span>
+                        <span className="text-cyber-text font-mono text-xs">
+                          🌿 {getBranchName(app)}
+                        </span>
+                      </div>
                       
-                      {app.github_url && (
-                        <div className="text-sm text-green-400 bg-green-900/20 px-3 py-1 rounded font-mono">
-                          GitHub repository available
-                        </div>
-                      )}
+                      {/* CI Status */}
+                      <div className="flex items-center gap-2">
+                        <span className="text-cyber-muted font-mono text-xs">CI:</span>
+                        <span className={`font-mono text-xs ${getStatusColor(getBranchStatus(app))}`}>
+                          {getStatusIcon(getBranchStatus(app))} {getStatusText(getBranchStatus(app))}
+                        </span>
+                      </div>
                       
-                      {/* Status Information */}
-                      <div className="space-y-2 pt-2 border-t border-cyber-border">
-                        {/* Branch */}
-                        <div className="flex items-center gap-2">
-                          <span className="text-cyber-muted font-mono text-xs">Branch:</span>
-                          <span className="text-cyber-text font-mono text-xs">
-                            🌿 {getBranchName(app)}
-                          </span>
-                        </div>
-                        
-                        {/* CI Status */}
-                        <div className="flex items-center gap-2">
-                          <span className="text-cyber-muted font-mono text-xs">CI:</span>
-                          <span className={`font-mono text-xs ${getStatusColor(getBranchStatus(app))}`}>
-                            {getStatusIcon(getBranchStatus(app))} {getStatusText(getBranchStatus(app))}
-                          </span>
-                        </div>
-                        
-                        {/* Deploy Status */}
-                        <div className="flex items-center gap-2">
-                          <span className="text-cyber-muted font-mono text-xs">Deploy:</span>
-                          <span className={`font-mono text-xs ${getStatusColor(getDeployStatus(app))}`}>
-                            {getStatusIcon(getDeployStatus(app))} {getStatusText(getDeployStatus(app))}
-                          </span>
-                        </div>
+                      {/* Deploy Status */}
+                      <div className="flex items-center gap-2">
+                        <span className="text-cyber-muted font-mono text-xs">Deploy:</span>
+                        <span className={`font-mono text-xs ${getStatusColor(getDeployStatus(app))}`}>
+                          {getStatusIcon(getDeployStatus(app))} {getStatusText(getDeployStatus(app))}
+                        </span>
                       </div>
                     </div>
                   </div>
