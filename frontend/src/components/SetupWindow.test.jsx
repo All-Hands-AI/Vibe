@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'
 import { vi } from 'vitest'
 import SetupWindow from './SetupWindow'
 import { SetupProvider } from '../context/SetupContext'
@@ -22,12 +22,16 @@ vi.mock('../utils/uuid', () => ({
 }))
 
 // Helper function to render SetupWindow with providers
-const renderSetupWindow = (props = {}) => {
-  return render(
-    <SetupProvider>
-      <SetupWindow onSetupComplete={vi.fn()} {...props} />
-    </SetupProvider>
-  )
+const renderSetupWindow = async (props = {}) => {
+  let result
+  await act(async () => {
+    result = render(
+      <SetupProvider>
+        <SetupWindow onSetupComplete={vi.fn()} {...props} />
+      </SetupProvider>
+    )
+  })
+  return result
 }
 
 describe('SetupWindow', () => {
@@ -56,8 +60,8 @@ describe('SetupWindow', () => {
       })
   })
 
-  test('renders setup window with all required fields', () => {
-    renderSetupWindow({ onSetupComplete: mockOnSetupComplete })
+  test('renders setup window with all required fields', async () => {
+    await renderSetupWindow({ onSetupComplete: mockOnSetupComplete })
     
     expect(screen.getByText('🚀 Welcome to OpenVibe')).toBeInTheDocument()
     expect(screen.getByText('Please configure your API keys to get started')).toBeInTheDocument()
@@ -76,7 +80,7 @@ describe('SetupWindow', () => {
       json: async () => ({ valid: true, message: 'Anthropic API key is valid' })
     })
 
-    renderSetupWindow({ onSetupComplete: mockOnSetupComplete })
+    await renderSetupWindow({ onSetupComplete: mockOnSetupComplete })
     
     const anthropicInput = screen.getByLabelText(/Anthropic API Key/)
     
@@ -107,7 +111,7 @@ describe('SetupWindow', () => {
       json: async () => ({ valid: true, message: 'Anthropic API key is valid' })
     })
 
-    renderSetupWindow({ onSetupComplete: mockOnSetupComplete })
+    await renderSetupWindow({ onSetupComplete: mockOnSetupComplete })
     
     const anthropicInput = screen.getByLabelText(/Anthropic API Key/)
     
@@ -136,7 +140,7 @@ describe('SetupWindow', () => {
         json: async () => ({ valid: true, message: 'Fly API key is valid' })
       })
 
-    renderSetupWindow({ onSetupComplete: mockOnSetupComplete })
+    await renderSetupWindow({ onSetupComplete: mockOnSetupComplete })
     
     const anthropicInput = screen.getByLabelText(/Anthropic API Key/)
     const githubInput = screen.getByLabelText(/GitHub API Key/)
@@ -180,7 +184,7 @@ describe('SetupWindow', () => {
       json: async () => ({ valid: false, message: 'Anthropic API key is invalid' })
     })
 
-    renderSetupWindow({ onSetupComplete: mockOnSetupComplete })
+    await renderSetupWindow({ onSetupComplete: mockOnSetupComplete })
     
     const anthropicInput = screen.getByLabelText(/Anthropic API Key/)
     

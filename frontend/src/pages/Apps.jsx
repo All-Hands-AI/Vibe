@@ -193,7 +193,7 @@ function Apps() {
       }
 
       console.log('✅ App created successfully:', data.app)
-      setSuccess(`App "${slug}" created successfully!`)
+      setSuccess(`App "${data.app.name || slug}" created successfully!`)
       setNewAppName('')
       
       // Refresh apps list
@@ -406,7 +406,7 @@ function Apps() {
                   <div className="p-6">
                     <div className="flex justify-between items-start mb-4">
                       <div className="flex-1">
-                        <h3 className="text-xl font-semibold text-cyber-text mb-1 font-mono">{app.slug}</h3>
+                        <h3 className="text-xl font-semibold text-cyber-text mb-1 font-mono">{app.name || app.slug}</h3>
                       </div>
                       <button 
                         className="text-red-400 hover:text-red-300 text-lg p-2 hover:bg-red-900/20 rounded transition-colors duration-200 z-10 relative"

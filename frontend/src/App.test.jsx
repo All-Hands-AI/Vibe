@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, act } from '@testing-library/react'
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import App from './App'
 
@@ -29,7 +29,7 @@ describe('App', () => {
     localStorageMock.removeItem.mockClear()
   })
 
-  it('shows loading screen initially', () => {
+  it('shows setup window when API keys are not configured initially', async () => {
     // Mock API calls that will fail (no setup)
     fetch
       .mockResolvedValueOnce({
@@ -45,10 +45,14 @@ describe('App', () => {
         json: async () => ({ valid: false, message: 'Fly API key not set' })
       })
 
-    render(<App />)
+    await act(async () => {
+      render(<App />)
+    })
     
-    // Should show loading screen initially
-    expect(screen.getByText('Initializing OpenVibe...')).toBeInTheDocument()
+    // Wait for setup window to appear (loading screen is very brief)
+    await waitFor(() => {
+      expect(screen.getByText('🚀 Welcome to OpenVibe')).toBeInTheDocument()
+    })
   })
 
   it('shows setup window when API keys are not configured', async () => {
@@ -67,7 +71,9 @@ describe('App', () => {
         json: async () => ({ valid: false, message: 'Fly API key not set' })
       })
 
-    render(<App />)
+    await act(async () => {
+      render(<App />)
+    })
     
     // Wait for setup window to appear
     await waitFor(() => {
@@ -100,7 +106,9 @@ describe('App', () => {
         json: async () => ({ apps: [], count: 0 })
       })
 
-    render(<App />)
+    await act(async () => {
+      render(<App />)
+    })
     
     // Wait for main app to load by checking for the Apps page content
     await waitFor(() => {
@@ -117,7 +125,7 @@ describe('App', () => {
     expect(screen.getByText('Your Apps')).toBeInTheDocument()
   })
 
-  it('renders with theme provider', () => {
+  it('renders with theme provider', async () => {
     // Mock API calls that will fail (no setup)
     fetch
       .mockResolvedValueOnce({
@@ -133,7 +141,11 @@ describe('App', () => {
         json: async () => ({ valid: false, message: 'Fly API key not set' })
       })
 
-    const { container } = render(<App />)
+    let container
+    await act(async () => {
+      const result = render(<App />)
+      container = result.container
+    })
     
     // Check that theme class is applied
     expect(container.querySelector('.app-theme-dark')).toBeInTheDocument()
