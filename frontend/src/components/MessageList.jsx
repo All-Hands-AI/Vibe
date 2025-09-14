@@ -118,7 +118,7 @@ function MessageList({ messages, userUuid, scrollContainerRef, onScroll, message
                         {getMessageTypeIcon(message.type)}
                       </span>
                       <span className="text-xs text-cyber-muted font-mono">
-                        {isOwnMessage(message) ? 'You' : 'User'}
+                        {isOwnMessage(message) ? 'You' : '🤖 Agent'}
                       </span>
                     </div>
                     <span className="text-xs text-cyber-muted font-mono">
@@ -149,7 +149,7 @@ function MessageList({ messages, userUuid, scrollContainerRef, onScroll, message
 
                   {/* Message Metadata */}
                   {message.metadata && Object.keys(message.metadata).length > 0 && (
-                    <div className="mt-2 pt-2 border-t border-gray-600/50">
+                    <div className={`mt-2 pt-2 ${isOwnMessage(message) ? 'border-t border-gray-600/50' : ''}`}>
                       <div className="text-xs text-cyber-muted font-mono">
                         {message.metadata.filename && (
                           <div>File: {message.metadata.filename}</div>
