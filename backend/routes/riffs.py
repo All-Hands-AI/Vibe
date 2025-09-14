@@ -7,6 +7,7 @@ from storage import get_riffs_storage, get_apps_storage
 from agent_loop import agent_loop_manager
 from keys import get_user_key
 from utils.repository import setup_riff_workspace
+from utils.event_serializer import serialize_agent_event_to_message
 
 import os
 
@@ -113,9 +114,6 @@ def create_agent_for_user(user_uuid, app_slug, riff_slug):
                 try:
                     logger.info(f"📨 Received event from agent: {type(event).__name__}")
 
-                    # Import the event serializer
-                    from utils.event_serializer import serialize_agent_event_to_message
-
                     # Serialize the event to a message format
                     serialized_message = serialize_agent_event_to_message(
                         event, user_uuid, app_slug, riff_slug
@@ -123,13 +121,17 @@ def create_agent_for_user(user_uuid, app_slug, riff_slug):
 
                     if serialized_message:
                         # Save the serialized message
-                        if add_user_message(user_uuid, app_slug, riff_slug, serialized_message):
+                        if add_user_message(
+                            user_uuid, app_slug, riff_slug, serialized_message
+                        ):
                             logger.info(
                                 f"✅ Agent event ({type(event).__name__}) saved as message for riff: {riff_slug}"
                             )
 
                             # Update riff message stats
-                            messages = load_user_messages(user_uuid, app_slug, riff_slug)
+                            messages = load_user_messages(
+                                user_uuid, app_slug, riff_slug
+                            )
                             update_riff_message_stats(
                                 user_uuid,
                                 app_slug,
@@ -149,6 +151,7 @@ def create_agent_for_user(user_uuid, app_slug, riff_slug):
                 except Exception as e:
                     logger.error(f"❌ Error in message callback: {e}")
                     import traceback
+
                     logger.error(f"❌ Traceback: {traceback.format_exc()}")
 
             # Create and store the agent loop
