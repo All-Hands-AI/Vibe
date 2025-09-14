@@ -4,7 +4,6 @@ import { useSetup } from '../context/SetupContext'
 import { getUserUUID } from '../utils/uuid'
 import ChatWindow from '../components/ChatWindow'
 import LLMErrorModal from '../components/LLMErrorModal'
-import CompactStatusPanel from '../components/CompactStatusPanel'
 import DeploymentBanner from '../components/DeploymentBanner'
 import { startLLMPolling, checkLLMReady } from '../utils/llmService'
 import { getDeployStatus } from '../utils/statusUtils'
@@ -251,6 +250,22 @@ function RiffDetail() {
           <div className="flex flex-wrap items-baseline justify-between gap-4 mb-4">
             <div>
               <h1 className="text-3xl font-bold text-cyber-text mb-2 font-mono">{riff.name}</h1>
+              {/* PR Status Subheading */}
+              {prStatus && (
+                <div className="flex items-center gap-3 text-sm font-mono">
+                  <a
+                    href={prStatus.html_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-blue-400 hover:text-blue-300 transition-colors duration-200"
+                  >
+                    #{prStatus.number} {prStatus.title}
+                  </a>
+                  <span className={`${prStatus.draft ? 'text-gray-400' : 'text-green-400'}`}>
+                    {prStatus.draft ? '📝 Draft' : '🟢 Ready'}
+                  </span>
+                </div>
+              )}
             </div>
             <p className="text-cyber-muted font-mono text-sm">
               Created {new Date(riff.created_at).toLocaleDateString()}
@@ -260,17 +275,8 @@ function RiffDetail() {
 
         {/* Main Content Grid - 2 columns */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-[calc(100vh-200px)]">
-          {/* Left Sidebar - Status and Chat */}
-          <div className="flex flex-col space-y-3">
-            {/* Compact Status Panel */}
-            <CompactStatusPanel 
-              app={app} 
-              riff={riff} 
-              prStatus={prStatus} 
-              appSlug={appSlug} 
-              riffSlug={riffSlug} 
-            />
-
+          {/* Left Sidebar - Chat */}
+          <div className="flex flex-col">
             {/* Chat Window */}
             <div className="flex-1 min-h-0">
               {userUUID ? (
