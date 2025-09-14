@@ -33,6 +33,10 @@ jobs:
             platform: macos
             arch: x64
             binary_name: openvibe-macos-x64
+          - os: macos-14
+            platform: macos
+            arch: arm64
+            binary_name: openvibe-macos-arm64
           - os: windows-latest
             platform: windows
             arch: x64
@@ -132,52 +136,19 @@ jobs:
             
             // Create download URLs for each platform
             const platforms = [
-              { name: 'Linux (x64)', artifact: 'openvibe-linux-x64' },
-              { name: 'macOS (x64)', artifact: 'openvibe-macos-x64' },
-              { name: 'Windows (x64)', artifact: 'openvibe-windows-x64.exe' }
+              { name: 'Linux x64', artifact: 'openvibe-linux-x64' },
+              { name: 'macOS x64', artifact: 'openvibe-macos-x64' },
+              { name: 'macOS ARM64', artifact: 'openvibe-macos-arm64' },
+              { name: 'Windows x64', artifact: 'openvibe-windows-x64.exe' }
             ];
             
-            let comment = `## 🚀 CLI Binary Downloads\n\n`;
-            comment += `The OpenVibe CLI has been packaged as standalone binaries for easy distribution:\n\n`;
+            const downloadUrl = `https://github.com/${repo.owner}/${repo.repo}/actions/runs/${runId}/artifacts`;
             
-            for (const platform of platforms) {
-              const downloadUrl = `https://github.com/${repo.owner}/${repo.repo}/actions/runs/${runId}/artifacts`;
-              comment += `### ${platform.name}\n`;
-              comment += `📦 **[Download ${platform.artifact}](${downloadUrl})**\n\n`;
-            }
-            
-            comment += `### 📋 Installation Instructions\n\n`;
-            comment += `1. Download the binary for your platform from the links above\n`;
-            comment += `2. Make it executable (Unix/macOS): \`chmod +x openvibe-*\`\n`;
-            comment += `3. Move to your PATH: \`sudo mv openvibe-* /usr/local/bin/openvibe\`\n`;
-            comment += `4. Run: \`openvibe --help\`\n\n`;
-            
-            comment += `### ✨ Features\n\n`;
-            comment += `- 🤙 **1:1 Frontend Parity**: All web features available in CLI\n`;
-            comment += `- 📱 **Apps Management**: Create, list, show, delete apps\n`;
-            comment += `- 🎵 **Riffs Management**: Create and manage riffs within apps\n`;
-            comment += `- 💬 **Interactive Chat**: Real-time chat with full-screen and simple modes\n`;
-            comment += `- 🔧 **Setup & Config**: Easy configuration and API key management\n`;
-            comment += `- 📊 **Status Monitoring**: System health and integration status\n`;
-            comment += `- 🎨 **Beautiful UI**: Rich terminal interface with colors and progress bars\n\n`;
-            
-            comment += `### 🎯 Quick Start\n\n`;
-            comment += `\`\`\`bash\n`;
-            comment += `# Welcome and setup\n`;
-            comment += `openvibe welcome\n`;
-            comment += `openvibe setup\n\n`;
-            comment += `# Set up mock keys for testing\n`;
-            comment += `openvibe integrations setup-mock\n\n`;
-            comment += `# Create and manage apps\n`;
-            comment += `openvibe apps create "My App"\n`;
-            comment += `openvibe apps list\n\n`;
-            comment += `# Create riffs and chat\n`;
-            comment += `openvibe riffs create my-app "My Riff"\n`;
-            comment += `openvibe chat my-app my-riff --simple\n`;
-            comment += `\`\`\`\n\n`;
-            
-            comment += `---\n`;
-            comment += `*Binaries are automatically built and tested on every PR. They expire after 30 days.*`;
+            let comment = `## 🚀 CLI Binaries Available\n\n`;
+            comment += `**[📦 Download All Binaries](${downloadUrl})**\n\n`;
+            comment += `**Platforms:** ${platforms.map(p => p.name).join(' • ')}\n\n`;
+            comment += `**Quick start:** Download, \`chmod +x\`, move to PATH, run \`openvibe --help\`\n\n`;
+            comment += `*Binaries expire in 30 days*`;
             
             // Post the comment
             await github.rest.issues.createComment({
@@ -223,7 +194,8 @@ jobs:
             
             ### Downloads
             - **Linux (x64)**: `openvibe-linux-x64`
-            - **macOS (x64)**: `openvibe-macos-x64` 
+            - **macOS (x64)**: `openvibe-macos-x64`
+            - **macOS (ARM64)**: `openvibe-macos-arm64`
             - **Windows (x64)**: `openvibe-windows-x64.exe`
             
             ### Installation
@@ -243,6 +215,7 @@ jobs:
           files: |
             artifacts/openvibe-linux-x64/openvibe-linux-x64
             artifacts/openvibe-macos-x64/openvibe-macos-x64
+            artifacts/openvibe-macos-arm64/openvibe-macos-arm64
             artifacts/openvibe-windows-x64.exe/openvibe-windows-x64.exe
           draft: false
           prerelease: false
