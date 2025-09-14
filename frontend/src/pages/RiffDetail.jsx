@@ -21,6 +21,8 @@ function RiffDetail() {
   const [, setLlmReady] = useState(true)
   const [showLLMError, setShowLLMError] = useState(false)
   const stopPollingRef = useRef(null)
+  const prStatusPollingRef = useRef(null)
+  const deploymentStatusPollingRef = useRef(null)
 
   // Fetch app and riff details
   const fetchData = useCallback(async () => {
@@ -167,6 +169,54 @@ function RiffDetail() {
     }
   }, [appSlug, riffSlug])
 
+  // Start polling for PR status
+  const startPrStatusPolling = useCallback(() => {
+    if (prStatusPollingRef.current) {
+      clearInterval(prStatusPollingRef.current)
+    }
+    
+    if (appSlug && riffSlug) {
+      console.log('🔄 Starting PR status polling every 5 seconds for:', { appSlug, riffSlug })
+      // Initial fetch
+      fetchPrStatus()
+      // Set up polling interval
+      prStatusPollingRef.current = setInterval(() => {
+        fetchPrStatus()
+      }, 5000) // Poll every 5 seconds
+    }
+  }, [appSlug, riffSlug, fetchPrStatus])
+
+  // Start polling for deployment status
+  const startDeploymentStatusPolling = useCallback(() => {
+    if (deploymentStatusPollingRef.current) {
+      clearInterval(deploymentStatusPollingRef.current)
+    }
+    
+    if (appSlug && riffSlug) {
+      console.log('🚀 Starting deployment status polling every 5 seconds for:', { appSlug, riffSlug })
+      // Initial fetch
+      fetchDeploymentStatus()
+      // Set up polling interval
+      deploymentStatusPollingRef.current = setInterval(() => {
+        fetchDeploymentStatus()
+      }, 5000) // Poll every 5 seconds
+    }
+  }, [appSlug, riffSlug, fetchDeploymentStatus])
+
+  // Stop all status polling
+  const stopStatusPolling = useCallback(() => {
+    if (prStatusPollingRef.current) {
+      console.log('⏹️ Stopping PR status polling')
+      clearInterval(prStatusPollingRef.current)
+      prStatusPollingRef.current = null
+    }
+    if (deploymentStatusPollingRef.current) {
+      console.log('⏹️ Stopping deployment status polling')
+      clearInterval(deploymentStatusPollingRef.current)
+      deploymentStatusPollingRef.current = null
+    }
+  }, [])
+
   // Check LLM readiness and handle polling
   const handleLLMReadyChange = useCallback((isReady) => {
     console.log('🔍 LLM readiness changed:', isReady)
@@ -200,9 +250,9 @@ function RiffDetail() {
     fetchData()
   }, [fetchData])
 
-  // Check LLM readiness and fetch PR status when riff data is loaded
+  // Check LLM readiness and start status polling when riff data is loaded
   useEffect(() => {
-    console.log('🔄 [PR_STATUS_DEBUG] useEffect triggered - checking conditions:', {
+    console.log('🔄 [STATUS_POLLING_DEBUG] useEffect triggered - checking conditions:', {
       riff: riff ? 'loaded' : 'not loaded',
       app: app ? 'loaded' : 'not loaded',
       appSlug,
@@ -210,22 +260,23 @@ function RiffDetail() {
     })
     
     if (riff && app) {
-      console.log('✅ [PR_STATUS_DEBUG] Both riff and app loaded, calling fetchPrStatus')
+      console.log('✅ [STATUS_POLLING_DEBUG] Both riff and app loaded, starting polling')
       checkInitialLLMReadiness()
       startPolling()
-      fetchPrStatus() // Fetch PR status for this specific riff
-      fetchDeploymentStatus() // Fetch deployment status for this specific riff
+      startPrStatusPolling() // Start polling PR status for this specific riff
+      startDeploymentStatusPolling() // Start polling deployment status for this specific riff
     } else {
-      console.log('⏳ [PR_STATUS_DEBUG] Waiting for riff and app to load before fetching PR status')
+      console.log('⏳ [STATUS_POLLING_DEBUG] Waiting for riff and app to load before starting polling')
     }
     
-    // Cleanup polling on unmount
+    // Cleanup all polling on unmount
     return () => {
       if (stopPollingRef.current) {
         stopPollingRef.current()
       }
+      stopStatusPolling()
     }
-  }, [riff, app, appSlug, riffSlug, checkInitialLLMReadiness, startPolling, fetchPrStatus, fetchDeploymentStatus])
+  }, [riff, app, appSlug, riffSlug, checkInitialLLMReadiness, startPolling, startPrStatusPolling, startDeploymentStatusPolling, stopStatusPolling])
 
   // Scroll to top when route changes
   useEffect(() => {
@@ -234,12 +285,14 @@ function RiffDetail() {
 
   // Handle LLM reset
   const handleLLMReset = useCallback(() => {
-    console.log('✅ LLM reset completed, restarting polling')
+    console.log('✅ LLM reset completed, restarting all polling')
     setLlmReady(true)
     setShowLLMError(false)
-    // Restart polling after reset
+    // Restart all polling after reset
     startPolling()
-  }, [startPolling])
+    startPrStatusPolling()
+    startDeploymentStatusPolling()
+  }, [startPolling, startPrStatusPolling, startDeploymentStatusPolling])
 
   const handleCloseLLMError = useCallback(() => {
     setShowLLMError(false)
