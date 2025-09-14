@@ -29,10 +29,8 @@ dependencies = [
     "click>=8.0.0",
     "pydantic>=2.0.0",
     "python-dateutil>=2.8.0",
-    # Backend dependencies
+    # Backend dependencies (minimal set for storage only)
     "PyNaCl>=1.5.0",
-    "openhands-sdk @ git+https://github.com/all-hands-ai/agent-sdk.git@main#subdirectory=openhands/sdk",
-    "openhands-tools @ git+https://github.com/all-hands-ai/agent-sdk.git@main#subdirectory=openhands/tools",
 ]
 
 [project.optional-dependencies]
@@ -50,9 +48,6 @@ build = [
 
 [project.scripts]
 openvibe = "openvibe_cli.main:main"
-
-[tool.hatch.metadata]
-allow-direct-references = true
 
 [tool.black]
 line-length = 88

@@ -16,7 +16,7 @@ from datetime import datetime
 from openvibe_cli.backend_modules.storage.apps_storage import AppsStorage
 from openvibe_cli.backend_modules.storage.riffs_storage import RiffsStorage
 from openvibe_cli.backend_modules.storage.keys_storage import KeysStorage
-from openvibe_cli.backend_modules.agent_loop import AgentLoopManager
+# AgentLoopManager imported lazily when needed to avoid heavy dependencies
 
 from openvibe_cli.config import Config
 
@@ -49,7 +49,12 @@ class OpenVibeBackend:
     def _ensure_agent_manager(self):
         """Lazy initialization of agent manager."""
         if self.agent_manager is None:
-            self.agent_manager = AgentLoopManager()
+            try:
+                from openvibe_cli.backend_modules.agent_loop import AgentLoopManager
+                self.agent_manager = AgentLoopManager()
+            except ImportError as e:
+                logger.warning(f"Agent loop functionality not available: {e}")
+                self.agent_manager = None
     
     # Apps Management
     def list_apps(self) -> List[Dict[str, Any]]:
