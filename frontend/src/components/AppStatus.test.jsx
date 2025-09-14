@@ -95,7 +95,7 @@ describe('AppStatus', () => {
       expect(screen.getByText('✅ Passing')).toBeInTheDocument()
     })
     
-    expect(screen.getByText('🚀 https://my-project-conversation-123.fly.dev')).toBeInTheDocument()
+    expect(screen.getByText('🚀 https://conversation-123-conversation-123.fly.dev')).toBeInTheDocument()
   })
 
   it('displays individual check commits', () => {
