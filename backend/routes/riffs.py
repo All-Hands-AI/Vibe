@@ -66,6 +66,125 @@ logger = get_logger(__name__)
 riffs_bp = Blueprint("riffs", __name__)
 
 
+def reconstruct_agent_from_state(user_uuid, app_slug, riff_slug):
+    """
+    Reconstruct an Agent object from existing serialized state for a specific user, app, and riff.
+    This function creates an AgentLoop from existing state without re-cloning the repository.
+
+    Args:
+        user_uuid: User's UUID
+        app_slug: App slug identifier
+        riff_slug: Riff slug identifier
+
+    Returns:
+        tuple: (success: bool, error_message: str or None)
+    """
+    try:
+        # Get user's Anthropic token
+        anthropic_token = get_user_key(user_uuid, "anthropic")
+        if not anthropic_token:
+            logger.warning(f"⚠️ No Anthropic token found for user {user_uuid[:8]}")
+            return False, "Anthropic API key required"
+
+        # Get workspace path (should already exist from previous setup)
+        workspace_path = (
+            f"/data/{user_uuid}/apps/{app_slug}/riffs/{riff_slug}/workspace"
+        )
+
+        # Check if workspace exists - if not, fall back to creating new agent
+        if not os.path.exists(workspace_path):
+            logger.warning(
+                f"⚠️ Workspace not found at {workspace_path}, falling back to creating new agent"
+            )
+            return create_agent_for_user(user_uuid, app_slug, riff_slug)
+
+        logger.info(f"🔄 Reconstructing agent from state for riff {riff_slug}")
+
+        # Create LLM instance
+        try:
+            llm = get_llm_instance(
+                api_key=anthropic_token, model="claude-3-haiku-20240307"
+            )
+
+            # Create message callback to store events as messages
+            def message_callback(event):
+                """Callback to handle events from the agent conversation"""
+                try:
+                    logger.info(f"📨 Received event from agent: {type(event).__name__}")
+
+                    # Serialize the event to a message format
+                    serialized_message = serialize_agent_event_to_message(
+                        event, user_uuid, app_slug, riff_slug
+                    )
+
+                    if serialized_message:
+                        # Save the serialized message
+                        if add_user_message(
+                            user_uuid, app_slug, riff_slug, serialized_message
+                        ):
+                            logger.info(
+                                f"✅ Agent event ({type(event).__name__}) saved as message for riff: {riff_slug}"
+                            )
+
+                            # Update riff message stats
+                            messages = load_user_messages(
+                                user_uuid, app_slug, riff_slug
+                            )
+                            update_riff_message_stats(
+                                user_uuid,
+                                app_slug,
+                                riff_slug,
+                                len(messages),
+                                serialized_message["created_at"],
+                            )
+                        else:
+                            logger.error(
+                                f"❌ Failed to save agent event ({type(event).__name__}) for riff: {riff_slug}"
+                            )
+                    else:
+                        logger.debug(
+                            f"🔇 Event {type(event).__name__} was not serialized (likely filtered out)"
+                        )
+
+                except Exception as e:
+                    logger.error(f"❌ Error in message callback: {e}")
+                    import traceback
+
+                    logger.error(f"❌ Traceback: {traceback.format_exc()}")
+
+            # Create and store the agent loop from existing state
+            logger.info(
+                f"🔧 Reconstructing AgentLoop from state with key: {user_uuid[:8]}:{app_slug}:{riff_slug}"
+            )
+            agent_loop_manager.create_agent_loop_from_state(
+                user_uuid, app_slug, riff_slug, llm, workspace_path, message_callback
+            )
+            logger.info(f"🤖 Reconstructed AgentLoop for riff: {riff_slug}")
+
+            # Verify it was stored correctly
+            test_retrieval = agent_loop_manager.get_agent_loop(
+                user_uuid, app_slug, riff_slug
+            )
+            if test_retrieval:
+                logger.info(
+                    f"✅ AgentLoop reconstruction verification successful for {user_uuid[:8]}:{app_slug}:{riff_slug}"
+                )
+                return True, None
+            else:
+                logger.error(
+                    f"❌ AgentLoop reconstruction verification failed for {user_uuid[:8]}:{app_slug}:{riff_slug}"
+                )
+                return False, "Failed to verify Agent reconstruction"
+
+        except Exception as e:
+            logger.error(f"❌ Failed to create LLM instance: {e}")
+            return False, f"Failed to initialize LLM: {str(e)}"
+
+    except Exception as e:
+        logger.error(f"❌ Failed to reconstruct AgentLoop: {e}")
+        return False, f"Failed to reconstruct Agent: {str(e)}"
+
+
 def create_agent_for_user(user_uuid, app_slug, riff_slug):
     """
     Create and store an Agent object for a specific user, app, and riff.
@@ -699,8 +818,10 @@ def reset_riff_llm(slug, riff_slug):
                 f"ℹ️ No existing AgentLoop found for {user_uuid[:8]}:{slug}:{riff_slug}"
             )
 
-        # Create a brand new Agent object using the reusable function
-        success, error_message = create_agent_for_user(user_uuid, slug, riff_slug)
+        # Reconstruct Agent object from existing serialized state (no re-cloning)
+        success, error_message = reconstruct_agent_from_state(
+            user_uuid, slug, riff_slug
+        )
         if not success:
             logger.error(f"❌ Failed to reset Agent for riff: {error_message}")
             return jsonify({"error": error_message}), 500
