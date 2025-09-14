@@ -3,10 +3,13 @@ import requests
 import json
 import logging
 import re
+import uuid
 from datetime import datetime, timezone
 from pathlib import Path
-from keys import load_user_keys
-from storage import get_apps_storage
+from keys import load_user_keys, get_user_key
+from storage import get_apps_storage, get_riffs_storage
+from agent_loop import agent_loop_manager
+from utils.repository import setup_riff_workspace
 
 logger = logging.getLogger(__name__)
 
@@ -71,6 +74,147 @@ def create_slug(name):
     slug = re.sub(r"\s+", "-", slug.strip())
     slug = re.sub(r"-+", "-", slug)
     return slug.strip("-")
+
+
+def save_user_riff(user_uuid, app_slug, riff_slug, riff_data):
+    """Save riff for a specific user"""
+    storage = get_riffs_storage(user_uuid)
+    return storage.save_riff(app_slug, riff_slug, riff_data)
+
+
+def add_user_message(user_uuid, app_slug, riff_slug, message):
+    """Add a message to a riff for a specific user"""
+    storage = get_riffs_storage(user_uuid)
+    return storage.add_message(app_slug, riff_slug, message)
+
+
+def create_agent_for_riff(user_uuid, app_slug, riff_slug, github_url):
+    """Create and store an Agent object for a specific user, app, and riff"""
+    try:
+        # Get user's Anthropic token
+        anthropic_token = get_user_key(user_uuid, "anthropic")
+        if not anthropic_token:
+            logger.warning(f"⚠️ No Anthropic token found for user {user_uuid[:8]}")
+            return False, "Anthropic API key required"
+
+        # Setup workspace: create directory and clone repository
+        logger.info(f"🏗️ Setting up workspace for riff {riff_slug}")
+        workspace_success, workspace_path, workspace_error = setup_riff_workspace(
+            user_uuid, app_slug, riff_slug, github_url
+        )
+
+        if not workspace_success:
+            logger.error(f"❌ Failed to setup workspace: {workspace_error}")
+            return False, workspace_error
+
+        # Create AgentLoop with user's Anthropic token
+        logger.info(f"🤖 Creating AgentLoop for {user_uuid[:8]}:{app_slug}:{riff_slug}")
+        success, error_message = agent_loop_manager.create_agent_loop(
+            user_uuid, app_slug, riff_slug, anthropic_token, workspace_path
+        )
+
+        if not success:
+            logger.error(f"❌ Failed to create AgentLoop: {error_message}")
+            return False, error_message
+
+        logger.info(
+            f"✅ AgentLoop created successfully for {user_uuid[:8]}:{app_slug}:{riff_slug}"
+        )
+        return True, None
+
+    except Exception as e:
+        logger.error(f"💥 Error creating agent for riff: {str(e)}")
+        return False, f"Error creating agent: {str(e)}"
+
+
+def create_initial_riff_and_message(user_uuid, app_slug, app_name, github_url):
+    """Create initial riff and message for a new app"""
+    try:
+        # Create riff name and slug
+        riff_name = f"rename to {app_name}"
+        riff_slug = create_slug(riff_name)
+
+        logger.info(
+            f"🔄 Creating initial riff: {riff_name} -> {riff_slug} for app {app_slug}"
+        )
+
+        # Create riff record
+        riff = {
+            "slug": riff_slug,
+            "name": riff_name,
+            "app_slug": app_slug,
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "created_by": user_uuid,
+            "last_message_at": None,
+            "message_count": 0,
+        }
+
+        # Save riff
+        if not save_user_riff(user_uuid, app_slug, riff_slug, riff):
+            logger.error("❌ Failed to save initial riff")
+            return False, "Failed to save initial riff"
+
+        # Create initial message with instructions
+        message_id = str(uuid.uuid4())
+        created_at = datetime.now(timezone.utc).isoformat()
+
+        initial_message_content = f"""Please follow the instructions in TEMPLATE.md to change the app name everywhere from the template name to "{app_name}". After making all the necessary changes, delete the TEMPLATE.md file and push your changes to the repository."""
+
+        message = {
+            "id": message_id,
+            "content": initial_message_content,
+            "riff_slug": riff_slug,
+            "app_slug": app_slug,
+            "created_at": created_at,
+            "created_by": user_uuid,
+            "type": "user",
+            "metadata": {"initial_setup": True},
+        }
+
+        # Add message
+        if not add_user_message(user_uuid, app_slug, riff_slug, message):
+            logger.error("❌ Failed to save initial message")
+            return False, "Failed to save initial message"
+
+        # Create agent for the riff
+        logger.info(f"🤖 Creating agent for initial riff: {riff_slug}")
+        agent_success, agent_error = create_agent_for_riff(
+            user_uuid, app_slug, riff_slug, github_url
+        )
+
+        if not agent_success:
+            logger.warning(f"⚠️ Failed to create agent for initial riff: {agent_error}")
+            # Don't fail the entire process if agent creation fails
+            return True, {
+                "riff": riff,
+                "message": message,
+                "agent_warning": f"Agent creation failed: {agent_error}",
+            }
+
+        # Send initial message to agent
+        try:
+            agent_loop = agent_loop_manager.get_agent_loop(
+                user_uuid, app_slug, riff_slug
+            )
+            if agent_loop:
+                logger.info(
+                    f"🤖 Sending initial message to agent for {user_uuid[:8]}/{app_slug}/{riff_slug}"
+                )
+                confirmation = agent_loop.send_message(initial_message_content)
+                logger.info(f"✅ Initial message sent to agent: {confirmation}")
+            else:
+                logger.warning(
+                    f"❌ AgentLoop not found after creation for {user_uuid[:8]}:{app_slug}:{riff_slug}"
+                )
+        except Exception as e:
+            logger.warning(f"⚠️ Failed to send initial message to agent: {str(e)}")
+
+        logger.info(f"✅ Created initial riff and message for app: {app_name}")
+        return True, {"riff": riff, "message": message}
+
+    except Exception as e:
+        logger.error(f"💥 Error creating initial riff and message: {str(e)}")
+        return False, f"Error creating initial riff: {str(e)}"
 
 
 def get_user_default_org(fly_token):
@@ -1139,17 +1283,30 @@ def create_app():
             logger.error("❌ Failed to save app to file")
             return jsonify({"error": "Failed to save app"}), 500
 
+        # Create initial riff and message for the new app
+        logger.info(f"🆕 Creating initial riff for app: {app_name}")
+        riff_success, riff_result = create_initial_riff_and_message(
+            user_uuid, app_slug, app_name, github_url
+        )
+
+        warnings = []
+        if not fly_success:
+            warnings.append(f"Fly.io app creation failed: {fly_result}")
+
+        if not riff_success:
+            logger.warning(f"⚠️ Failed to create initial riff: {riff_result}")
+            warnings.append(f"Initial riff creation failed: {riff_result}")
+        else:
+            logger.info(f"✅ Initial riff created successfully for app: {app_name}")
+
         logger.info(f"✅ App created successfully: {app_name}")
         return (
             jsonify(
                 {
                     "message": "App created successfully",
                     "app": app,
-                    "warnings": (
-                        []
-                        if fly_success
-                        else [f"Fly.io app creation failed: {fly_result}"]
-                    ),
+                    "warnings": warnings,
+                    "initial_riff": riff_result if riff_success else None,
                 }
             ),
             201,
