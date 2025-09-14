@@ -309,8 +309,32 @@ function RiffDetail() {
 
           {/* Right Side - Iframe */}
           <div className="flex flex-col">
+            {/* Deployment Status Header */}
             <div className="mb-2">
-              <h3 className="text-lg font-semibold text-cyber-text font-mono">🚀 Live App Preview</h3>
+              {deploymentStatus ? (
+                <div className="flex items-center gap-2 mb-1">
+                  {deploymentStatus.status === 'pending' && (
+                    <>
+                      <div className="w-4 h-4 border-2 border-yellow-400 border-t-transparent rounded-full animate-spin"></div>
+                      <h3 className="text-lg font-semibold text-yellow-400 font-mono">🚀 Deploying...</h3>
+                    </>
+                  )}
+                  {deploymentStatus.status === 'success' && (
+                    <>
+                      <div className="w-4 h-4 bg-green-400 rounded-full"></div>
+                      <h3 className="text-lg font-semibold text-green-400 font-mono">🚀 Live App</h3>
+                    </>
+                  )}
+                  {deploymentStatus.status === 'error' && (
+                    <>
+                      <div className="w-4 h-4 bg-red-400 rounded-full"></div>
+                      <h3 className="text-lg font-semibold text-red-400 font-mono">🚀 Deployment Failed</h3>
+                    </>
+                  )}
+                </div>
+              ) : (
+                <h3 className="text-lg font-semibold text-cyber-text font-mono mb-1">🚀 Live App</h3>
+              )}
               <a
                 href={`https://${app.name}-${riff.name}.fly.dev`}
                 target="_blank"
