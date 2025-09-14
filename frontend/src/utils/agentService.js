@@ -173,12 +173,13 @@ export function getStatusDescription(status) {
     return 'Waiting for Confirmation'
   }
   
-  if (status.running && status.thread_alive) {
-    return 'Running'
+  if (status.running) {
+    return 'Ready'
   }
   
-  if (status.running) {
-    return 'Starting'
+  // Agent is idle - check if it has any activity
+  if (status.has_recent_activity === false || status.event_count <= 1) {
+    return 'Idle (No Messages)'
   }
   
   return 'Idle'
@@ -212,12 +213,8 @@ export function getStatusColor(status) {
     return 'text-blue-400'
   }
   
-  if (status.running && status.thread_alive) {
-    return 'text-neon-green'
-  }
-  
   if (status.running) {
-    return 'text-cyan-400'
+    return 'text-neon-green'
   }
   
   return 'text-gray-400'

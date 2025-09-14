@@ -207,25 +207,37 @@ class AgentLoop:
                     "agent_paused": False,
                     "agent_waiting_for_confirmation": False,
                     "thread_alive": False,
-                    "running": self.running,
+                    "running": False,
                 }
 
             state = self.conversation.state
+
+            # Determine if the agent is actually running based on conversation state
+            agent_finished = getattr(state, "agent_finished", False)
+            agent_paused = getattr(state, "agent_paused", False)
+            agent_waiting = getattr(state, "agent_waiting_for_confirmation", False)
+
+            # Agent is considered "running" if it's not finished, not paused, and not waiting
+            is_running = not agent_finished and not agent_paused and not agent_waiting
+
+            # Check if there are recent events indicating activity
+            events = getattr(state, "events", [])
+            has_recent_activity = len(events) > 0
+
             return {
                 "status": "initialized",
-                "agent_finished": getattr(state, "agent_finished", False),
-                "agent_paused": getattr(state, "agent_paused", False),
-                "agent_waiting_for_confirmation": getattr(
-                    state, "agent_waiting_for_confirmation", False
-                ),
+                "agent_finished": agent_finished,
+                "agent_paused": agent_paused,
+                "agent_waiting_for_confirmation": agent_waiting,
                 "thread_alive": self.thread is not None and self.thread.is_alive(),
-                "running": self.running,
+                "running": is_running,
                 "conversation_id": getattr(state, "id", None),
-                "event_count": len(getattr(state, "events", [])),
+                "event_count": len(events),
+                "has_recent_activity": has_recent_activity,
             }
         except Exception as e:
             logger.error(f"❌ Error getting agent status for {self.get_key()}: {e}")
-            return {"status": "error", "error": str(e), "running": self.running}
+            return {"status": "error", "error": str(e), "running": False}
 
     def pause_agent(self):
         """
@@ -262,19 +274,29 @@ class AgentLoop:
                 )
                 return False
 
-            # Check if agent is paused
-            if hasattr(self.conversation, "state") and hasattr(
-                self.conversation.state, "agent_paused"
-            ):
-                if not self.conversation.state.agent_paused:
-                    logger.info(f"ℹ️ Agent for {self.get_key()} is not paused")
-                    return True
+            state = self.conversation.state
 
-            # Start the agent thread if not running
-            if not self.thread or not self.thread.is_alive():
-                self.start_agent_thread()
+            # Check current agent state
+            agent_finished = getattr(state, "agent_finished", False)
+            agent_paused = getattr(state, "agent_paused", False)
 
-            # Trigger conversation run in a separate thread
+            if agent_finished:
+                logger.info(f"ℹ️ Agent for {self.get_key()} is finished, cannot resume")
+                return False
+
+            if not agent_paused:
+                # Agent is already running or idle, check if we need to start it
+                events = getattr(state, "events", [])
+                if len(events) <= 1:  # Only initial event, agent hasn't started
+                    logger.info(
+                        f"🔄 Agent for {self.get_key()} is idle, will start on next message"
+                    )
+                else:
+                    logger.info(f"ℹ️ Agent for {self.get_key()} is already running")
+                return True
+
+            # Agent is paused, resume it by running the conversation
+            # The OpenHands SDK will handle the resume automatically when run() is called
             threading.Thread(target=self._run_conversation, daemon=True).start()
 
             logger.info(f"🔄 Agent resumed for {self.get_key()}")

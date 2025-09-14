@@ -95,8 +95,18 @@ function AgentStatusPanel({ appSlug, riffSlug }) {
 
   const statusDescription = getStatusDescription(status)
   const statusColor = getStatusColor(status)
-  const canPlay = status && (status.agent_paused || status.agent_finished || !status.running)
+  
+  // Play button logic: can play if paused, or if idle with no messages (to activate agent)
+  const canPlay = status && (
+    status.agent_paused || 
+    (!status.running && !status.agent_finished && status.event_count <= 1)
+  )
+  
+  // Pause button logic: can pause if running and not already paused or finished
   const canPause = status && status.running && !status.agent_paused && !status.agent_finished
+  
+  // Determine button text based on state
+  const playButtonText = status && status.event_count <= 1 ? 'Activate' : 'Play'
 
   return (
     <div className="bg-gray-900 border border-gray-700 rounded-lg p-4">
@@ -152,7 +162,7 @@ function AgentStatusPanel({ appSlug, riffSlug }) {
               <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" />
             </svg>
           )}
-          <span>Play</span>
+          <span>{playButtonText}</span>
         </button>
 
         <button
