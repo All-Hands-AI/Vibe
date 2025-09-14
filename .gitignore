@@ -190,3 +190,6 @@ venv.bak/
 .mypy_cache/
 .dmypy.json
 dmypy.json
+
+# Jinja2 template cache
+.jinja_cache/
