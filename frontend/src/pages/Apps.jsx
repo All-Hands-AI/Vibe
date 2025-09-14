@@ -145,11 +145,11 @@ function Apps() {
       return
     }
 
-    const slug = createSlug(newAppName.trim())
-    console.log('📝 App details:', { name: newAppName.trim(), slug })
+    const slug = newAppName.trim()
+    console.log('📝 App details:', { slug })
     
     if (!slug) {
-      console.warn('❌ Invalid slug generated')
+      console.warn('❌ Empty slug')
       setError('Please enter a valid app name')
       return
     }
@@ -163,7 +163,7 @@ function Apps() {
       console.log('🆔 User UUID:', uuid)
 
       const requestData = {
-        text: newAppName.trim()
+        text: slug
       }
       
       const requestOptions = {
@@ -345,18 +345,14 @@ function Apps() {
                   type="text"
                   id="appName"
                   value={newAppName}
-                  onChange={(e) => setNewAppName(e.target.value)}
+                  onChange={(e) => setNewAppName(createSlug(e.target.value))}
                   placeholder="Enter app name"
                   disabled={creating}
                   className={`w-full px-4 py-3 bg-black text-cyber-text font-mono border-2 transition-colors duration-200 focus:outline-none focus:border-neon-green ${
                     error ? 'border-red-500' : 'border-cyber-border'
                   }`}
                 />
-                {newAppName && (
-                  <div className="mt-2 text-sm text-cyber-muted font-mono">
-                    Slug: <code className="bg-cyber-accent px-2 py-1 rounded text-cyber-text">{createSlug(newAppName)}</code>
-                  </div>
-                )}
+
               </div>
               
               <button 
