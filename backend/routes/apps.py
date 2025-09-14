@@ -3,6 +3,7 @@ import requests
 import json
 import logging
 import re
+import time
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
@@ -1462,6 +1463,12 @@ def create_app():
         if not save_user_app(user_uuid, app_slug, app):
             logger.error("❌ Failed to save app to file")
             return jsonify({"error": "Failed to save app"}), 500
+
+        # Wait 5 seconds before creating the first riff to allow for proper setup
+        logger.info(
+            f"⏳ Waiting 5 seconds before creating initial riff for app: {app_slug}"
+        )
+        time.sleep(5)
 
         # Create initial riff and message for the new app
         logger.info(f"🆕 Creating initial riff for app: {app_slug}")

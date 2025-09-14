@@ -30,17 +30,18 @@ logger = get_logger(__name__)
 
 class CustomAgentContext(AgentContext):
     """Custom AgentContext that can store workspace_path."""
+
     workspace_path: str = "/workspace"  # default value
 
 
 class CustomAgent(Agent):
     """Custom Agent that uses our local system prompt template."""
-    
+
     @property
     def prompt_dir(self) -> str:
         """Override to use our backend/prompts directory."""
         return os.path.join(os.path.dirname(__file__), "prompts")
-    
+
     @property
     def system_message(self) -> str:
         """Compute system message with workspace_path template variable."""
@@ -48,15 +49,15 @@ class CustomAgent(Agent):
         workspace_path = "/workspace"  # default
         if self.agent_context and isinstance(self.agent_context, CustomAgentContext):
             workspace_path = self.agent_context.workspace_path
-        
+
         system_message = render_template(
             prompt_dir=self.prompt_dir,
             template_name=self.system_prompt_filename,
             cli_mode=self.cli_mode,
             workspace_path=workspace_path,
         )
-        
-        # Note: We don't append system_message_suffix since we've integrated 
+
+        # Note: We don't append system_message_suffix since we've integrated
         # everything into the main template
         return system_message
 
