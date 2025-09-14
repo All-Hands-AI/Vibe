@@ -6,6 +6,7 @@ from datetime import datetime, timezone
 from storage import get_riffs_storage, get_apps_storage
 from agent_loop import agent_loop_manager
 from keys import get_user_key
+from utils.repository import setup_riff_workspace
 
 import os
 
@@ -75,6 +76,30 @@ def create_agent_for_user(user_uuid, app_slug, riff_slug):
         if not anthropic_token:
             logger.warning(f"⚠️ No Anthropic token found for user {user_uuid[:8]}")
             return False, "Anthropic API key required"
+
+        # Get app data to retrieve GitHub URL
+        apps_storage = get_apps_storage(user_uuid)
+        app_data = apps_storage.load_app(app_slug)
+        if not app_data:
+            logger.error(f"❌ App data not found for {app_slug}")
+            return False, "App not found"
+
+        github_url = app_data.get("github_url")
+        if not github_url:
+            logger.error(f"❌ No GitHub URL found for app {app_slug}")
+            return False, "GitHub URL not configured for this app"
+
+        # Setup workspace: create directory and clone repository
+        logger.info(f"🏗️ Setting up workspace for riff {riff_slug}")
+        workspace_success, workspace_path, workspace_error = setup_riff_workspace(
+            user_uuid, app_slug, riff_slug, github_url
+        )
+
+        if not workspace_success:
+            logger.error(f"❌ Failed to setup workspace: {workspace_error}")
+            return False, f"Failed to setup workspace: {workspace_error}"
+
+        logger.info(f"✅ Workspace ready at: {workspace_path}")
 
         # Create LLM instance
         try:
@@ -155,7 +180,7 @@ def create_agent_for_user(user_uuid, app_slug, riff_slug):
                 f"🔧 Creating AgentLoop with key: {user_uuid[:8]}:{app_slug}:{riff_slug}"
             )
             agent_loop_manager.create_agent_loop(
-                user_uuid, app_slug, riff_slug, llm, message_callback
+                user_uuid, app_slug, riff_slug, llm, message_callback, workspace_path
             )
             logger.info(f"🤖 Created AgentLoop for riff: {riff_slug}")
 

@@ -42,6 +42,7 @@ class AgentLoop:
         riff_slug: str,
         llm: LLM,
         message_callback: Optional[Callable] = None,
+        workspace_path: Optional[str] = None,
     ):
         """
         Initialize an AgentLoop instance.
@@ -52,21 +53,21 @@ class AgentLoop:
             riff_slug: Slug identifier for the riff/conversation
             llm: LLM instance from openhands-sdk
             message_callback: Optional callback function to handle events/messages
+            workspace_path: Optional path to the workspace directory (defaults to /data)
         """
         self.user_uuid = user_uuid
         self.app_slug = app_slug
         self.riff_slug = riff_slug
         self.llm = llm
         self.message_callback = message_callback
+        self.workspace_path = workspace_path or "/data"
 
         # Create Agent with development tools
-        # Use absolute path /data for container deployment
-        data_dir = "/data"
-
+        # Use workspace path for file operations, /data for task tracking
         tools: list = [
-            FileEditorTool.create(),
+            FileEditorTool.create(working_dir=self.workspace_path),
             TaskTrackerTool.create(
-                save_dir=data_dir
+                save_dir="/data"
             ),  # Save task tracking data to /data directory
         ]  # Include FileEditor and TaskTracker tools for development capabilities
 
@@ -218,6 +219,7 @@ class AgentLoopManager:
         riff_slug: str,
         llm: LLM,
         message_callback: Optional[Callable] = None,
+        workspace_path: Optional[str] = None,
     ) -> AgentLoop:
         """
         Create a new AgentLoop and store it in the dictionary.
@@ -228,6 +230,7 @@ class AgentLoopManager:
             riff_slug: Slug identifier for the riff/conversation
             llm: LLM instance from openhands-sdk
             message_callback: Optional callback function to handle events/messages
+            workspace_path: Optional path to the workspace directory
 
         Returns:
             The created AgentLoop instance
@@ -242,7 +245,7 @@ class AgentLoopManager:
                 old_loop.stop_agent_thread()
 
             agent_loop = AgentLoop(
-                user_uuid, app_slug, riff_slug, llm, message_callback
+                user_uuid, app_slug, riff_slug, llm, message_callback, workspace_path
             )
             self.agent_loops[key] = agent_loop
 
