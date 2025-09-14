@@ -8,7 +8,7 @@ import os
 import threading
 from typing import Dict, Optional, Callable
 from threading import Lock
-from utils.logging import get_logger
+from openvibe_cli.backend_modules.utils.logging import get_logger
 
 # Add the site-packages to the path for openhands imports
 sys.path.insert(0, ".venv/lib/python3.12/site-packages")
