@@ -293,10 +293,13 @@ function RiffDetail() {
           <div className="flex flex-col">
             <div className="mb-2">
               <h3 className="text-lg font-semibold text-cyber-text font-mono">🚀 Live App Preview</h3>
+              <p className="text-cyber-muted font-mono text-xs">
+                {app.name}-{riff.name}.fly.dev
+              </p>
             </div>
             <div className="flex-1 border border-gray-700 rounded-lg overflow-hidden">
               <iframe
-                src="https://openvibe.fly.dev"
+                src={`https://${app.name}-${riff.name}.fly.dev`}
                 className="w-full h-full"
                 title="Live App Preview"
                 sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox"
