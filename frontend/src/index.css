@@ -97,7 +97,7 @@
   }
 
   .terminal-content {
-    @apply p-4 font-mono text-cyber-text;
+    @apply p-3 font-mono text-cyber-text;
   }
 
   /* ⚡ Glitch Text Effect */
@@ -190,7 +190,7 @@
 
   /* 🔥 Hacker Card Styles */
   .hacker-card {
-    @apply bg-black border-2 border-cyber-border rounded-lg p-6;
+    @apply bg-black border-2 border-cyber-border rounded-lg p-4;
     @apply hover:border-neon-green hover:shadow-lg hover:shadow-neon-green/20;
     @apply transition-all duration-300;
     background: linear-gradient(135deg, rgba(0, 0, 0, 0.9) 0%, rgba(26, 26, 26, 0.9) 100%);
