@@ -127,12 +127,15 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
-            const fs = require('fs');
-            const path = require('path');
-            
-            // Get the run ID for artifact URLs
             const runId = context.runId;
             const repo = context.repo;
+            
+            // Get artifacts for this run
+            const artifacts = await github.rest.actions.listWorkflowRunArtifacts({
+              owner: repo.owner,
+              repo: repo.repo,
+              run_id: runId
+            });
             
             // Create download URLs for each platform
             const platforms = [
@@ -142,12 +145,19 @@ jobs:
               { name: 'Windows x64', artifact: 'openvibe-windows-x64.exe' }
             ];
             
-            const downloadUrl = `https://github.com/${repo.owner}/${repo.repo}/actions/runs/${runId}/artifacts`;
-            
             let comment = `## 🚀 CLI Binaries Available\n\n`;
-            comment += `**[📦 Download All Binaries](${downloadUrl})**\n\n`;
-            comment += `**Platforms:** ${platforms.map(p => p.name).join(' • ')}\n\n`;
-            comment += `**Quick start:** Download, \`chmod +x\`, move to PATH, run \`openvibe --help\`\n\n`;
+            
+            // Add individual download links
+            for (const platform of platforms) {
+              const artifact = artifacts.data.artifacts.find(a => a.name === platform.artifact);
+              if (artifact) {
+                // GitHub Actions artifact download URL format
+                const downloadUrl = `https://github.com/${repo.owner}/${repo.repo}/actions/runs/${runId}/artifacts/${artifact.id}`;
+                comment += `📦 **[${platform.name}](${downloadUrl})**\n`;
+              }
+            }
+            
+            comment += `\n**Quick start:** Download, \`chmod +x\`, move to PATH, run \`openvibe --help\`\n\n`;
             comment += `*Binaries expire in 30 days*`;
             
             // Post the comment
