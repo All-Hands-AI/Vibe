@@ -2,10 +2,9 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { useParams, Link, useLocation } from 'react-router-dom'
 import { useSetup } from '../context/SetupContext'
 import { getUserUUID } from '../utils/uuid'
-import AppStatus from '../components/AppStatus'
 import ChatWindow from '../components/ChatWindow'
 import LLMErrorModal from '../components/LLMErrorModal'
-import AgentStatusPanel from '../components/AgentStatusPanel'
+import CompactStatusPanel from '../components/CompactStatusPanel'
 import { startLLMPolling, checkLLMReady } from '../utils/llmService'
 
 function RiffDetail() {
@@ -260,15 +259,15 @@ function RiffDetail() {
         {/* Main Content Grid - 2 columns */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-[calc(100vh-200px)]">
           {/* Left Sidebar - Status and Chat */}
-          <div className="flex flex-col space-y-4">
-            {/* Status Panels */}
-            <div className="space-y-4">
-              {/* App Status */}
-              <AppStatus app={app} riff={riff} prStatus={prStatus} />
-              
-              {/* Agent Status Panel */}
-              <AgentStatusPanel appSlug={appSlug} riffSlug={riffSlug} />
-            </div>
+          <div className="flex flex-col space-y-3">
+            {/* Compact Status Panel */}
+            <CompactStatusPanel 
+              app={app} 
+              riff={riff} 
+              prStatus={prStatus} 
+              appSlug={appSlug} 
+              riffSlug={riffSlug} 
+            />
 
             {/* Chat Window */}
             <div className="flex-1 min-h-0">
