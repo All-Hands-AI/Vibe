@@ -171,6 +171,118 @@ class AgentLoop:
         except Exception as e:
             logger.error(f"❌ Error running conversation for {self.get_key()}: {e}")
 
+    def get_all_events(self):
+        """
+        Retrieve all events from the agent conversation.
+
+        Returns:
+            list: List of all events from the conversation
+        """
+        try:
+            if (
+                self.conversation
+                and hasattr(self.conversation, "state")
+                and hasattr(self.conversation.state, "events")
+            ):
+                return self.conversation.state.events
+            else:
+                logger.warning(f"⚠️ No events available for {self.get_key()}")
+                return []
+        except Exception as e:
+            logger.error(f"❌ Error retrieving events for {self.get_key()}: {e}")
+            return []
+
+    def get_agent_status(self):
+        """
+        Get the current status of the agent.
+
+        Returns:
+            dict: Dictionary containing agent status information
+        """
+        try:
+            if not self.conversation or not hasattr(self.conversation, "state"):
+                return {
+                    "status": "not_initialized",
+                    "agent_finished": False,
+                    "agent_paused": False,
+                    "agent_waiting_for_confirmation": False,
+                    "thread_alive": False,
+                    "running": self.running,
+                }
+
+            state = self.conversation.state
+            return {
+                "status": "initialized",
+                "agent_finished": getattr(state, "agent_finished", False),
+                "agent_paused": getattr(state, "agent_paused", False),
+                "agent_waiting_for_confirmation": getattr(
+                    state, "agent_waiting_for_confirmation", False
+                ),
+                "thread_alive": self.thread is not None and self.thread.is_alive(),
+                "running": self.running,
+                "conversation_id": getattr(state, "id", None),
+                "event_count": len(getattr(state, "events", [])),
+            }
+        except Exception as e:
+            logger.error(f"❌ Error getting agent status for {self.get_key()}: {e}")
+            return {"status": "error", "error": str(e), "running": self.running}
+
+    def pause_agent(self):
+        """
+        Pause the agent execution.
+
+        Returns:
+            bool: True if pause was successful, False otherwise
+        """
+        try:
+            if self.conversation and hasattr(self.conversation, "pause"):
+                self.conversation.pause()
+                logger.info(f"🔄 Agent paused for {self.get_key()}")
+                return True
+            else:
+                logger.warning(
+                    f"⚠️ Cannot pause agent for {self.get_key()}: conversation not available"
+                )
+                return False
+        except Exception as e:
+            logger.error(f"❌ Error pausing agent for {self.get_key()}: {e}")
+            return False
+
+    def resume_agent(self):
+        """
+        Resume the agent execution by starting a new conversation run.
+
+        Returns:
+            bool: True if resume was successful, False otherwise
+        """
+        try:
+            if not self.conversation:
+                logger.warning(
+                    f"⚠️ Cannot resume agent for {self.get_key()}: conversation not available"
+                )
+                return False
+
+            # Check if agent is paused
+            if hasattr(self.conversation, "state") and hasattr(
+                self.conversation.state, "agent_paused"
+            ):
+                if not self.conversation.state.agent_paused:
+                    logger.info(f"ℹ️ Agent for {self.get_key()} is not paused")
+                    return True
+
+            # Start the agent thread if not running
+            if not self.thread or not self.thread.is_alive():
+                self.start_agent_thread()
+
+            # Trigger conversation run in a separate thread
+            threading.Thread(target=self._run_conversation, daemon=True).start()
+
+            logger.info(f"🔄 Agent resumed for {self.get_key()}")
+            return True
+        except Exception as e:
+            logger.error(f"❌ Error resuming agent for {self.get_key()}: {e}")
+            return False
+
 
 class AgentLoopManager:
     """

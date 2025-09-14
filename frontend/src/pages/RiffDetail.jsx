@@ -5,6 +5,7 @@ import { getUserUUID } from '../utils/uuid'
 import AppStatus from '../components/AppStatus'
 import ChatWindow from '../components/ChatWindow'
 import LLMErrorModal from '../components/LLMErrorModal'
+import AgentStatusPanel from '../components/AgentStatusPanel'
 import { startLLMPolling, checkLLMReady } from '../utils/llmService'
 
 function RiffDetail() {
@@ -225,9 +226,13 @@ function RiffDetail() {
 
         {/* Main Content Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Branch Status */}
-          <div className="lg:col-span-1">
+          {/* Sidebar */}
+          <div className="lg:col-span-1 space-y-6">
+            {/* App Status */}
             <AppStatus app={app} />
+            
+            {/* Agent Status Panel */}
+            <AgentStatusPanel appSlug={appSlug} riffSlug={riffSlug} />
           </div>
 
           {/* Chat Window */}

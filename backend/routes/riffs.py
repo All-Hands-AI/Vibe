@@ -741,3 +741,205 @@ def reset_riff_llm(slug, riff_slug):
             logger, "POST", f"/api/apps/{slug}/riffs/{riff_slug}/reset", 500
         )
         return jsonify({"error": "Failed to reset riff LLM"}), 500
+
+
+@riffs_bp.route("/api/apps/<slug>/riffs/<riff_slug>/status", methods=["GET"])
+def get_agent_status(slug, riff_slug):
+    """Get the current status of the agent for a specific riff"""
+    log_api_request(logger, "GET", f"/api/apps/{slug}/riffs/{riff_slug}/status")
+
+    try:
+        # Get UUID from headers
+        user_uuid = request.headers.get("X-User-UUID")
+        if not user_uuid:
+            logger.warning("❌ X-User-UUID header is required")
+            return jsonify({"error": "X-User-UUID header is required"}), 400
+
+        user_uuid = user_uuid.strip()
+        if not user_uuid:
+            logger.warning("❌ Empty UUID provided in header")
+            return jsonify({"error": "UUID cannot be empty"}), 400
+
+        # Verify app exists
+        if not user_app_exists(user_uuid, slug):
+            logger.warning(f"❌ App not found: {slug}")
+            return jsonify({"error": "App not found"}), 404
+
+        # Verify riff exists
+        if not user_riff_exists(user_uuid, slug, riff_slug):
+            logger.warning(f"❌ Riff not found: {riff_slug}")
+            return jsonify({"error": "Riff not found"}), 404
+
+        # Get the agent loop
+        agent_loop = agent_loop_manager.get_agent_loop(user_uuid, slug, riff_slug)
+        if not agent_loop:
+            logger.warning(
+                f"❌ Agent loop not found for {user_uuid[:8]}:{slug}:{riff_slug}"
+            )
+            return (
+                jsonify(
+                    {
+                        "status": "not_found",
+                        "message": "Agent loop not found. Create a new riff to initialize the agent.",
+                    }
+                ),
+                404,
+            )
+
+        # Get agent status
+        status = agent_loop.get_agent_status()
+
+        logger.info(f"📊 Agent status retrieved for {user_uuid[:8]}:{slug}:{riff_slug}")
+        log_api_response(
+            logger, "GET", f"/api/apps/{slug}/riffs/{riff_slug}/status", 200, user_uuid
+        )
+        return jsonify(status), 200
+
+    except Exception as e:
+        logger.error(f"💥 Error getting agent status: {str(e)}")
+        log_api_response(
+            logger, "GET", f"/api/apps/{slug}/riffs/{riff_slug}/status", 500
+        )
+        return jsonify({"error": "Failed to get agent status"}), 500
+
+
+@riffs_bp.route("/api/apps/<slug>/riffs/<riff_slug>/play", methods=["POST"])
+def play_agent(slug, riff_slug):
+    """Resume/play the agent for a specific riff"""
+    log_api_request(logger, "POST", f"/api/apps/{slug}/riffs/{riff_slug}/play")
+
+    try:
+        # Get UUID from headers
+        user_uuid = request.headers.get("X-User-UUID")
+        if not user_uuid:
+            logger.warning("❌ X-User-UUID header is required")
+            return jsonify({"error": "X-User-UUID header is required"}), 400
+
+        user_uuid = user_uuid.strip()
+        if not user_uuid:
+            logger.warning("❌ Empty UUID provided in header")
+            return jsonify({"error": "UUID cannot be empty"}), 400
+
+        # Verify app exists
+        if not user_app_exists(user_uuid, slug):
+            logger.warning(f"❌ App not found: {slug}")
+            return jsonify({"error": "App not found"}), 404
+
+        # Verify riff exists
+        if not user_riff_exists(user_uuid, slug, riff_slug):
+            logger.warning(f"❌ Riff not found: {riff_slug}")
+            return jsonify({"error": "Riff not found"}), 404
+
+        # Get the agent loop
+        agent_loop = agent_loop_manager.get_agent_loop(user_uuid, slug, riff_slug)
+        if not agent_loop:
+            logger.warning(
+                f"❌ Agent loop not found for {user_uuid[:8]}:{slug}:{riff_slug}"
+            )
+            return (
+                jsonify(
+                    {
+                        "error": "Agent loop not found. Create a new riff to initialize the agent."
+                    }
+                ),
+                404,
+            )
+
+        # Resume the agent
+        success = agent_loop.resume_agent()
+        if success:
+            logger.info(f"▶️ Agent resumed for {user_uuid[:8]}:{slug}:{riff_slug}")
+            log_api_response(
+                logger,
+                "POST",
+                f"/api/apps/{slug}/riffs/{riff_slug}/play",
+                200,
+                user_uuid,
+            )
+            return (
+                jsonify({"message": "Agent resumed successfully", "status": "playing"}),
+                200,
+            )
+        else:
+            logger.error(
+                f"❌ Failed to resume agent for {user_uuid[:8]}:{slug}:{riff_slug}"
+            )
+            return jsonify({"error": "Failed to resume agent"}), 500
+
+    except Exception as e:
+        logger.error(f"💥 Error resuming agent: {str(e)}")
+        log_api_response(
+            logger, "POST", f"/api/apps/{slug}/riffs/{riff_slug}/play", 500
+        )
+        return jsonify({"error": "Failed to resume agent"}), 500
+
+
+@riffs_bp.route("/api/apps/<slug>/riffs/<riff_slug>/pause", methods=["POST"])
+def pause_agent(slug, riff_slug):
+    """Pause the agent for a specific riff"""
+    log_api_request(logger, "POST", f"/api/apps/{slug}/riffs/{riff_slug}/pause")
+
+    try:
+        # Get UUID from headers
+        user_uuid = request.headers.get("X-User-UUID")
+        if not user_uuid:
+            logger.warning("❌ X-User-UUID header is required")
+            return jsonify({"error": "X-User-UUID header is required"}), 400
+
+        user_uuid = user_uuid.strip()
+        if not user_uuid:
+            logger.warning("❌ Empty UUID provided in header")
+            return jsonify({"error": "UUID cannot be empty"}), 400
+
+        # Verify app exists
+        if not user_app_exists(user_uuid, slug):
+            logger.warning(f"❌ App not found: {slug}")
+            return jsonify({"error": "App not found"}), 404
+
+        # Verify riff exists
+        if not user_riff_exists(user_uuid, slug, riff_slug):
+            logger.warning(f"❌ Riff not found: {riff_slug}")
+            return jsonify({"error": "Riff not found"}), 404
+
+        # Get the agent loop
+        agent_loop = agent_loop_manager.get_agent_loop(user_uuid, slug, riff_slug)
+        if not agent_loop:
+            logger.warning(
+                f"❌ Agent loop not found for {user_uuid[:8]}:{slug}:{riff_slug}"
+            )
+            return (
+                jsonify(
+                    {
+                        "error": "Agent loop not found. Create a new riff to initialize the agent."
+                    }
+                ),
+                404,
+            )
+
+        # Pause the agent
+        success = agent_loop.pause_agent()
+        if success:
+            logger.info(f"⏸️ Agent paused for {user_uuid[:8]}:{slug}:{riff_slug}")
+            log_api_response(
+                logger,
+                "POST",
+                f"/api/apps/{slug}/riffs/{riff_slug}/pause",
+                200,
+                user_uuid,
+            )
+            return (
+                jsonify({"message": "Agent paused successfully", "status": "paused"}),
+                200,
+            )
+        else:
+            logger.error(
+                f"❌ Failed to pause agent for {user_uuid[:8]}:{slug}:{riff_slug}"
+            )
+            return jsonify({"error": "Failed to pause agent"}), 500
+
+    except Exception as e:
+        logger.error(f"💥 Error pausing agent: {str(e)}")
+        log_api_response(
+            logger, "POST", f"/api/apps/{slug}/riffs/{riff_slug}/pause", 500
+        )
+        return jsonify({"error": "Failed to pause agent"}), 500
