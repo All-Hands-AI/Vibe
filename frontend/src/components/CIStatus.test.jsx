@@ -57,7 +57,7 @@ describe('CIStatus', () => {
     expect(screen.getByText('🟡')).toBeInTheDocument()
   })
 
-  it('shows popover with individual checks on hover', () => {
+  it('shows modal with individual checks on click', () => {
     const prStatus = {
       ci_status: 'success',
       checks: [
@@ -68,7 +68,7 @@ describe('CIStatus', () => {
     render(<CIStatus prStatus={prStatus} />)
     
     const statusElement = screen.getByText('CI: Some checks failed')
-    fireEvent.mouseEnter(statusElement)
+    fireEvent.click(statusElement)
     
     expect(screen.getByText('CI Checks')).toBeInTheDocument()
     expect(screen.getByText('Unit Tests')).toBeInTheDocument()
@@ -77,7 +77,7 @@ describe('CIStatus', () => {
     expect(screen.getByText('Failed')).toBeInTheDocument()
   })
 
-  it('hides popover when mouse leaves', () => {
+  it('hides modal when close button is clicked', () => {
     const prStatus = {
       ci_status: 'success',
       checks: [
@@ -87,10 +87,47 @@ describe('CIStatus', () => {
     render(<CIStatus prStatus={prStatus} />)
     
     const statusElement = screen.getByText('CI: All checks passed')
-    fireEvent.mouseEnter(statusElement)
+    fireEvent.click(statusElement)
     expect(screen.getByText('CI Checks')).toBeInTheDocument()
     
-    fireEvent.mouseLeave(statusElement)
+    const closeButton = screen.getByLabelText('Close')
+    fireEvent.click(closeButton)
+    expect(screen.queryByText('CI Checks')).not.toBeInTheDocument()
+  })
+
+  it('hides modal when backdrop is clicked', () => {
+    const prStatus = {
+      ci_status: 'success',
+      checks: [
+        { name: 'Unit Tests', status: 'completed', conclusion: 'success' },
+      ],
+    }
+    render(<CIStatus prStatus={prStatus} />)
+    
+    const statusElement = screen.getByText('CI: All checks passed')
+    fireEvent.click(statusElement)
+    expect(screen.getByText('CI Checks')).toBeInTheDocument()
+    
+    // Click on the backdrop (the fixed overlay)
+    const backdrop = document.querySelector('.fixed.inset-0.bg-black.bg-opacity-50')
+    fireEvent.click(backdrop)
+    expect(screen.queryByText('CI Checks')).not.toBeInTheDocument()
+  })
+
+  it('hides modal when escape key is pressed', () => {
+    const prStatus = {
+      ci_status: 'success',
+      checks: [
+        { name: 'Unit Tests', status: 'completed', conclusion: 'success' },
+      ],
+    }
+    render(<CIStatus prStatus={prStatus} />)
+    
+    const statusElement = screen.getByText('CI: All checks passed')
+    fireEvent.click(statusElement)
+    expect(screen.getByText('CI Checks')).toBeInTheDocument()
+    
+    fireEvent.keyDown(document, { key: 'Escape' })
     expect(screen.queryByText('CI Checks')).not.toBeInTheDocument()
   })
 
