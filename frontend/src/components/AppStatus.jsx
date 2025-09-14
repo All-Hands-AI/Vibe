@@ -5,7 +5,8 @@ import {
   getStatusText, 
   getStatusColor, 
   getBranchName, 
-  getBranchStatus, 
+  getRiffCIStatus,
+  getCheckStatus,
   getDeployStatus 
 } from '../utils/statusUtils'
 
@@ -152,34 +153,37 @@ function AppStatus({ app, riff, prStatus = null }) {
         <div className="space-y-2">
           <div className="flex items-center gap-3">
             <span className="text-cyber-muted font-mono text-sm min-w-[100px]">CI Status:</span>
-            <span className={`font-mono text-sm ${getStatusColor(getBranchStatus(app))}`}>
-              {getStatusIcon(getBranchStatus(app))} {getStatusText(getBranchStatus(app))}
+            <span className={`font-mono text-sm ${getStatusColor(getRiffCIStatus(app, prData))}`}>
+              {getStatusIcon(getRiffCIStatus(app, prData))} {getStatusText(getRiffCIStatus(app, prData))}
             </span>
           </div>
 
           {/* Individual Check Commits (from PR) */}
           {prData?.checks && prData.checks.length > 0 && (
             <div className="ml-[115px] space-y-1">
-              {prData.checks.map((check, index) => (
-                <div key={index} className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <span className={`text-sm ${getStatusColor(check.status)}`}>
-                      {getStatusIcon(check.status)}
-                    </span>
-                    <span className="text-cyber-text font-mono text-xs">{check.name}</span>
+              {prData.checks.map((check, index) => {
+                const checkStatus = getCheckStatus(check)
+                return (
+                  <div key={index} className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className={`text-sm ${getStatusColor(checkStatus)}`}>
+                        {getStatusIcon(checkStatus)}
+                      </span>
+                      <span className="text-cyber-text font-mono text-xs">{check.name}</span>
+                    </div>
+                    {check.details_url && (
+                      <a
+                        href={check.details_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-cyber-muted hover:text-blue-400 text-xs font-mono transition-colors duration-200"
+                      >
+                        View →
+                      </a>
+                    )}
                   </div>
-                  {check.details_url && (
-                    <a
-                      href={check.details_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-cyber-muted hover:text-blue-400 text-xs font-mono transition-colors duration-200"
-                    >
-                      View →
-                    </a>
-                  )}
-                </div>
-              ))}
+                )
+              })}
             </div>
           )}
         </div>

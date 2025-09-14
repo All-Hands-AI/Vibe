@@ -12,6 +12,8 @@ export const getStatusIcon = (status) => {
       return '❌'
     case 'pending':
     case 'running':
+    case 'in_progress':
+    case 'queued':
       return '🔄'
     default:
       return '🔄'
@@ -27,6 +29,8 @@ export const getStatusText = (status) => {
       return 'Failing'
     case 'pending':
     case 'running':
+    case 'in_progress':
+    case 'queued':
       return 'Running'
     default:
       return 'Checking...'
@@ -42,6 +46,8 @@ export const getStatusColor = (status) => {
       return 'text-red-400'
     case 'pending':
     case 'running':
+    case 'in_progress':
+    case 'queued':
       return 'text-yellow-400'
     default:
       return 'text-cyber-muted'
@@ -67,6 +73,24 @@ export const getBranchStatus = (app) => {
   if (app?.github_status?.tests_passing === false) return 'failure'
   if (app?.github_status?.tests_passing === null) return 'pending'
   return 'pending'
+}
+
+export const getRiffCIStatus = (app, prStatus) => {
+  // Use riff-specific PR status first if available
+  if (prStatus?.ci_status) {
+    return prStatus.ci_status
+  }
+  // Fall back to app-level status
+  return getBranchStatus(app)
+}
+
+export const getCheckStatus = (check) => {
+  // If the check is completed, use the conclusion
+  if (check.status === 'completed') {
+    return check.conclusion || 'unknown'
+  }
+  // Otherwise, use the status (in_progress, queued, etc.)
+  return check.status
 }
 
 export const getDeployStatus = (app) => {

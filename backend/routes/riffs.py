@@ -1181,13 +1181,59 @@ def get_riff_pr_status(slug, riff_slug):
                 logger.info(f"ℹ️ No PR found from riff branch '{riff_branch}' to main")
                 # Note: We don't try base search here because riffs are source branches, not target branches
 
+            # Get Fly.io status for the riff-specific app (appname-riffname)
+            fly_token = user_keys.get("fly")
+            riff_fly_status = None
+            if fly_token:
+                # Riff apps are named as: appname-riffname
+                riff_app_name = f"{slug}-{riff_slug}"
+                logger.info(f"🚁 Checking Fly.io status for riff app: {riff_app_name}")
+                from .apps import get_fly_status
+
+                riff_fly_status = get_fly_status(riff_app_name, fly_token)
+
+            # Enhance PR status with deployment information
             if pr_status:
+                # Add deployment status based on PR status and Fly.io status
+                deploy_status = pr_status.get("deploy_status", "unknown")
+                if deploy_status == "unknown" and riff_fly_status:
+                    # Fall back to Fly.io status if no active deployment
+                    fly_app_status = riff_fly_status.get("status")
+                    if fly_app_status == "running":
+                        deploy_status = "success"
+                    elif fly_app_status in ["stopped", "suspended"]:
+                        deploy_status = "failure"
+                    else:
+                        deploy_status = "pending"
+
+                pr_status["deploy_status"] = deploy_status
+                pr_status["fly_status"] = riff_fly_status
+
                 logger.info(
-                    f"✅ Found PR status for riff {riff_slug}: #{pr_status['number']}"
+                    f"✅ Found PR status for riff {riff_slug}: #{pr_status['number']} (deploy: {deploy_status})"
+                )
+            elif riff_fly_status:
+                # No PR but we have Fly.io status - create a minimal status object
+                fly_app_status = riff_fly_status.get("status")
+                if fly_app_status == "running":
+                    deploy_status = "success"
+                elif fly_app_status in ["stopped", "suspended"]:
+                    deploy_status = "failure"
+                else:
+                    deploy_status = "pending"
+
+                pr_status = {
+                    "deploy_status": deploy_status,
+                    "fly_status": riff_fly_status,
+                    "ci_status": "unknown",
+                }
+
+                logger.info(
+                    f"ℹ️ No PR found for riff {riff_slug}, but Fly.io app exists (deploy: {deploy_status})"
                 )
             else:
                 logger.info(
-                    f"ℹ️ No PR found for riff {riff_slug} (branch: {riff_branch})"
+                    f"ℹ️ No PR or Fly.io app found for riff {riff_slug} (branch: {riff_branch})"
                 )
 
             log_api_response(

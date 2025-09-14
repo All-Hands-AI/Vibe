@@ -781,9 +781,11 @@ def get_pr_status(repo_url, github_token, branch="main", search_by_base=False):
                 )
 
         # Determine deploy status based on checks
+        # Look for the specific "Deploy app" job from "Deploy to Fly.io" workflow
         deploy_status = "unknown"
         for check in checks:
-            if "deploy" in check["name"].lower():
+            check_name = check["name"].lower()
+            if "deploy app" in check_name or "deploy to fly.io" in check_name:
                 if check["status"] == "completed":
                     deploy_status = check.get("conclusion", "unknown")
                 else:
@@ -1318,16 +1320,27 @@ def get_app(slug):
                 fly_status = get_fly_status(app["slug"], fly_token)
 
                 # Create deployment status from fly status and PR status
+                # Priority: PR deploy status > Fly.io status > default pending
+                deploy_status = "pending"
+                if pr_status and pr_status.get("deploy_status") != "unknown":
+                    # Use PR deploy status if available and not unknown
+                    deploy_status = pr_status.get("deploy_status")
+                elif fly_status and fly_status.get("status"):
+                    # Fall back to Fly.io status if no active deployment
+                    fly_app_status = fly_status.get("status")
+                    if fly_app_status == "running":
+                        deploy_status = "success"
+                    elif fly_app_status in ["stopped", "suspended"]:
+                        deploy_status = "failure"
+                    else:
+                        deploy_status = "pending"
+
                 deployment_status = {
                     "deployed": (
                         fly_status.get("deployed", False) if fly_status else False
                     ),
                     "app_url": fly_status.get("app_url") if fly_status else None,
-                    "deploy_status": (
-                        pr_status.get("deploy_status", "pending")
-                        if pr_status
-                        else "pending"
-                    ),
+                    "deploy_status": deploy_status,
                 }
 
         except Exception as e:

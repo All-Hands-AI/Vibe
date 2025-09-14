@@ -237,4 +237,45 @@ describe('AppStatus', () => {
     // Should fall back to app branch when riff name is not available
     expect(screen.getByText('🌿 main')).toBeInTheDocument()
   })
+
+  it('displays running status correctly for in_progress checks', () => {
+    const app = {
+      name: 'test-app',
+      branch: 'feature-branch'
+    }
+
+    const prStatus = {
+      number: 999,
+      title: 'Running CI',
+      html_url: 'https://github.com/user/repo/pull/999',
+      draft: false,
+      mergeable: null,
+      changed_files: 3,
+      ci_status: 'in_progress',
+      checks: [
+        {
+          name: 'Unit Tests',
+          status: 'in_progress',
+          conclusion: null,
+          details_url: 'https://github.com/user/repo/actions/runs/999'
+        },
+        {
+          name: 'Build',
+          status: 'completed',
+          conclusion: 'success',
+          details_url: 'https://github.com/user/repo/actions/runs/1000'
+        }
+      ]
+    }
+
+    render(<AppStatus app={app} prStatus={prStatus} />)
+    
+    // Should show running status for overall CI (there are multiple "Running" texts, so use getAllByText)
+    const runningTexts = screen.getAllByText('🔄 Running')
+    expect(runningTexts.length).toBeGreaterThan(0)
+    
+    // Should show individual check statuses correctly
+    expect(screen.getByText('Unit Tests')).toBeInTheDocument()
+    expect(screen.getByText('Build')).toBeInTheDocument()
+  })
 })
