@@ -19,12 +19,10 @@ from openhands.tools import FileEditorTool, TaskTrackerTool, BashTool
 logger = get_logger(__name__)
 
 
-def create_test_agent(llm, tools, workspace_path):
-    """Create an agent with FileEditor and TaskTracker tools that prefixes all responses with 'howdy!' for testing"""
+def create_agent(llm, tools, workspace_path):
+    """Create an agent with development tools and workspace configuration"""
     # Create agent context with custom system message suffix that includes workspace info
-    system_message_suffix = f"""IMPORTANT: Always prefix your response with 'howdy!' followed by a space, then respond normally to the user's request.
-
-WORKSPACE INFORMATION:
+    system_message_suffix = f"""WORKSPACE INFORMATION:
 You are working in a workspace located at: {workspace_path}
 
 The workspace contains:
@@ -95,12 +93,12 @@ class AgentLoop:
                 save_dir=task_dir
             ),  # Save task tracking data to workspace/tasks/ directory
             BashTool.create(
-                working_dir=self.workspace_path
-            ),  # Enable bash command execution in the workspace
+                working_dir=os.path.join(self.workspace_path, "project")
+            ),  # Enable bash command execution in the project directory
         ]  # Include FileEditor, TaskTracker, and Bash tools for development capabilities
 
-        # Use custom agent for testing - it will always reply with "howdy!"
-        self.agent = create_test_agent(llm, tools, self.workspace_path)
+        # Create agent with development tools and workspace configuration
+        self.agent = create_agent(llm, tools, self.workspace_path)
 
         # Create conversation callbacks
         callbacks = []
