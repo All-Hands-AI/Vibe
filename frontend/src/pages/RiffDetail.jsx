@@ -6,7 +6,7 @@ import ChatWindow from '../components/ChatWindow'
 import LLMErrorModal from '../components/LLMErrorModal'
 import DeploymentBanner from '../components/DeploymentBanner'
 import { startLLMPolling, checkLLMReady } from '../utils/llmService'
-import { getDeployStatus } from '../utils/statusUtils'
+
 
 function RiffDetail() {
   const { slug: appSlug, riffSlug } = useParams()
@@ -15,6 +15,7 @@ function RiffDetail() {
   const [app, setApp] = useState(null)
   const [riff, setRiff] = useState(null)
   const [prStatus, setPrStatus] = useState(null)
+  const [deploymentStatus, setDeploymentStatus] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [, setLlmReady] = useState(true)
@@ -79,34 +80,49 @@ function RiffDetail() {
     }
   }, [appSlug, riffSlug])
 
-  // Fetch PR status for the specific riff
+  // Fetch PR status for the specific riff (kept for backward compatibility with AppStatus component)
   const fetchPrStatus = useCallback(async () => {
     console.log('🔄 Fetching PR status for riff:', { appSlug, riffSlug })
+    try {
+      // NOTE: The old pr-status endpoint has been removed, but we can extract PR info
+      // from the deployment status if needed. For now, we'll set it to null
+      // and rely on the deployment endpoint for deployment status.
+      setPrStatus(null)
+      
+    } catch (err) {
+      console.error('❌ Error fetching PR status:', err)
+      setPrStatus(null)
+    }
+  }, [appSlug, riffSlug])
+
+  // Fetch deployment status for the specific riff
+  const fetchDeploymentStatus = useCallback(async () => {
+    console.log('🚀 Fetching deployment status for riff:', { appSlug, riffSlug })
     try {
       const uuid = getUserUUID()
       const headers = {
         'X-User-UUID': uuid
       }
       
-      const prResponse = await fetch(`/api/apps/${appSlug}/riffs/${riffSlug}/pr-status`, { headers })
-      console.log('📡 PR status response status:', prResponse?.status)
+      const deployResponse = await fetch(`/api/apps/${appSlug}/riffs/${riffSlug}/deployment`, { headers })
+      console.log('📡 Deployment status response status:', deployResponse?.status)
       
-      if (!prResponse || !prResponse.ok) {
-        const errorText = await prResponse?.text() || 'Unknown error'
-        console.error('❌ Fetch PR status failed:', errorText)
-        // Don't throw error for PR status - it's optional
-        setPrStatus(null)
+      if (!deployResponse || !deployResponse.ok) {
+        const errorText = await deployResponse?.text() || 'Unknown error'
+        console.error('❌ Fetch deployment status failed:', errorText)
+        // Don't throw error for deployment status - it's optional
+        setDeploymentStatus(null)
         return
       }
       
-      const prData = await prResponse.json()
-      console.log('📊 Received PR status data:', prData)
-      setPrStatus(prData.pr_status)
+      const deployData = await deployResponse.json()
+      console.log('📊 Received deployment status data:', deployData)
+      setDeploymentStatus(deployData)
       
     } catch (err) {
-      console.error('❌ Error fetching PR status:', err)
-      // Don't fail the whole page if PR status fails
-      setPrStatus(null)
+      console.error('❌ Error fetching deployment status:', err)
+      // Don't fail the whole page if deployment status fails
+      setDeploymentStatus(null)
     }
   }, [appSlug, riffSlug])
 
@@ -149,6 +165,7 @@ function RiffDetail() {
       checkInitialLLMReadiness()
       startPolling()
       fetchPrStatus() // Fetch PR status for this specific riff
+      fetchDeploymentStatus() // Fetch deployment status for this specific riff
     }
     
     // Cleanup polling on unmount
@@ -157,7 +174,7 @@ function RiffDetail() {
         stopPollingRef.current()
       }
     }
-  }, [riff, app, checkInitialLLMReadiness, startPolling, fetchPrStatus])
+  }, [riff, app, checkInitialLLMReadiness, startPolling, fetchPrStatus, fetchDeploymentStatus])
 
   // Scroll to top when route changes
   useEffect(() => {
@@ -298,8 +315,32 @@ function RiffDetail() {
 
           {/* Right Side - Iframe */}
           <div className="flex flex-col">
+            {/* Deployment Status Header */}
             <div className="mb-2">
-              <h3 className="text-lg font-semibold text-cyber-text font-mono">🚀 Live App Preview</h3>
+              {deploymentStatus ? (
+                <div className="flex items-center gap-2 mb-1">
+                  {deploymentStatus.status === 'pending' && (
+                    <>
+                      <div className="w-4 h-4 border-2 border-yellow-400 border-t-transparent rounded-full animate-spin"></div>
+                      <h3 className="text-lg font-semibold text-yellow-400 font-mono">🚀 Deploying...</h3>
+                    </>
+                  )}
+                  {deploymentStatus.status === 'success' && (
+                    <>
+                      <div className="w-4 h-4 bg-green-400 rounded-full"></div>
+                      <h3 className="text-lg font-semibold text-green-400 font-mono">🚀 Live App</h3>
+                    </>
+                  )}
+                  {deploymentStatus.status === 'error' && (
+                    <>
+                      <div className="w-4 h-4 bg-red-400 rounded-full"></div>
+                      <h3 className="text-lg font-semibold text-red-400 font-mono">🚀 Deployment Failed</h3>
+                    </>
+                  )}
+                </div>
+              ) : (
+                <h3 className="text-lg font-semibold text-cyber-text font-mono mb-1">🚀 Live App</h3>
+              )}
               <a
                 href={`https://${app.name}-${riff.name}.fly.dev`}
                 target="_blank"
@@ -312,8 +353,7 @@ function RiffDetail() {
             
             {/* Deployment Banner */}
             <DeploymentBanner 
-              deployStatus={getDeployStatus(app)} 
-              prStatus={prStatus} 
+              deploymentStatus={deploymentStatus}
             />
             
             <div className="flex-1 border border-gray-700 rounded-lg overflow-hidden">

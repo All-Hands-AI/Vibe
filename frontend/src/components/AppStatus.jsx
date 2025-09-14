@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import PropTypes from 'prop-types'
+import { getUserUUID } from '../utils/uuid'
 import { 
   getStatusIcon, 
   getStatusText, 
@@ -11,6 +12,41 @@ import {
 
 function AppStatus({ app, riff, prStatus = null }) {
   const [prData, setPrData] = useState(null)
+  const [deploymentStatus, setDeploymentStatus] = useState(null)
+
+  // Fetch deployment status
+  const fetchDeploymentStatus = useCallback(async () => {
+    if (!app?.slug) return
+    
+    try {
+      const uuid = getUserUUID()
+      const headers = { 'X-User-UUID': uuid }
+      
+      let endpoint
+      if (riff) {
+        // For riffs, use the riff-specific deployment endpoint
+        endpoint = `/api/apps/${app.slug}/riffs/${riff.slug}/deployment`
+      } else {
+        // For apps, use the app deployment endpoint
+        endpoint = `/api/apps/${app.slug}/deployment`
+      }
+      
+      console.log('🚀 Fetching deployment status from:', endpoint)
+      const response = await fetch(endpoint, { headers })
+      
+      if (response.ok) {
+        const data = await response.json()
+        console.log('✅ Deployment status received:', data)
+        setDeploymentStatus(data)
+      } else {
+        console.warn('⚠️ Failed to fetch deployment status:', response.status)
+        setDeploymentStatus(null)
+      }
+    } catch (error) {
+      console.error('❌ Error fetching deployment status:', error)
+      setDeploymentStatus(null)
+    }
+  }, [app?.slug, riff])
 
   useEffect(() => {
     // Use passed prStatus prop first, then fall back to app.pr_status
@@ -24,7 +60,10 @@ function AppStatus({ app, riff, prStatus = null }) {
       console.log('🔍 AppStatus: No PR status available')
       setPrData(null)
     }
-  }, [app, prStatus])
+    
+    // Fetch deployment status
+    fetchDeploymentStatus()
+  }, [app, riff, prStatus, fetchDeploymentStatus])
 
 
 
@@ -225,10 +264,32 @@ function AppStatus({ app, riff, prStatus = null }) {
         {/* Deploy CI Status */}
         <div className="flex items-center gap-3">
           <span className="text-cyber-muted font-mono text-sm min-w-[100px]">Deploy:</span>
-          <span className={`font-mono text-sm ${getStatusColor(getDeployStatus(app))}`}>
-            {getStatusIcon(getDeployStatus(app))} {getStatusText(getDeployStatus(app))}
-          </span>
+          <div className="flex items-center gap-2">
+            <span className={`font-mono text-sm ${getStatusColor(getDeployStatus(deploymentStatus))}`}>
+              {getStatusIcon(getDeployStatus(deploymentStatus))} {getStatusText(getDeployStatus(deploymentStatus))}
+            </span>
+            {deploymentStatus?.details?.workflow_url && (
+              <a
+                href={deploymentStatus.details.workflow_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-cyber-muted hover:text-blue-400 text-xs font-mono transition-colors duration-200"
+              >
+                View →
+              </a>
+            )}
+          </div>
         </div>
+        
+        {/* Deployment Status Message (if error or additional info) */}
+        {deploymentStatus?.message && deploymentStatus.status !== 'success' && (
+          <div className="flex items-start gap-3">
+            <span className="text-cyber-muted font-mono text-sm min-w-[100px]">Status:</span>
+            <span className="text-cyber-muted font-mono text-xs">
+              {deploymentStatus.message}
+            </span>
+          </div>
+        )}
 
         {/* Fly.io App Link */}
         <div className="flex items-center gap-3">
