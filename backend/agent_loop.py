@@ -39,6 +39,9 @@ When using the FileEditor tool, always use absolute paths.
 
 <WORKFLOW>
 Only work on the current branch. Commit and your work whenver you've made an improvement.
+
+Whenever you push substantial changes, update the PR title and description as necessary,
+especially if they're currently blank. Keep it short!
 </WORKFLOW>
 """
 
