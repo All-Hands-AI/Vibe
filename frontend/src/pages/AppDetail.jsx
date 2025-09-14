@@ -1,10 +1,11 @@
 import { useState, useEffect, useCallback } from 'react'
-import { useParams, Link } from 'react-router-dom'
+import { useParams, Link, useNavigate } from 'react-router-dom'
 import { getUserUUID } from '../utils/uuid'
 import AppStatus from '../components/AppStatus'
 
 function AppDetail() {
   const { slug } = useParams()
+  const navigate = useNavigate()
   const [app, setApp] = useState(null)
   const [riffs, setRiffs] = useState([])
   const [loading, setLoading] = useState(true)
@@ -159,6 +160,10 @@ function AppDetail() {
       // Refresh riffs list
       console.log('🔄 Refreshing riffs list...')
       await fetchRiffs()
+      
+      // Redirect to the new riff's page
+      console.log('🔄 Redirecting to new riff:', data.riff.slug)
+      navigate(`/apps/${app.slug}/riffs/${data.riff.slug}`)
       
       // Clear success message after 5 seconds
       setTimeout(() => setSuccess(''), 5000)
