@@ -31,13 +31,13 @@ class TestLLMReadinessEndpoints:
             )
 
         # Create an app
-        app_data = {"name": app_name}
+        app_data = {"text": app_name}
         app_response = client.post("/api/apps", headers=headers, json=app_data)
         assert app_response.status_code == 201
         app_slug = app_response.get_json()["app"]["slug"]
 
         # Create a riff
-        riff_data = {"name": riff_name, "description": "A test riff for LLM testing"}
+        riff_data = {"text": riff_name}
         riff_response = client.post(
             f"/api/apps/{app_slug}/riffs", headers=headers, json=riff_data
         )
@@ -123,7 +123,7 @@ class TestLLMReadinessEndpoints:
         }
 
         # Create app without setting up API keys
-        app_data = {"name": "No Keys App"}
+        app_data = {"text": "No Keys App"}
         app_response = client.post("/api/apps", headers=unique_headers, json=app_data)
         # This should fail because no API keys are set up
         assert app_response.status_code == 400

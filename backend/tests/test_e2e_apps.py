@@ -292,7 +292,7 @@ class TestAppsEndpoints:
         assert response.status_code == 200
         data = response.get_json()
         assert data["count"] == 1
-        assert data["apps"][0]["slug"] == "User1 App"
+        assert data["apps"][0]["slug"] == "user1-app"
 
     def test_app_slug_generation(self, client, sample_headers, mock_api_keys):
         """Test that app slugs are generated correctly from names"""
@@ -315,7 +315,7 @@ class TestAppsEndpoints:
 
         for app_name, expected_slug in test_cases:
             response = client.post(
-                "/api/apps", headers=sample_headers, json={"name": app_name}
+                "/api/apps", headers=sample_headers, json={"text": app_name}
             )
             assert response.status_code == 201
 

@@ -204,7 +204,7 @@ Please work through these steps systematically and let me know if you encounter 
         except Exception as e:
             logger.warning(f"⚠️ Failed to send initial message to agent: {str(e)}")
 
-        logger.info(f"✅ Created initial riff and message for app: {app_name}")
+        logger.info(f"✅ Created initial riff and message for app: {app_display_name}")
         return True, {"riff": riff, "message": message}
 
     except Exception as e:
@@ -612,7 +612,9 @@ def get_fly_status(project_slug, fly_token):
             "deployed": app_status in ["running", "deployed"],
             "app_url": app_url,
             "status": app_status,
-            "slug": app_data.get("name"),  # Fly.io uses "name" field for what we call "slug"
+            "slug": app_data.get(
+                "name"
+            ),  # Fly.io uses "name" field for what we call "slug"
             "organization": app_data.get("organization", {}).get("slug"),
         }
 

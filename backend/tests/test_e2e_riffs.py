@@ -284,7 +284,7 @@ class TestRiffsEndpoints:
             response = client.post(
                 f"/api/apps/{app_slug}/riffs",
                 headers=unique_headers,
-                json={"name": riff_name},
+                json={"text": riff_name},
             )
             assert response.status_code == 201
 
@@ -292,7 +292,7 @@ class TestRiffsEndpoints:
             assert data["riff"]["slug"] == expected_slug
 
     def test_custom_riff_slug(self, client, mock_api_keys):
-        """Test creating riff with custom slug"""
+        """Test creating riff with text that generates a specific slug"""
         unique_headers = {
             "X-User-UUID": "test-custom-riff-slug-uuid",
             "Content-Type": "application/json",
@@ -301,7 +301,7 @@ class TestRiffsEndpoints:
             client, unique_headers, mock_api_keys, "Custom Slug App"
         )
 
-        riff_data = {"text": "Custom Slug Riff", "slug": "my-custom-slug"}
+        riff_data = {"text": "Custom Slug Riff"}
 
         response = client.post(
             f"/api/apps/{app_slug}/riffs", headers=unique_headers, json=riff_data
@@ -310,7 +310,7 @@ class TestRiffsEndpoints:
         assert response.status_code == 201
         data = response.get_json()
 
-        assert data["riff"]["slug"] == "my-custom-slug"
+        assert data["riff"]["slug"] == "custom-slug-riff"
 
     def test_different_users_isolated_riffs(self, client, mock_api_keys):
         """Test that riffs are isolated between different users"""
@@ -346,7 +346,7 @@ class TestRiffsEndpoints:
         assert data["count"] == 1  # Only the automatic rename riff
         assert len(data["riffs"]) == 1
         assert (
-            data["riffs"][0]["name"] == f"rename-to-{app2_slug}"
+            data["riffs"][0]["slug"] == f"rename-to-{app2_slug}"
         )  # Only the automatic riff
 
         # Check that user1 still sees their riff (plus the automatic one)
@@ -385,7 +385,7 @@ class TestRiffsEndpoints:
         assert data["count"] == 1  # Only the automatic rename riff
         assert len(data["riffs"]) == 1
         assert (
-            data["riffs"][0]["name"] == f"rename-to-{app2_slug}"
+            data["riffs"][0]["slug"] == f"rename-to-{app2_slug}"
         )  # Only the automatic riff
 
         # Check that first app still has the riff (plus the automatic one)
