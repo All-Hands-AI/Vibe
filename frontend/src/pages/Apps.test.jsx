@@ -111,9 +111,20 @@ describe('Apps', () => {
       expect(screen.getByText('another-app')).toBeInTheDocument()
     })
     
-    // Check GitHub info and app links
+    // Check GitHub info and status information
     expect(screen.getAllByText('GitHub repository available')).toHaveLength(2)
-    expect(screen.getAllByText('View App →')).toHaveLength(2)
+    
+    // Check that status information is displayed
+    expect(screen.getAllByText('Branch:')).toHaveLength(2)
+    expect(screen.getAllByText('CI:')).toHaveLength(2)
+    expect(screen.getAllByText('Deploy:')).toHaveLength(2)
+    
+    // Check that cards are clickable (wrapped in links)
+    const appLinks = screen.getAllByRole('link')
+    const appCardLinks = appLinks.filter(link => 
+      link.getAttribute('href')?.startsWith('/apps/')
+    )
+    expect(appCardLinks).toHaveLength(2)
   })
 
   it('shows slug preview when typing app name', async () => {
