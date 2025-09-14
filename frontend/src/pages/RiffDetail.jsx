@@ -17,6 +17,7 @@ function RiffDetail() {
   const [riff, setRiff] = useState(null)
   const [prStatus, setPrStatus] = useState(null)
   const [deploymentStatus, setDeploymentStatus] = useState(null)
+  const [previousDeploymentStatus, setPreviousDeploymentStatus] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [, setLlmReady] = useState(true)
@@ -24,6 +25,7 @@ function RiffDetail() {
   const stopPollingRef = useRef(null)
   const prStatusPollingRef = useRef(null)
   const deploymentStatusPollingRef = useRef(null)
+  const iframeRef = useRef(null)
   
   // Set page title
   useDocumentTitle(formatPageTitle('riff', app?.name, riff?.name))
@@ -287,6 +289,34 @@ function RiffDetail() {
     window.scrollTo(0, 0)
   }, [location.pathname])
 
+  // Watch for deployment status changes and reload iframe when ready
+  useEffect(() => {
+    if (deploymentStatus && previousDeploymentStatus) {
+      const wasNotReady = previousDeploymentStatus.status !== 'success'
+      const isNowReady = deploymentStatus.status === 'success'
+      
+      if (wasNotReady && isNowReady) {
+        console.log('🔄 Deployment status changed to ready, reloading iframe')
+        // Reload the iframe by resetting its src
+        if (iframeRef.current) {
+          const currentSrc = iframeRef.current.src
+          iframeRef.current.src = 'about:blank'
+          // Small delay to ensure the blank page loads before setting the real src
+          setTimeout(() => {
+            if (iframeRef.current) {
+              iframeRef.current.src = currentSrc
+            }
+          }, 100)
+        }
+      }
+    }
+    
+    // Update previous status for next comparison
+    if (deploymentStatus) {
+      setPreviousDeploymentStatus(deploymentStatus)
+    }
+  }, [deploymentStatus, previousDeploymentStatus])
+
   // Handle LLM reset
   const handleLLMReset = useCallback(() => {
     console.log('✅ LLM reset completed, restarting all polling')
@@ -532,6 +562,7 @@ function RiffDetail() {
             
             <div className="flex-1 border border-gray-700 rounded-lg overflow-hidden">
               <iframe
+                ref={iframeRef}
                 src={`https://${app.slug}-${riff.slug}.fly.dev`}
                 className="w-full h-full"
                 title="Live App Preview"
