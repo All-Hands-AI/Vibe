@@ -6,6 +6,7 @@ import ChatWindow from '../components/ChatWindow'
 import LLMErrorModal from '../components/LLMErrorModal'
 import CIStatus from '../components/CIStatus'
 import { startLLMPolling, checkLLMReady } from '../utils/llmService'
+import { useDocumentTitle, formatPageTitle } from '../utils/useDocumentTitle'
 
 
 function RiffDetail() {
@@ -23,6 +24,9 @@ function RiffDetail() {
   const stopPollingRef = useRef(null)
   const prStatusPollingRef = useRef(null)
   const deploymentStatusPollingRef = useRef(null)
+  
+  // Set page title
+  useDocumentTitle(formatPageTitle('riff', app?.name, riff?.name))
 
   // Fetch app and riff details
   const fetchData = useCallback(async () => {

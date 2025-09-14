@@ -3,6 +3,7 @@ import { useParams, Link, useNavigate } from 'react-router-dom'
 import { getUserUUID } from '../utils/uuid'
 import AppStatus from '../components/AppStatus'
 import ConfirmationModal from '../components/ConfirmationModal'
+import { useDocumentTitle, formatPageTitle } from '../utils/useDocumentTitle'
 
 function AppDetail() {
   const { slug } = useParams()
@@ -22,6 +23,9 @@ function AppDetail() {
     riff: null,
     isDeleting: false
   })
+  
+  // Set page title
+  useDocumentTitle(formatPageTitle('app', app?.name))
 
 
 
