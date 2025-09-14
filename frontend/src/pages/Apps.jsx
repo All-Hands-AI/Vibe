@@ -267,9 +267,8 @@ function Apps() {
   return (
     <div className="min-h-screen bg-black text-cyber-text">
       <div className="max-w-6xl mx-auto px-8 py-16">
-        <header className="text-center mb-16">
-          <h1 className="text-5xl font-bold text-cyber-text mb-4 font-mono">Apps</h1>
-          <p className="text-xl text-cyber-muted font-mono">Manage your OpenVibe apps</p>
+        <header className="text-left mb-16">
+          <h1 className="text-5xl font-bold text-cyber-text mb-4 font-mono">OpenHands Vibe 🤙</h1>
         </header>
 
         {/* Create New App Form */}

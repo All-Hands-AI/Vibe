@@ -104,7 +104,7 @@ describe('App', () => {
     
     // Wait for main app to load by checking for the Apps page content
     await waitFor(() => {
-      expect(screen.getByRole('heading', { name: 'Apps' })).toBeInTheDocument()
+      expect(screen.getByRole('heading', { name: 'OpenHands Vibe 🤙' })).toBeInTheDocument()
     })
     
     // Wait for the apps to finish loading
@@ -113,7 +113,6 @@ describe('App', () => {
     })
     
     // Check for apps page content (default route is now Apps)
-    expect(screen.getByText('Manage your OpenVibe apps')).toBeInTheDocument()
     expect(screen.getByText('Create New App')).toBeInTheDocument()
     expect(screen.getByText('Your Apps')).toBeInTheDocument()
   })
