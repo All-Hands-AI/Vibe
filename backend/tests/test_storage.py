@@ -86,7 +86,6 @@ class TestAppsStorage:
         """Test saving and loading an app"""
         storage = AppsStorage(test_uuid)
         test_app = {
-            "name": "Test App",
             "slug": "test-app",
             "created_at": "2025-09-13T19:00:00",
         }
@@ -106,7 +105,7 @@ class TestAppsStorage:
         assert storage.app_exists("test-app") is False
 
         # After saving app
-        test_app = {"name": "Test App", "slug": "test-app"}
+        test_app = {"slug": "test-app"}
         storage.save_app("test-app", test_app)
         assert storage.app_exists("test-app") is True
 
@@ -118,8 +117,8 @@ class TestAppsStorage:
         assert storage.list_apps() == []
 
         # Add apps
-        app1 = {"name": "App 1", "slug": "app-1"}
-        app2 = {"name": "App 2", "slug": "app-2"}
+        app1 = {"slug": "app-1"}
+        app2 = {"slug": "app-2"}
         storage.save_app("app-1", app1)
         storage.save_app("app-2", app2)
 
@@ -134,7 +133,7 @@ class TestAppsStorage:
         storage = AppsStorage(test_uuid)
 
         # Save app
-        test_app = {"name": "Test App", "slug": "test-app"}
+        test_app = {"slug": "test-app"}
         storage.save_app("test-app", test_app)
         assert storage.app_exists("test-app") is True
 
@@ -150,7 +149,6 @@ class TestRiffsStorage:
         """Test saving and loading a riff"""
         storage = RiffsStorage(test_uuid)
         test_riff = {
-            "name": "Test Riff",
             "slug": "test-riff",
             "app_slug": "test-app",
             "created_at": "2025-09-13T19:00:00",
@@ -171,7 +169,7 @@ class TestRiffsStorage:
         assert storage.riff_exists("test-app", "test-riff") is False
 
         # After saving riff
-        test_riff = {"name": "Test Riff", "slug": "test-riff"}
+        test_riff = {"slug": "test-riff"}
         storage.save_riff("test-app", "test-riff", test_riff)
         assert storage.riff_exists("test-app", "test-riff") is True
 
@@ -183,8 +181,8 @@ class TestRiffsStorage:
         assert storage.list_riffs("test-app") == []
 
         # Add riffs
-        riff1 = {"name": "Riff 1", "slug": "riff-1", "app_slug": "test-app"}
-        riff2 = {"name": "Riff 2", "slug": "riff-2", "app_slug": "test-app"}
+        riff1 = {"slug": "riff-1", "app_slug": "test-app"}
+        riff2 = {"slug": "riff-2", "app_slug": "test-app"}
         storage.save_riff("test-app", "riff-1", riff1)
         storage.save_riff("test-app", "riff-2", riff2)
 
@@ -199,7 +197,7 @@ class TestRiffsStorage:
         storage = RiffsStorage(test_uuid)
 
         # Save riff
-        test_riff = {"name": "Test Riff", "slug": "test-riff"}
+        test_riff = {"slug": "test-riff"}
         storage.save_riff("test-app", "test-riff", test_riff)
         assert storage.riff_exists("test-app", "test-riff") is True
 

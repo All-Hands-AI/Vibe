@@ -206,7 +206,7 @@ class TestLLMReadinessEndpoints:
         }
 
         # Try to create app without API keys (should fail)
-        app_data = {"name": "Reset No Keys App"}
+        app_data = {"text": "Reset No Keys App"}
         app_response = client.post("/api/apps", headers=unique_headers, json=app_data)
         assert app_response.status_code == 400
 

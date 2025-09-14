@@ -97,7 +97,7 @@ def add_user_message(user_uuid, app_slug, riff_slug, message):
     return storage.add_message(app_slug, riff_slug, message)
 
 
-def create_initial_riff_and_message(user_uuid, app_slug, app_display_name, github_url):
+def create_initial_riff_and_message(user_uuid, app_slug, github_url):
     """Create initial riff and message for a new app"""
     try:
         # Import here to avoid circular imports
@@ -130,13 +130,13 @@ def create_initial_riff_and_message(user_uuid, app_slug, app_display_name, githu
         message_id = str(uuid.uuid4())
         created_at = datetime.now(timezone.utc).isoformat()
 
-        initial_message_content = f"""Please complete the following tasks to customize this app template for "{app_display_name}":
+        initial_message_content = f"""Please complete the following tasks to customize this app template for "{app_slug}":
 
 1. **Read TEMPLATE.md** - First, read the TEMPLATE.md file to understand the specific instructions for this template.
 
 2. **Follow the template instructions** - Execute the instructions in TEMPLATE.md to change the app name everywhere in the repository. The template should contain a helpful command or script to automate this process.
 
-3. **Change the app name** - Update all references from the template name to "{app_display_name}" throughout the codebase. This typically includes:
+3. **Change the app name** - Update all references from the template name to "{app_slug}" throughout the codebase. This typically includes:
    - Package.json or similar dependency files
    - Configuration files
    - README files
@@ -204,7 +204,7 @@ Please work through these steps systematically and let me know if you encounter 
         except Exception as e:
             logger.warning(f"⚠️ Failed to send initial message to agent: {str(e)}")
 
-        logger.info(f"✅ Created initial riff and message for app: {app_display_name}")
+        logger.info(f"✅ Created initial riff and message for app: {app_slug}")
         return True, {"riff": riff, "message": message}
 
     except Exception as e:
@@ -1492,7 +1492,7 @@ def create_app():
         # Create initial riff and message for the new app
         logger.info(f"🆕 Creating initial riff for app: {app_slug}")
         riff_success, riff_result = create_initial_riff_and_message(
-            user_uuid, app_slug, app_slug, github_url
+            user_uuid, app_slug, github_url
         )
 
         warnings = []
