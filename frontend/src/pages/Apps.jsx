@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Link } from 'react-router-dom'
 import { getUserUUID } from '../utils/uuid'
 import ConfirmationModal from '../components/ConfirmationModal'
@@ -14,6 +14,7 @@ import {
 function Apps() {
   const [apps, setApps] = useState([])
   const [loading, setLoading] = useState(true)
+  const [appsWithDetails, setAppsWithDetails] = useState([])
   const [creating, setCreating] = useState(false)
   const [newAppName, setNewAppName] = useState('')
   const [error, setError] = useState('')
@@ -39,7 +40,7 @@ function Apps() {
 
 
   // Fetch apps from backend
-  const fetchApps = async () => {
+  const fetchApps = useCallback(async () => {
     console.log('🔄 Fetching apps from backend...')
     try {
       setLoading(true)
@@ -75,8 +76,14 @@ function Apps() {
       console.log('📊 Received data:', data)
       console.log('📊 Apps count:', data.apps?.length || 0)
       
-      setApps(data.apps || [])
+      const appsList = data.apps || []
+      setApps(appsList)
       console.log('✅ Apps loaded successfully')
+      
+      // Fetch detailed data for each app
+      if (appsList.length > 0) {
+        await fetchAppsDetails(appsList)
+      }
     } catch (err) {
       console.error('❌ Error fetching apps:', err)
       console.error('❌ Error stack:', err.stack)
@@ -84,6 +91,45 @@ function Apps() {
     } finally {
       setLoading(false)
       console.log('🔄 Fetch apps completed')
+    }
+  }, [])
+
+  // Fetch detailed app data for each app
+  const fetchAppsDetails = async (appsList) => {
+    console.log('🔄 Fetching detailed data for', appsList.length, 'apps...')
+    try {
+      const uuid = getUserUUID()
+      const headers = {
+        'X-User-UUID': uuid
+      }
+
+      // Fetch details for all apps in parallel
+      const detailPromises = appsList.map(async (app) => {
+        try {
+          console.log('📡 Fetching details for app:', app.slug)
+          const response = await fetch(`/api/apps/${app.slug}`, { headers })
+          
+          if (!response || !response.ok) {
+            console.warn('⚠️ Failed to fetch details for app:', app.slug)
+            return app // Return original app data if details fetch fails
+          }
+          
+          const detailedApp = await response.json()
+          console.log('✅ Loaded details for app:', app.slug)
+          return detailedApp
+        } catch (err) {
+          console.warn('⚠️ Error fetching details for app:', app.slug, err)
+          return app // Return original app data if details fetch fails
+        }
+      })
+
+      const appsWithDetailedData = await Promise.all(detailPromises)
+      setAppsWithDetails(appsWithDetailedData)
+      console.log('✅ All app details loaded successfully')
+    } catch (err) {
+      console.error('❌ Error fetching app details:', err)
+      // If details fetching fails, use original apps data
+      setAppsWithDetails(appsList)
     }
   }
 
@@ -265,7 +311,7 @@ function Apps() {
   // Load apps on component mount
   useEffect(() => {
     fetchApps()
-  }, [])
+  }, [fetchApps])
 
   // Clear error when user starts typing
   useEffect(() => {
@@ -347,7 +393,7 @@ function Apps() {
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {apps.map((app) => (
+              {(appsWithDetails.length > 0 ? appsWithDetails : apps).map((app) => (
                 <Link 
                   key={app.slug} 
                   to={`/apps/${app.slug}`}
@@ -370,29 +416,40 @@ function Apps() {
                     
                     {/* Status Information */}
                     <div className="space-y-2">
-                      {/* Branch */}
-                      <div className="flex items-center gap-2">
-                        <span className="text-cyber-muted font-mono text-xs">Branch:</span>
-                        <span className="text-cyber-text font-mono text-xs">
-                          🌿 {getBranchName(app)}
-                        </span>
-                      </div>
-                      
-                      {/* CI Status */}
-                      <div className="flex items-center gap-2">
-                        <span className="text-cyber-muted font-mono text-xs">CI:</span>
-                        <span className={`font-mono text-xs ${getStatusColor(getBranchStatus(app))}`}>
-                          {getStatusIcon(getBranchStatus(app))} {getStatusText(getBranchStatus(app))}
-                        </span>
-                      </div>
-                      
-                      {/* Deploy Status */}
-                      <div className="flex items-center gap-2">
-                        <span className="text-cyber-muted font-mono text-xs">Deploy:</span>
-                        <span className={`font-mono text-xs ${getStatusColor(getDeployStatus(app))}`}>
-                          {getStatusIcon(getDeployStatus(app))} {getStatusText(getDeployStatus(app))}
-                        </span>
-                      </div>
+                      {app.github_status || app.deployment_status || app.pr_status ? (
+                        // Show actual status when detailed data is available
+                        <>
+                          {/* Branch */}
+                          <div className="flex items-center gap-2">
+                            <span className="text-cyber-muted font-mono text-xs">Branch:</span>
+                            <span className="text-cyber-text font-mono text-xs">
+                              🌿 {getBranchName(app)}
+                            </span>
+                          </div>
+                          
+                          {/* CI Status */}
+                          <div className="flex items-center gap-2">
+                            <span className="text-cyber-muted font-mono text-xs">CI:</span>
+                            <span className={`font-mono text-xs ${getStatusColor(getBranchStatus(app))}`}>
+                              {getStatusIcon(getBranchStatus(app))} {getStatusText(getBranchStatus(app))}
+                            </span>
+                          </div>
+                          
+                          {/* Deploy Status */}
+                          <div className="flex items-center gap-2">
+                            <span className="text-cyber-muted font-mono text-xs">Deploy:</span>
+                            <span className={`font-mono text-xs ${getStatusColor(getDeployStatus(app))}`}>
+                              {getStatusIcon(getDeployStatus(app))} {getStatusText(getDeployStatus(app))}
+                            </span>
+                          </div>
+                        </>
+                      ) : (
+                        // Show loading state when detailed data is not yet available
+                        <div className="flex items-center gap-2 text-cyber-muted font-mono text-xs">
+                          <div className="w-3 h-3 border border-cyber-muted border-t-transparent rounded-full animate-spin"></div>
+                          <span>Loading status...</span>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </Link>
