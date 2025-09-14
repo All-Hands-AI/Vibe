@@ -78,9 +78,6 @@ def create_agent_for_user(user_uuid, app_slug, riff_slug):
             logger.warning(f"⚠️ No Anthropic token found for user {user_uuid[:8]}")
             return False, "Anthropic API key required"
 
-        # Get user's GitHub token (optional for push/PR operations)
-        github_token = get_user_key(user_uuid, "github")
-
         # Get app data to retrieve GitHub URL
         apps_storage = get_apps_storage(user_uuid)
         app_data = apps_storage.load_app(app_slug)
@@ -96,7 +93,7 @@ def create_agent_for_user(user_uuid, app_slug, riff_slug):
         # Setup workspace: create directory and clone repository
         logger.info(f"🏗️ Setting up workspace for riff {riff_slug}")
         workspace_success, workspace_path, workspace_error = setup_riff_workspace(
-            user_uuid, app_slug, riff_slug, github_url, github_token
+            user_uuid, app_slug, riff_slug, github_url
         )
 
         if not workspace_success:
@@ -346,7 +343,14 @@ def create_riff(slug):
         success, error_message = create_agent_for_user(user_uuid, slug, riff_slug)
         if not success:
             logger.error(f"❌ Failed to create Agent for riff: {error_message}")
-            return jsonify({"error": error_message}), 400
+            # Return 500 for git/workspace setup failures, 400 for other client errors
+            status_code = (
+                500
+                if "git" in error_message.lower()
+                or "workspace" in error_message.lower()
+                else 400
+            )
+            return jsonify({"error": error_message}), status_code
 
         logger.info(f"✅ Riff created successfully: {riff_name}")
         return jsonify({"message": "Riff created successfully", "riff": riff}), 201

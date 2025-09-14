@@ -211,6 +211,23 @@ def clone_repository(
         try:
             os.chdir(project_path)
 
+            # Configure git user settings for commits
+            git_config_commands = [
+                ["git", "config", "user.name", "openhands"],
+                ["git", "config", "user.email", "openhands@all-hands.dev"],
+            ]
+
+            for config_cmd in git_config_commands:
+                config_result = subprocess.run(
+                    config_cmd, capture_output=True, text=True, timeout=30
+                )
+                if config_result.returncode != 0:
+                    error_msg = f"Failed to configure git: {config_result.stderr}"
+                    logger.error(f"❌ {error_msg}")
+                    return False, error_msg
+
+            logger.info("✅ Git configuration set successfully")
+
             # Check if branch exists (try remote first, then local)
             check_remote_branch_cmd = [
                 "git",
@@ -341,9 +358,9 @@ def clone_repository(
                 if empty_commit_result.returncode == 0:
                     logger.info(f"✅ Added empty commit to branch '{branch_name}'")
                 else:
-                    logger.warning(
-                        f"⚠️ Failed to add empty commit: {empty_commit_result.stderr}"
-                    )
+                    error_msg = f"Failed to add empty commit to branch '{branch_name}': {empty_commit_result.stderr}"
+                    logger.error(f"❌ {error_msg}")
+                    return False, error_msg
 
                 # The remote URL already has the token embedded from cloning,
                 # so we can directly push the branch
@@ -364,9 +381,13 @@ def clone_repository(
                     if pr_success:
                         logger.info(f"🔀 Pull request created: {pr_result}")
                     else:
-                        logger.warning(f"⚠️ Failed to create pull request: {pr_result}")
+                        error_msg = f"Failed to create pull request for branch '{branch_name}': {pr_result}"
+                        logger.error(f"❌ {error_msg}")
+                        return False, error_msg
                 else:
-                    logger.warning(f"⚠️ Failed to push branch: {push_result.stderr}")
+                    error_msg = f"Failed to push branch '{branch_name}' to remote: {push_result.stderr}"
+                    logger.error(f"❌ {error_msg}")
+                    return False, error_msg
             elif not github_token:
                 logger.info(
                     f"ℹ️ No GitHub token available for user {user_uuid}, skipping push and PR creation"
@@ -389,22 +410,17 @@ def clone_repository(
 
 
 def setup_riff_workspace(
-    user_uuid: str,
-    app_slug: str,
-    riff_slug: str,
-    github_url: str,
-    github_token: Optional[str] = None,
+    user_uuid: str, app_slug: str, riff_slug: str, github_url: str
 ) -> Tuple[bool, Optional[str], Optional[str]]:
     """
     Complete workspace setup for a riff: create directory and clone repository.
-    If github_token is provided, push the branch to remote and create a pull request.
+    If user has a GitHub token, push the branch to remote and create a pull request.
 
     Args:
         user_uuid: User's UUID
         app_slug: App slug identifier
         riff_slug: Riff slug identifier (used as branch name)
         github_url: GitHub repository URL
-        github_token: Optional GitHub API token for push/PR operations
 
     Returns:
         Tuple[bool, Optional[str], Optional[str]]: (success, workspace_path, error_message)
