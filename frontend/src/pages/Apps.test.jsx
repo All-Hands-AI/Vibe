@@ -51,7 +51,7 @@ describe('Apps', () => {
     renderWithRouter(<Apps />)
     
     // Check header content
-    expect(screen.getByText('OpenHands Vibe 🤙')).toBeInTheDocument()
+    expect(screen.getByText('🤙 OpenHands Vibe')).toBeInTheDocument()
     
     // Check form elements
     expect(screen.getByText('Create New App')).toBeInTheDocument()

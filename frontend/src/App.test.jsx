@@ -104,7 +104,7 @@ describe('App', () => {
     
     // Wait for main app to load by checking for the Apps page content
     await waitFor(() => {
-      expect(screen.getByRole('heading', { name: 'OpenHands Vibe 🤙' })).toBeInTheDocument()
+      expect(screen.getByRole('heading', { name: '🤙 OpenHands Vibe' })).toBeInTheDocument()
     })
     
     // Wait for the apps to finish loading
