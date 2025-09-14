@@ -28,9 +28,9 @@ function Apps() {
     isDeleting: false
   })
 
-  // Create slug from app name for preview
-  const createSlug = (name) => {
-    console.log('🔧 createSlug input:', JSON.stringify(name))
+  // Create slug for real-time display (allows trailing hyphens)
+  const createSlugForDisplay = (name) => {
+    console.log('🔧 createSlugForDisplay input:', JSON.stringify(name))
     
     const step1 = name.toLowerCase()
     console.log('🔧 Step 1 (toLowerCase):', JSON.stringify(step1))
@@ -44,11 +44,26 @@ function Apps() {
     const step4 = step3.replace(/-+/g, '-')
     console.log('🔧 Step 4 (collapse multiple hyphens):', JSON.stringify(step4))
     
-    const step5 = step4.replace(/^-|-$/g, '')
-    console.log('🔧 Step 5 (remove leading/trailing hyphens):', JSON.stringify(step5))
+    const step5 = step4.replace(/^-/g, '') // Only remove leading hyphens, keep trailing
+    console.log('🔧 Step 5 (remove leading hyphens only):', JSON.stringify(step5))
     
-    console.log('🔧 createSlug final result:', JSON.stringify(step5))
+    console.log('🔧 createSlugForDisplay final result:', JSON.stringify(step5))
     return step5
+  }
+
+  // Create final slug for submission (removes trailing hyphens)
+  const createFinalSlug = (name) => {
+    console.log('🔧 createFinalSlug input:', JSON.stringify(name))
+    
+    const result = name
+      .toLowerCase()
+      .replace(/[^a-zA-Z0-9\s-]/g, '')
+      .replace(/\s+/g, '-')
+      .replace(/-+/g, '-')
+      .replace(/^-|-$/g, '') // Remove both leading and trailing hyphens
+    
+    console.log('🔧 createFinalSlug result:', JSON.stringify(result))
+    return result
   }
 
 
@@ -158,7 +173,7 @@ function Apps() {
       return
     }
 
-    const slug = newAppName.trim()
+    const slug = createFinalSlug(newAppName.trim())
     console.log('📝 App details:', { name: slug, slug })
     
     if (!slug) {
@@ -361,7 +376,7 @@ function Apps() {
                   onChange={(e) => {
                     const inputValue = e.target.value
                     console.log('📝 App name input onChange - raw input:', JSON.stringify(inputValue))
-                    const slug = createSlug(inputValue)
+                    const slug = createSlugForDisplay(inputValue)
                     console.log('📝 App name input onChange - setting state to:', JSON.stringify(slug))
                     setNewAppName(slug)
                   }}

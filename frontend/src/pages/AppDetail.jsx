@@ -27,9 +27,9 @@ function AppDetail() {
 
 
 
-  // Create slug from riff name
-  const createSlug = (name) => {
-    console.log('🔧 createSlug input:', JSON.stringify(name))
+  // Create slug for real-time display (allows trailing hyphens)
+  const createSlugForDisplay = (name) => {
+    console.log('🔧 createSlugForDisplay input:', JSON.stringify(name))
     
     const step1 = name.toLowerCase()
     console.log('🔧 Step 1 (toLowerCase):', JSON.stringify(step1))
@@ -43,11 +43,26 @@ function AppDetail() {
     const step4 = step3.replace(/-+/g, '-')
     console.log('🔧 Step 4 (collapse multiple hyphens):', JSON.stringify(step4))
     
-    const step5 = step4.replace(/^-|-$/g, '')
-    console.log('🔧 Step 5 (remove leading/trailing hyphens):', JSON.stringify(step5))
+    const step5 = step4.replace(/^-/g, '') // Only remove leading hyphens, keep trailing
+    console.log('🔧 Step 5 (remove leading hyphens only):', JSON.stringify(step5))
     
-    console.log('🔧 createSlug final result:', JSON.stringify(step5))
+    console.log('🔧 createSlugForDisplay final result:', JSON.stringify(step5))
     return step5
+  }
+
+  // Create final slug for submission (removes trailing hyphens)
+  const createFinalSlug = (name) => {
+    console.log('🔧 createFinalSlug input:', JSON.stringify(name))
+    
+    const result = name
+      .toLowerCase()
+      .replace(/[^a-zA-Z0-9\s-]/g, '')
+      .replace(/\s+/g, '-')
+      .replace(/-+/g, '-')
+      .replace(/^-|-$/g, '') // Remove both leading and trailing hyphens
+    
+    console.log('🔧 createFinalSlug result:', JSON.stringify(result))
+    return result
   }
 
   // Fetch app details
@@ -129,7 +144,7 @@ function AppDetail() {
       return
     }
 
-    const riffSlug = newRiffName.trim()
+    const riffSlug = createFinalSlug(newRiffName.trim())
     console.log('📝 Riff details:', { name: riffSlug, slug: riffSlug })
     
     if (!riffSlug) {
@@ -403,7 +418,7 @@ function AppDetail() {
                         onChange={(e) => {
                           const inputValue = e.target.value
                           console.log('📝 Riff name input onChange - raw input:', JSON.stringify(inputValue))
-                          const slug = createSlug(inputValue)
+                          const slug = createSlugForDisplay(inputValue)
                           console.log('📝 Riff name input onChange - setting state to:', JSON.stringify(slug))
                           setNewRiffName(slug)
                         }}
