@@ -33,6 +33,11 @@ def create_agent(llm, tools, workspace_path):
     system_message_suffix = f"""WORKSPACE INFORMATION:
 You are working in a workspace located at: {workspace_path}/project/
 
+<IMPORTANT>
+Some examples you've seen might reference `/workspace`. This directory DOES NOT REALLY EXIST.
+Do all your work in the directory {workspace_path}/project/
+</IMPORTANT>
+
 This workspace has a git repository in it.
 
 When using the FileEditor tool, always use absolute paths.
