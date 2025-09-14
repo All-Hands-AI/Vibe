@@ -12,16 +12,11 @@ from pathlib import Path
 from typing import Dict, List, Optional, Any
 from datetime import datetime
 
-# Add backend to Python path
-backend_path = Path(__file__).parent.parent.parent / "backend"
-if str(backend_path) not in sys.path:
-    sys.path.insert(0, str(backend_path))
-
-# Import backend modules
-from storage.apps_storage import AppsStorage
-from storage.riffs_storage import RiffsStorage
-from storage.keys_storage import KeysStorage
-from agent_loop import AgentLoopManager
+# Import backend modules from local copy
+from openvibe_cli.backend_modules.storage.apps_storage import AppsStorage
+from openvibe_cli.backend_modules.storage.riffs_storage import RiffsStorage
+from openvibe_cli.backend_modules.storage.keys_storage import KeysStorage
+from openvibe_cli.backend_modules.agent_loop import AgentLoopManager
 
 from openvibe_cli.config import Config
 
