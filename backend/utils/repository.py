@@ -1,6 +1,9 @@
 """
 Repository management utilities for OpenVibe backend.
 Handles cloning and managing GitHub repositories for riffs.
+
+When cloning repositories, the user's stored GitHub token is automatically
+embedded in the remote URL to enable authenticated push/pull operations.
 """
 
 import os
@@ -9,6 +12,7 @@ import shutil
 from pathlib import Path
 from typing import Optional, Tuple
 from utils.logging import get_logger
+from keys import load_user_keys
 
 logger = get_logger(__name__)
 
@@ -38,15 +42,19 @@ def create_workspace_directory(user_uuid: str, app_slug: str, riff_slug: str) ->
 
 
 def clone_repository(
-    github_url: str, workspace_path: str, branch_name: str
+    github_url: str, workspace_path: str, branch_name: str, user_uuid: str
 ) -> Tuple[bool, Optional[str]]:
     """
     Clone a GitHub repository to the workspace and checkout the specified branch.
+
+    The cloned repository will have the user's stored GitHub token embedded in its remote URL
+    to enable authenticated push/pull operations for all users.
 
     Args:
         github_url: GitHub repository URL
         workspace_path: Path to the workspace directory
         branch_name: Branch name to checkout (riff name)
+        user_uuid: User's UUID to retrieve their stored GitHub token
 
     Returns:
         Tuple[bool, Optional[str]]: (success, error_message)
@@ -63,10 +71,32 @@ def clone_repository(
             logger.info(f"🧹 Cleaning existing project directory: {project_path}")
             shutil.rmtree(project_path)
 
-        logger.info(f"📥 Cloning repository {github_url} to {project_path}")
+        # Modify GitHub URL to include user's stored token for authentication
+        try:
+            user_keys = load_user_keys(user_uuid)
+            github_token = user_keys.get("github")
+        except Exception as e:
+            logger.warning(f"⚠️ Failed to load user keys for {user_uuid}: {e}")
+            github_token = None
+
+        if github_token and github_url.startswith("https://github.com/"):
+            # Insert token into URL for authenticated cloning
+            authenticated_url = github_url.replace(
+                "https://github.com/", f"https://{github_token}@github.com/"
+            )
+            logger.info(
+                f"📥 Cloning repository with user authentication to {project_path}"
+            )
+        else:
+            authenticated_url = github_url
+            if not github_token:
+                logger.warning(
+                    f"⚠️ No GitHub token found for user {user_uuid}, cloning without authentication"
+                )
+            logger.info(f"📥 Cloning repository {github_url} to {project_path}")
 
         # Clone the repository into the project subdirectory
-        clone_cmd = ["git", "clone", github_url, project_path]
+        clone_cmd = ["git", "clone", authenticated_url, project_path]
         result = subprocess.run(
             clone_cmd, capture_output=True, text=True, timeout=300  # 5 minute timeout
         )
@@ -227,7 +257,9 @@ def setup_riff_workspace(
         workspace_path = create_workspace_directory(user_uuid, app_slug, riff_slug)
 
         # Clone repository and checkout branch
-        success, error_msg = clone_repository(github_url, workspace_path, riff_slug)
+        success, error_msg = clone_repository(
+            github_url, workspace_path, riff_slug, user_uuid
+        )
 
         if success:
             logger.info(f"🎉 Workspace setup complete: {workspace_path}")
