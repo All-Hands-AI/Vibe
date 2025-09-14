@@ -59,7 +59,6 @@ from routes.apps import (
     delete_github_branch,
     delete_fly_app,
     load_user_app,
-    get_pr_status,
     user_app_exists,
 )
 
@@ -1257,8 +1256,10 @@ def delete_riff(slug, riff_slug):
 @riffs_bp.route("/api/apps/<slug>/riffs/<riff_slug>/deployment", methods=["GET"])
 def get_riff_deployment_status(slug, riff_slug):
     """Get deployment status for a riff (checks riff branch)"""
-    logger.info(f"🚀 GET /api/apps/{slug}/riffs/{riff_slug}/deployment - Getting riff deployment status")
-    
+    logger.info(
+        f"🚀 GET /api/apps/{slug}/riffs/{riff_slug}/deployment - Getting riff deployment status"
+    )
+
     try:
         # Get UUID from headers
         user_uuid = request.headers.get("X-User-UUID")
@@ -1289,11 +1290,13 @@ def get_riff_deployment_status(slug, riff_slug):
         github_url = app.get("github_url")
         if not github_url:
             logger.info(f"ℹ️ No GitHub URL configured for app {slug}")
-            return jsonify({
-                "status": "error",
-                "message": "No GitHub URL configured for this app",
-                "details": {"error": "no_github_url"}
-            })
+            return jsonify(
+                {
+                    "status": "error",
+                    "message": "No GitHub URL configured for this app",
+                    "details": {"error": "no_github_url"},
+                }
+            )
 
         # Get user's GitHub token
         user_keys = load_user_keys(user_uuid)
@@ -1301,19 +1304,25 @@ def get_riff_deployment_status(slug, riff_slug):
 
         if not github_token:
             logger.info(f"ℹ️ No GitHub token found for user {user_uuid[:8]}")
-            return jsonify({
-                "status": "error",
-                "message": "No GitHub token configured",
-                "details": {"error": "no_github_token"}
-            })
+            return jsonify(
+                {
+                    "status": "error",
+                    "message": "No GitHub token configured",
+                    "details": {"error": "no_github_token"},
+                }
+            )
 
         # Check deployment status for riff branch (use riff slug as branch name)
         branch_name = riff_slug
-        logger.info(f"🔍 Checking deployment status for riff '{riff_slug}' on branch '{branch_name}'")
-        
+        logger.info(
+            f"🔍 Checking deployment status for riff '{riff_slug}' on branch '{branch_name}'"
+        )
+
         deployment_status = get_deployment_status(github_url, github_token, branch_name)
-        
-        logger.info(f"✅ Deployment status retrieved for riff {riff_slug}: {deployment_status['status']}")
+
+        logger.info(
+            f"✅ Deployment status retrieved for riff {riff_slug}: {deployment_status['status']}"
+        )
         return jsonify(deployment_status)
 
     except Exception as e:

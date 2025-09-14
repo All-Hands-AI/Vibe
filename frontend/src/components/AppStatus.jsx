@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import PropTypes from 'prop-types'
 import { getUserUUID } from '../utils/uuid'
 import { 
@@ -15,7 +15,7 @@ function AppStatus({ app, riff, prStatus = null }) {
   const [deploymentStatus, setDeploymentStatus] = useState(null)
 
   // Fetch deployment status
-  const fetchDeploymentStatus = async () => {
+  const fetchDeploymentStatus = useCallback(async () => {
     if (!app?.slug) return
     
     try {
@@ -46,7 +46,7 @@ function AppStatus({ app, riff, prStatus = null }) {
       console.error('❌ Error fetching deployment status:', error)
       setDeploymentStatus(null)
     }
-  }
+  }, [app?.slug, riff])
 
   useEffect(() => {
     // Use passed prStatus prop first, then fall back to app.pr_status
@@ -63,7 +63,7 @@ function AppStatus({ app, riff, prStatus = null }) {
     
     // Fetch deployment status
     fetchDeploymentStatus()
-  }, [app, riff, prStatus])
+  }, [app, riff, prStatus, fetchDeploymentStatus])
 
 
 

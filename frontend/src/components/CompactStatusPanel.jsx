@@ -2,10 +2,8 @@ import { useState, useEffect, useCallback } from 'react'
 import PropTypes from 'prop-types'
 import { 
   getStatusIcon, 
-  getStatusText, 
   getStatusColor, 
-  getBranchStatus, 
-  getDeployStatus 
+  getBranchStatus
 } from '../utils/statusUtils'
 import { 
   getAgentStatus, 

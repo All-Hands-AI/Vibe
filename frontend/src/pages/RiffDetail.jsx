@@ -7,7 +7,7 @@ import LLMErrorModal from '../components/LLMErrorModal'
 import CompactStatusPanel from '../components/CompactStatusPanel'
 import DeploymentBanner from '../components/DeploymentBanner'
 import { startLLMPolling, checkLLMReady } from '../utils/llmService'
-import { getDeployStatus } from '../utils/statusUtils'
+
 
 function RiffDetail() {
   const { slug: appSlug, riffSlug } = useParams()
@@ -85,11 +85,6 @@ function RiffDetail() {
   const fetchPrStatus = useCallback(async () => {
     console.log('🔄 Fetching PR status for riff:', { appSlug, riffSlug })
     try {
-      const uuid = getUserUUID()
-      const headers = {
-        'X-User-UUID': uuid
-      }
-      
       // NOTE: The old pr-status endpoint has been removed, but we can extract PR info
       // from the deployment status if needed. For now, we'll set it to null
       // and rely on the deployment endpoint for deployment status.

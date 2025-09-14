@@ -7,8 +7,7 @@ import {
   getStatusText, 
   getStatusColor, 
   getBranchName, 
-  getBranchStatus, 
-  getDeployStatus 
+  getBranchStatus
 } from '../utils/statusUtils'
 
 function Apps() {

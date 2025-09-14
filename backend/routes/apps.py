@@ -1615,7 +1615,7 @@ def delete_app(slug):
 def get_app_deployment_status(slug):
     """Get deployment status for an app (checks main branch)"""
     logger.info(f"🚀 GET /api/apps/{slug}/deployment - Getting app deployment status")
-    
+
     try:
         # Get UUID from headers
         user_uuid = request.headers.get("X-User-UUID")
@@ -1638,11 +1638,13 @@ def get_app_deployment_status(slug):
         github_url = app.get("github_url")
         if not github_url:
             logger.info(f"ℹ️ No GitHub URL configured for app {slug}")
-            return jsonify({
-                "status": "error",
-                "message": "No GitHub URL configured for this app",
-                "details": {"error": "no_github_url"}
-            })
+            return jsonify(
+                {
+                    "status": "error",
+                    "message": "No GitHub URL configured for this app",
+                    "details": {"error": "no_github_url"},
+                }
+            )
 
         # Get user's GitHub token
         user_keys = load_user_keys(user_uuid)
@@ -1650,19 +1652,25 @@ def get_app_deployment_status(slug):
 
         if not github_token:
             logger.info(f"ℹ️ No GitHub token found for user {user_uuid[:8]}")
-            return jsonify({
-                "status": "error",
-                "message": "No GitHub token configured",
-                "details": {"error": "no_github_token"}
-            })
+            return jsonify(
+                {
+                    "status": "error",
+                    "message": "No GitHub token configured",
+                    "details": {"error": "no_github_token"},
+                }
+            )
 
         # Check deployment status for main branch
         branch_name = "main"
-        logger.info(f"🔍 Checking deployment status for app '{slug}' on branch '{branch_name}'")
-        
+        logger.info(
+            f"🔍 Checking deployment status for app '{slug}' on branch '{branch_name}'"
+        )
+
         deployment_status = get_deployment_status(github_url, github_token, branch_name)
-        
-        logger.info(f"✅ Deployment status retrieved for app {slug}: {deployment_status['status']}")
+
+        logger.info(
+            f"✅ Deployment status retrieved for app {slug}: {deployment_status['status']}"
+        )
         return jsonify(deployment_status)
 
     except Exception as e:
