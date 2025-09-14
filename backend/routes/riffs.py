@@ -232,6 +232,16 @@ def create_slug(name):
     return slug.strip("-")
 
 
+def is_valid_slug(slug):
+    """Validate that a slug contains only lowercase letters, numbers, and hyphens"""
+    if not slug:
+        return False
+    # Check if slug matches the pattern: lowercase letters, numbers, and hyphens only
+    # Must not start or end with hyphen, and no consecutive hyphens
+    pattern = r"^[a-z0-9]+(-[a-z0-9]+)*$"
+    return bool(re.match(pattern, slug))
+
+
 @riffs_bp.route("/api/apps/<slug>/riffs", methods=["GET"])
 def get_riffs(slug):
     """Get all riffs for a specific app"""
@@ -308,6 +318,18 @@ def create_riff(slug):
         if not riff_slug:
             logger.warning("❌ Invalid riff name - cannot create slug")
             return jsonify({"error": "Invalid riff name"}), 400
+
+        # Validate slug format
+        if not is_valid_slug(riff_slug):
+            logger.warning(f"❌ Invalid riff slug format: {riff_slug}")
+            return (
+                jsonify(
+                    {
+                        "error": "Riff slug must contain only lowercase letters, numbers, and hyphens (no consecutive hyphens, no leading/trailing hyphens)"
+                    }
+                ),
+                400,
+            )
 
         logger.info(
             f"🔄 Creating riff: {riff_name} -> {riff_slug} for user {user_uuid[:8]}"

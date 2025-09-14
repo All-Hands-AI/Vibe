@@ -67,6 +67,16 @@ def save_apps(apps):
     return False  # Disable legacy saving
 
 
+def is_valid_slug(slug):
+    """Validate that a slug contains only lowercase letters, numbers, and hyphens"""
+    if not slug:
+        return False
+    # Check if slug matches the pattern: lowercase letters, numbers, and hyphens only
+    # Must not start or end with hyphen, and no consecutive hyphens
+    pattern = r"^[a-z0-9]+(-[a-z0-9]+)*$"
+    return bool(re.match(pattern, slug))
+
+
 def create_slug(name):
     """Convert app name to slug format"""
     # Convert to lowercase and replace spaces/special chars with hyphens
@@ -130,9 +140,9 @@ def create_agent_for_riff(user_uuid, app_slug, riff_slug, github_url):
 def create_initial_riff_and_message(user_uuid, app_slug, app_name, github_url):
     """Create initial riff and message for a new app"""
     try:
-        # Create riff name and slug
-        riff_name = f"rename to {app_name}"
-        riff_slug = create_slug(riff_name)
+        # Create riff name and slug using branch name format
+        riff_name = f"rename-to-{app_slug}"
+        riff_slug = riff_name  # Already in slug format since app_slug is validated
 
         logger.info(
             f"🔄 Creating initial riff: {riff_name} -> {riff_slug} for app {app_slug}"
@@ -1197,6 +1207,18 @@ def create_app():
         if not app_slug:
             logger.warning("❌ Invalid app name - cannot create slug")
             return jsonify({"error": "Invalid app name"}), 400
+
+        # Validate slug format
+        if not is_valid_slug(app_slug):
+            logger.warning(f"❌ Invalid app slug format: {app_slug}")
+            return (
+                jsonify(
+                    {
+                        "error": "App slug must contain only lowercase letters, numbers, and hyphens (no consecutive hyphens, no leading/trailing hyphens)"
+                    }
+                ),
+                400,
+            )
 
         logger.info(
             f"🔄 Creating app: {app_name} -> {app_slug} for user {user_uuid[:8]}"
