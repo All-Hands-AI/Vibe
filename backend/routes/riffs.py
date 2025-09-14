@@ -459,14 +459,32 @@ def create_riff(slug):
         )
 
         # Check if riff with same slug already exists for this user
+        existing_riff = None
         if user_riff_exists(user_uuid, slug, riff_slug):
-            logger.warning(
-                f"❌ Riff with slug '{riff_slug}' already exists for user {user_uuid[:8]}"
+            logger.info(
+                f"🔄 Riff with slug '{riff_slug}' already exists for user {user_uuid[:8]}, adopting existing riff"
             )
-            return (
-                jsonify({"error": f'Riff with name "{riff_name}" already exists'}),
-                409,
-            )
+            existing_riff = load_user_riff(user_uuid, slug, riff_slug)
+            if existing_riff:
+                # Try to reconstruct the agent from existing state
+                success, error_message = reconstruct_agent_from_state(user_uuid, slug, riff_slug)
+                if success:
+                    logger.info(f"✅ Successfully adopted existing riff: {riff_name}")
+                    return jsonify({"message": "Existing riff adopted successfully", "riff": existing_riff}), 200
+                else:
+                    # If reconstruction fails, try creating a new agent
+                    logger.warning(f"⚠️ Failed to reconstruct agent from existing state: {error_message}")
+                    logger.info(f"🔄 Attempting to create new agent for existing riff: {riff_slug}")
+                    success, error_message = create_agent_for_user(user_uuid, slug, riff_slug)
+                    if success:
+                        logger.info(f"✅ Successfully created new agent for existing riff: {riff_name}")
+                        return jsonify({"message": "Existing riff adopted with new agent", "riff": existing_riff}), 200
+                    else:
+                        logger.error(f"❌ Failed to create agent for existing riff: {error_message}")
+                        return jsonify({"error": f"Failed to adopt existing riff: {error_message}"}), 500
+            else:
+                logger.error(f"❌ Could not load existing riff data for {riff_slug}")
+                return jsonify({"error": "Failed to load existing riff data"}), 500
 
         # Create riff record
         riff = {
