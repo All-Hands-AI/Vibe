@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { getUserUUID } from '../utils/uuid'
 import ConfirmationModal from '../components/ConfirmationModal'
 import { 
@@ -12,6 +12,7 @@ import {
 } from '../utils/statusUtils'
 
 function Apps() {
+  const navigate = useNavigate()
   const [apps, setApps] = useState([])
   const [loading, setLoading] = useState(true)
   const [appsWithDetails, setAppsWithDetails] = useState([])
@@ -198,6 +199,10 @@ function Apps() {
       // Refresh apps list
       console.log('🔄 Refreshing apps list...')
       await fetchApps()
+      
+      // Redirect to the new app's page
+      console.log('🔄 Redirecting to new app:', data.app.slug)
+      navigate(`/apps/${data.app.slug}`)
       
       // Clear success message after 5 seconds
       setTimeout(() => setSuccess(''), 5000)
