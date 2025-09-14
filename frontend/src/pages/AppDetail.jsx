@@ -162,7 +162,6 @@ function AppDetail() {
       console.log('🆔 User UUID:', uuid)
 
       const requestData = {
-        name: riffSlug,
         slug: riffSlug
       }
       
@@ -217,7 +216,7 @@ function AppDetail() {
     event.preventDefault() // Prevent navigation to riff detail
     event.stopPropagation() // Stop event bubbling
     
-    console.log('🗑️ Delete button clicked for riff:', riff.name)
+    console.log('🗑️ Delete button clicked for riff:', riff.slug)
     setDeleteModal({
       isOpen: true,
       riff: riff,
@@ -230,7 +229,7 @@ function AppDetail() {
     const riff = deleteModal.riff
     if (!riff) return
 
-    console.log('🗑️ Confirming deletion of riff:', riff.name)
+    console.log('🗑️ Confirming deletion of riff:', riff.slug)
     
     try {
       setDeleteModal(prev => ({ ...prev, isDeleting: true }))
@@ -266,7 +265,7 @@ function AppDetail() {
       console.log('✅ Riff deleted successfully:', data)
       
       // Show success message
-      let successMessage = `Riff "${riff.name}" deleted successfully!`
+      let successMessage = `Riff "${riff.slug}" deleted successfully!`
       if (data.warnings && data.warnings.length > 0) {
         successMessage += ` (Note: ${data.warnings.join(', ')})`
       }
@@ -380,7 +379,7 @@ function AppDetail() {
               Apps
             </Link>
             <span className="text-gray-500">/</span>
-            <span className="text-cyber-muted">{app.name}</span>
+            <span className="text-cyber-muted">{app.slug}</span>
           </div>
         </nav>
 
@@ -388,7 +387,7 @@ function AppDetail() {
         <header className="mb-4">
           <div className="flex flex-wrap items-baseline justify-between gap-4 mb-4">
             <div>
-              <h1 className="text-3xl font-bold text-cyber-text mb-2 font-mono">{app.name}</h1>
+              <h1 className="text-3xl font-bold text-cyber-text mb-2 font-mono">{app.slug}</h1>
             </div>
             <p className="text-cyber-muted font-mono text-sm">
               Created {new Date(app.created_at).toLocaleDateString()}
@@ -478,8 +477,7 @@ function AppDetail() {
                           className="block"
                         >
                           <div className="mb-4 pr-12">
-                            <h4 className="text-xl font-semibold text-cyber-text mb-1">{riff.name}</h4>
-                            <span className="text-sm text-cyber-muted font-mono">{riff.slug}</span>
+                            <h4 className="text-xl font-semibold text-cyber-text mb-1">{riff.slug}</h4>
                           </div>
                           
                           <div className="space-y-2">
@@ -497,8 +495,8 @@ function AppDetail() {
                         <button 
                           className="absolute top-4 right-4 text-red-400 hover:text-red-300 text-lg p-2 hover:bg-red-900/20 rounded transition-colors duration-200 z-10"
                           onClick={(e) => handleDeleteClick(riff, e)}
-                          title={`Delete riff "${riff.name}"`}
-                          aria-label={`Delete riff "${riff.name}"`}
+                          title={`Delete riff "${riff.slug}"`}
+                          aria-label={`Delete riff "${riff.slug}"`}
                         >
                           🗑️
                         </button>
@@ -522,7 +520,7 @@ function AppDetail() {
           deleteModal.riff ? (
             <div>
               <p className="mb-4">
-                Are you sure you want to delete the riff <strong>&quot;{deleteModal.riff.name}&quot;</strong>?
+                Are you sure you want to delete the riff <strong>&quot;{deleteModal.riff.slug}&quot;</strong>?
               </p>
               <p className="mb-4 text-cyber-muted">
                 This will permanently delete:

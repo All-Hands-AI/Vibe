@@ -18,8 +18,8 @@ class TestLLMReadinessEndpoints:
         client,
         headers,
         mock_api_keys,
-        app_name="LLM Test App",
-        riff_name="LLM Test Riff",
+        app_name="llm-test-app",
+        riff_name="llm-test-riff",
     ):
         """Helper method to set up an app and riff for LLM readiness tests"""
         # Set up API keys
@@ -31,13 +31,13 @@ class TestLLMReadinessEndpoints:
             )
 
         # Create an app
-        app_data = {"name": app_name}
+        app_data = {"slug": app_name}
         app_response = client.post("/api/apps", headers=headers, json=app_data)
         assert app_response.status_code == 201
         app_slug = app_response.get_json()["app"]["slug"]
 
         # Create a riff
-        riff_data = {"name": riff_name, "description": "A test riff for LLM testing"}
+        riff_data = {"slug": riff_name}
         riff_response = client.post(
             f"/api/apps/{app_slug}/riffs", headers=headers, json=riff_data
         )
@@ -83,7 +83,7 @@ class TestLLMReadinessEndpoints:
             "Content-Type": "application/json",
         }
         app_slug, _ = self.setup_app_and_riff_for_llm_tests(
-            client, unique_headers, mock_api_keys, "Ready Test App"
+            client, unique_headers, mock_api_keys, "ready-test-app"
         )
 
         response = client.get(
@@ -101,7 +101,7 @@ class TestLLMReadinessEndpoints:
             "Content-Type": "application/json",
         }
         app_slug, riff_slug = self.setup_app_and_riff_for_llm_tests(
-            client, unique_headers, mock_api_keys, "Ready After Creation App"
+            client, unique_headers, mock_api_keys, "ready-after-creation-app"
         )
 
         response = client.get(
@@ -123,7 +123,7 @@ class TestLLMReadinessEndpoints:
         }
 
         # Create app without setting up API keys
-        app_data = {"name": "No Keys App"}
+        app_data = {"slug": "no-keys-app"}
         app_response = client.post("/api/apps", headers=unique_headers, json=app_data)
         # This should fail because no API keys are set up
         assert app_response.status_code == 400
@@ -167,7 +167,7 @@ class TestLLMReadinessEndpoints:
             "Content-Type": "application/json",
         }
         app_slug, _ = self.setup_app_and_riff_for_llm_tests(
-            client, unique_headers, mock_api_keys, "Reset Test App"
+            client, unique_headers, mock_api_keys, "reset-test-app"
         )
 
         response = client.post(
@@ -185,7 +185,7 @@ class TestLLMReadinessEndpoints:
             "Content-Type": "application/json",
         }
         app_slug, riff_slug = self.setup_app_and_riff_for_llm_tests(
-            client, unique_headers, mock_api_keys, "Reset Success App"
+            client, unique_headers, mock_api_keys, "reset-success-app"
         )
 
         # Reset the LLM
@@ -222,7 +222,7 @@ class TestLLMReadinessEndpoints:
             "Content-Type": "application/json",
         }
         app_slug, riff_slug = self.setup_app_and_riff_for_llm_tests(
-            client, unique_headers, mock_api_keys, "Ready Reset Flow App"
+            client, unique_headers, mock_api_keys, "ready-reset-flow-app"
         )
 
         # 1. Check initial readiness (should be ready after creation)
@@ -257,7 +257,7 @@ class TestLLMReadinessEndpoints:
             "Content-Type": "application/json",
         }
         app_slug, riff_slug = self.setup_app_and_riff_for_llm_tests(
-            client, unique_headers, mock_api_keys, "Multiple Resets App"
+            client, unique_headers, mock_api_keys, "multiple-resets-app"
         )
 
         # Perform multiple resets
@@ -286,7 +286,7 @@ class TestLLMReadinessEndpoints:
             "Content-Type": "application/json",
         }
         app_slug_1, riff_slug_1 = self.setup_app_and_riff_for_llm_tests(
-            client, headers_1, mock_api_keys, "Isolation App 1", "Same Riff Name"
+            client, headers_1, mock_api_keys, "isolation-app-1", "same-riff-name"
         )
 
         # User 2
@@ -295,7 +295,7 @@ class TestLLMReadinessEndpoints:
             "Content-Type": "application/json",
         }
         app_slug_2, riff_slug_2 = self.setup_app_and_riff_for_llm_tests(
-            client, headers_2, mock_api_keys, "Isolation App 2", "Same Riff Name"
+            client, headers_2, mock_api_keys, "isolation-app-2", "same-riff-name"
         )
 
         # Both should have the same riff slug since they have the same name
@@ -334,7 +334,7 @@ class TestLLMReadinessEndpoints:
             "Content-Type": "application/json",
         }
         app_slug, riff_slug = self.setup_app_and_riff_for_llm_tests(
-            client, headers_1, mock_api_keys, "Cross User App"
+            client, headers_1, mock_api_keys, "cross-user-app"
         )
 
         # User 2 tries to access User 1's riff

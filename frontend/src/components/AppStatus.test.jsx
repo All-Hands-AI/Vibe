@@ -5,7 +5,6 @@ import AppStatus from './AppStatus'
 describe('AppStatus', () => {
   it('displays PR status when PR data is available', () => {
     const app = {
-      name: 'test-app',
       slug: 'test-app',
       branch: 'feature-branch',
       pr_status: {
@@ -43,7 +42,7 @@ describe('AppStatus', () => {
 
   it('displays draft status correctly', () => {
     const app = {
-      name: 'test-app',
+      slug: 'test-app',
       branch: 'draft-feature',
       pr_status: {
         number: 456,
@@ -66,7 +65,6 @@ describe('AppStatus', () => {
 
   it('displays deployment status section', () => {
     const app = {
-      name: 'my-project',
       slug: 'conversation-123',
       branch: 'main',
       deployment_status: {
@@ -80,7 +78,7 @@ describe('AppStatus', () => {
     
     expect(screen.getByText('🌿 main')).toBeInTheDocument()
     expect(screen.getByText('✅ Passing')).toBeInTheDocument()
-    expect(screen.getByText('🚀 https://my-project-conversation-123.fly.dev')).toBeInTheDocument()
+    expect(screen.getByText('🚀 https://conversation-123-conversation-123.fly.dev')).toBeInTheDocument()
   })
 
   it('displays individual check commits', () => {
@@ -120,7 +118,7 @@ describe('AppStatus', () => {
 
   it('handles missing PR data gracefully for non-main branch', () => {
     const app = {
-      name: 'test-app',
+      slug: 'test-app',
       branch: 'feature-branch',
       github_status: {
         tests_passing: false,
@@ -143,7 +141,7 @@ describe('AppStatus', () => {
 
   it('generates correct fly.io app URL', () => {
     const app = {
-      name: 'my-app',
+      slug: 'my-app',
       conversation_id: 'conv-456',
       branch: 'main'
     }
@@ -156,7 +154,7 @@ describe('AppStatus', () => {
 
   it('handles main branch without PR gracefully', () => {
     const app = {
-      name: 'test-app',
+      slug: 'test-app',
       branch: 'main',
       github_status: {
         tests_passing: true,
@@ -170,7 +168,7 @@ describe('AppStatus', () => {
     expect(screen.queryByText('No active pull request found')).not.toBeInTheDocument() // Should not show for main
     expect(screen.getByText('✅ Passing')).toBeInTheDocument() // Branch CI status
     expect(screen.getByText('📝 def5678')).toBeInTheDocument() // Last commit
-    expect(screen.getByText('🚀 https://test-app-main.fly.dev')).toBeInTheDocument()
+    expect(screen.getByText('🚀 https://test-app-test-app.fly.dev')).toBeInTheDocument()
   })
 
   it('handles empty app data gracefully', () => {
@@ -185,7 +183,6 @@ describe('AppStatus', () => {
 
   it('displays riff name as branch when riff is provided', () => {
     const app = {
-      name: 'Test App',
       slug: 'test-app',
       github_url: 'https://github.com/user/test-app',
       github_status: {
@@ -200,7 +197,6 @@ describe('AppStatus', () => {
     }
 
     const riff = {
-      name: 'My Test Riff',
       slug: 'my-test-riff',
       app_slug: 'test-app',
       created_at: '2025-09-14T01:30:00.000Z',
@@ -210,13 +206,12 @@ describe('AppStatus', () => {
     render(<AppStatus app={app} riff={riff} />)
     
     // Should display the riff name instead of the app branch
-    expect(screen.getByText('🌿 My Test Riff')).toBeInTheDocument()
+    expect(screen.getByText('🌿 my-test-riff')).toBeInTheDocument()
     expect(screen.queryByText('🌿 main')).not.toBeInTheDocument()
   })
 
-  it('falls back to app branch when riff has no name', () => {
+  it('falls back to app branch when riff has no slug', () => {
     const app = {
-      name: 'Test App',
       slug: 'test-app',
       github_status: {
         branch: 'main',
@@ -225,16 +220,15 @@ describe('AppStatus', () => {
     }
 
     const riff = {
-      slug: 'my-test-riff',
       app_slug: 'test-app',
       created_at: '2025-09-14T01:30:00.000Z',
       created_by: 'test-user-123'
-      // name is missing
+      // slug is missing to test fallback
     }
 
     render(<AppStatus app={app} riff={riff} />)
     
-    // Should fall back to app branch when riff name is not available
+    // Should fall back to app branch when riff slug is not available
     expect(screen.getByText('🌿 main')).toBeInTheDocument()
   })
 })

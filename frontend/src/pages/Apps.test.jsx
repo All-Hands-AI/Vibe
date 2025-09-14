@@ -104,8 +104,8 @@ describe('Apps', () => {
     renderWithRouter(<Apps />)
     
     await waitFor(() => {
-      expect(screen.getByText('Test App')).toBeInTheDocument()
-      expect(screen.getByText('Another App')).toBeInTheDocument()
+      expect(screen.getByText('test-app')).toBeInTheDocument()
+      expect(screen.getByText('another-app')).toBeInTheDocument()
     })
     
     // Check that cards are clickable (wrapped in links)

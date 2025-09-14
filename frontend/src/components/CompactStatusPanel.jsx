@@ -79,7 +79,7 @@ function CompactStatusPanel({ app, prStatus = null, appSlug, riffSlug }) {
   }
 
   const getFlyAppUrl = () => {
-    const project = app?.name || 'project'
+    const project = app?.slug || 'project'
     const conversation = app?.conversation_id || app?.slug || 'main'
     return `https://${project}-${conversation}.fly.dev`
   }
@@ -181,7 +181,6 @@ function CompactStatusPanel({ app, prStatus = null, appSlug, riffSlug }) {
 
 CompactStatusPanel.propTypes = {
   app: PropTypes.shape({
-    name: PropTypes.string,
     slug: PropTypes.string,
     conversation_id: PropTypes.string,
     branch: PropTypes.string,

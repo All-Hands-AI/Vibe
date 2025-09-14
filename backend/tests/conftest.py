@@ -108,7 +108,6 @@ def mock_api_keys():
 def sample_app_data():
     """Provide sample app data for testing"""
     return {
-        "name": "Test App",
         "slug": "test-app",
         "description": "A test application",
         "github_url": "https://github.com/testuser/test-app",
@@ -119,7 +118,7 @@ def sample_app_data():
 @pytest.fixture
 def sample_riff_data():
     """Provide sample riff data for testing"""
-    return {"name": "Test Riff", "slug": "test-riff", "description": "A test riff"}
+    return {"slug": "test-riff", "description": "A test riff"}
 
 
 @pytest.fixture(autouse=True)

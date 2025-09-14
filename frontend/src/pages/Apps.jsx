@@ -191,7 +191,7 @@ function Apps() {
       console.log('🆔 User UUID:', uuid)
 
       const requestData = {
-        name: slug
+        slug: slug
       }
       
       const requestOptions = {
@@ -250,7 +250,7 @@ function Apps() {
     event.preventDefault() // Prevent navigation to app detail
     event.stopPropagation() // Stop event bubbling
     
-    console.log('🗑️ Delete button clicked for app:', app.name)
+    console.log('🗑️ Delete button clicked for app:', app.slug)
     setDeleteModal({
       isOpen: true,
       app: app,
@@ -263,7 +263,7 @@ function Apps() {
     const app = deleteModal.app
     if (!app) return
 
-    console.log('🗑️ Confirming deletion of app:', app.name)
+    console.log('🗑️ Confirming deletion of app:', app.slug)
     
     try {
       setDeleteModal(prev => ({ ...prev, isDeleting: true }))
@@ -299,7 +299,7 @@ function Apps() {
       console.log('✅ App deleted successfully:', data)
       
       // Show success message
-      let successMessage = `App "${app.name}" deleted successfully!`
+      let successMessage = `App "${app.slug}" deleted successfully!`
       if (data.warnings && data.warnings.length > 0) {
         successMessage += ` (Note: ${data.warnings.join(', ')})`
       }
@@ -435,13 +435,13 @@ function Apps() {
                   <div className="p-6">
                     <div className="flex justify-between items-start mb-4">
                       <div className="flex-1">
-                        <h3 className="text-xl font-semibold text-cyber-text mb-1 font-mono">{app.name}</h3>
+                        <h3 className="text-xl font-semibold text-cyber-text mb-1 font-mono">{app.slug}</h3>
                       </div>
                       <button 
                         className="text-red-400 hover:text-red-300 text-lg p-2 hover:bg-red-900/20 rounded transition-colors duration-200 z-10 relative"
                         onClick={(e) => handleDeleteClick(app, e)}
-                        title={`Delete app "${app.name}"`}
-                        aria-label={`Delete app "${app.name}"`}
+                        title={`Delete app "${app.slug}"`}
+                        aria-label={`Delete app "${app.slug}"`}
                       >
                         🗑️
                       </button>
@@ -501,7 +501,7 @@ function Apps() {
         message={
           deleteModal.app ? (
             <>
-              Are you sure you want to delete the app <strong>&ldquo;{deleteModal.app.name}&rdquo;</strong>?
+              Are you sure you want to delete the app <strong>&ldquo;{deleteModal.app.slug}&rdquo;</strong>?
               <br /><br />
               <strong>This action will permanently delete:</strong>
               <ul style={{ marginTop: '0.5rem', paddingLeft: '1.5rem' }}>
