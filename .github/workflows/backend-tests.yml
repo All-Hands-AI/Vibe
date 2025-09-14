@@ -35,10 +35,8 @@ jobs:
       - name: Install dependencies
         run: |
           source .venv/bin/activate
-          # Install project with all dependencies from pyproject.toml
-          uv pip install .
-          # Install dev dependencies
-          uv pip install pytest>=7.0.0 pytest-flask>=1.2.0 pytest-cov>=4.0.0 black>=23.0.0 flake8>=6.0.0 mypy>=1.0.0 types-requests
+          # Install all dependencies (main + dev) from pyproject.toml
+          uv pip install .[dev]
         working-directory: backend
 
       - name: Create test data directory

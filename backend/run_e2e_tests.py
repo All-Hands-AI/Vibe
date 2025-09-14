@@ -124,7 +124,7 @@ def check_dependencies():
 
     if missing_packages:
         print(f"❌ Missing required packages: {', '.join(missing_packages)}")
-        print("   Please install them with: pip install -r requirements.txt")
+        print("   Please install them with: uv pip install .[dev]")
         return False
 
     print("✅ All dependencies available")
