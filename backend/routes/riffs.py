@@ -87,12 +87,16 @@ def reconstruct_agent_from_state(user_uuid, app_slug, riff_slug):
             return False, "Anthropic API key required"
 
         # Get workspace path (should already exist from previous setup)
-        workspace_path = f"/data/{user_uuid}/apps/{app_slug}/riffs/{riff_slug}/workspace"
-        
-        # Check if workspace exists
+        workspace_path = (
+            f"/data/{user_uuid}/apps/{app_slug}/riffs/{riff_slug}/workspace"
+        )
+
+        # Check if workspace exists - if not, fall back to creating new agent
         if not os.path.exists(workspace_path):
-            logger.error(f"❌ Workspace not found at {workspace_path}")
-            return False, "Workspace not found - cannot reconstruct agent without existing workspace"
+            logger.warning(
+                f"⚠️ Workspace not found at {workspace_path}, falling back to creating new agent"
+            )
+            return create_agent_for_user(user_uuid, app_slug, riff_slug)
 
         logger.info(f"🔄 Reconstructing agent from state for riff {riff_slug}")
 
@@ -815,7 +819,9 @@ def reset_riff_llm(slug, riff_slug):
             )
 
         # Reconstruct Agent object from existing serialized state (no re-cloning)
-        success, error_message = reconstruct_agent_from_state(user_uuid, slug, riff_slug)
+        success, error_message = reconstruct_agent_from_state(
+            user_uuid, slug, riff_slug
+        )
         if not success:
             logger.error(f"❌ Failed to reset Agent for riff: {error_message}")
             return jsonify({"error": error_message}), 500
