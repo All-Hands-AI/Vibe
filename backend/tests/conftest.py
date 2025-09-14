@@ -120,3 +120,88 @@ def sample_app_data():
 def sample_riff_data():
     """Provide sample riff data for testing"""
     return {"name": "Test Riff", "slug": "test-riff", "description": "A test riff"}
+
+
+@pytest.fixture(autouse=True)
+def mock_repository_setup(monkeypatch, temp_data_dir):
+    """Mock repository workspace setup to avoid actual git cloning in tests"""
+
+    def mock_setup_riff_workspace(user_uuid, app_slug, riff_slug, github_url):
+        """Mock implementation that creates directory structure without cloning"""
+        workspace_path = (
+            f"{temp_data_dir}/{user_uuid}/apps/{app_slug}/riffs/{riff_slug}/workspace"
+        )
+
+        # Create the workspace directory structure
+        Path(workspace_path).mkdir(parents=True, exist_ok=True)
+
+        # Create project subdirectory with some mock files
+        project_path = os.path.join(workspace_path, "project")
+        Path(project_path).mkdir(parents=True, exist_ok=True)
+
+        # Create a mock README.md file
+        readme_path = os.path.join(project_path, "README.md")
+        with open(readme_path, "w") as f:
+            f.write(
+                f"# Mock Repository\n\nThis is a mock repository for testing.\nGitHub URL: {github_url}\n"
+            )
+
+        # Create tasks directory
+        tasks_path = os.path.join(workspace_path, "tasks")
+        Path(tasks_path).mkdir(parents=True, exist_ok=True)
+
+        return True, workspace_path, None
+
+    # Mock the setup_riff_workspace function
+    monkeypatch.setattr("routes.riffs.setup_riff_workspace", mock_setup_riff_workspace)
+
+    # Mock AgentLoop creation to avoid tool initialization issues in tests
+    def mock_create_agent_loop(
+        user_uuid, app_slug, riff_slug, llm, workspace_path, message_callback=None
+    ):
+        """Mock AgentLoop creation that doesn't actually create tools"""
+
+        class MockAgentLoop:
+            def __init__(
+                self,
+                user_uuid,
+                app_slug,
+                riff_slug,
+                llm,
+                workspace_path,
+                message_callback=None,
+            ):
+                self.user_uuid = user_uuid
+                self.app_slug = app_slug
+                self.riff_slug = riff_slug
+                self.llm = llm
+                self.workspace_path = workspace_path
+                self.message_callback = message_callback
+
+            def send_message(self, message):
+                """Mock send_message method for testing"""
+                return "Mock response: Message received"
+
+        return MockAgentLoop(
+            user_uuid, app_slug, riff_slug, llm, workspace_path, message_callback
+        )
+
+    # Mock the agent_loop_manager.create_agent_loop method
+    monkeypatch.setattr(
+        "routes.riffs.agent_loop_manager.create_agent_loop", mock_create_agent_loop
+    )
+
+    # Mock the agent_loop_manager.get_agent_loop method
+    def mock_get_agent_loop(user_uuid, app_slug, riff_slug):
+        """Mock get_agent_loop that always returns a mock agent"""
+        return mock_create_agent_loop(
+            user_uuid,
+            app_slug,
+            riff_slug,
+            None,
+            f"/mock/workspace/{user_uuid}/{app_slug}/{riff_slug}",
+        )
+
+    monkeypatch.setattr(
+        "routes.riffs.agent_loop_manager.get_agent_loop", mock_get_agent_loop
+    )

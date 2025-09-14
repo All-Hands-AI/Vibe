@@ -35,12 +35,10 @@ jobs:
       - name: Install dependencies
         run: |
           source .venv/bin/activate
-          # Install main dependencies
-          uv pip install Flask==3.0.0 Flask-CORS==4.0.0 gunicorn==21.2.0 requests==2.31.0 PyNaCl==1.5.0
-          # Install openhands-sdk
-          uv pip install "openhands-sdk @ git+https://github.com/all-hands-ai/agent-sdk.git@main#subdirectory=openhands/sdk"
+          # Install project with all dependencies from pyproject.toml
+          uv pip install .
           # Install dev dependencies
-          uv pip install pytest>=7.0.0 pytest-flask>=1.2.0 pytest-cov>=4.0.0 black>=23.0.0 flake8>=6.0.0 mypy>=1.0.0
+          uv pip install pytest>=7.0.0 pytest-flask>=1.2.0 pytest-cov>=4.0.0 black>=23.0.0 flake8>=6.0.0 mypy>=1.0.0 types-requests
         working-directory: backend
 
       - name: Create test data directory

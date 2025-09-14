@@ -13,9 +13,13 @@ class TestAppsEndpoints:
         """Verify that MOCK_MODE is enabled for tests"""
         assert os.environ.get("MOCK_MODE", "false").lower() == "true"
 
-    def test_get_apps_empty_list(self, client, sample_headers):
+    def test_get_apps_empty_list(self, client):
         """Test getting apps when none exist"""
-        response = client.get("/api/apps", headers=sample_headers)
+        unique_headers = {
+            "X-User-UUID": "test-get-apps-empty-list-uuid",
+            "Content-Type": "application/json",
+        }
+        response = client.get("/api/apps", headers=unique_headers)
 
         assert response.status_code == 200
         data = response.get_json()
@@ -41,13 +45,17 @@ class TestAppsEndpoints:
 
         assert data["error"] == "UUID cannot be empty"
 
-    def test_create_app_success(self, client, sample_headers, mock_api_keys):
+    def test_create_app_success(self, client, mock_api_keys):
         """Test creating a new app successfully"""
+        unique_headers = {
+            "X-User-UUID": "test-create-app-success-uuid",
+            "Content-Type": "application/json",
+        }
         # First set up API keys
         for provider, key in mock_api_keys.items():
             client.post(
                 f"/integrations/{provider}",
-                headers=sample_headers,
+                headers=unique_headers,
                 json={"api_key": key},
             )
 
@@ -57,7 +65,7 @@ class TestAppsEndpoints:
             "github_url": "https://github.com/testuser/test-app",
         }
 
-        response = client.post("/api/apps", headers=sample_headers, json=app_data)
+        response = client.post("/api/apps", headers=unique_headers, json=app_data)
 
         assert response.status_code == 201
         data = response.get_json()
