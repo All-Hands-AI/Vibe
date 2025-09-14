@@ -225,7 +225,7 @@ function RiffDetail() {
         stopPollingRef.current()
       }
     }
-  }, [riff, app, checkInitialLLMReadiness, startPolling, fetchPrStatus, fetchDeploymentStatus])
+  }, [riff, app, appSlug, riffSlug, checkInitialLLMReadiness, startPolling, fetchPrStatus, fetchDeploymentStatus])
 
   // Scroll to top when route changes
   useEffect(() => {
