@@ -1,9 +1,26 @@
-import { describe, it, expect } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { render, screen, waitFor } from '@testing-library/react'
 import AppStatus from './AppStatus'
 
 describe('AppStatus', () => {
-  it('displays PR status when PR data is available', () => {
+  beforeEach(() => {
+    // Mock fetch to prevent actual API calls
+    global.fetch = vi.fn(() =>
+      Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve({
+          status: 'success',
+          message: 'Deployment completed successfully',
+          details: {}
+        })
+      })
+    )
+  })
+
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+  it('displays PR status when PR data is available', async () => {
     const app = {
       slug: 'test-app',
       branch: 'feature-branch',
@@ -22,11 +39,6 @@ describe('AppStatus', () => {
             details_url: 'https://github.com/user/repo/actions/runs/123'
           }
         ]
-      },
-      deployment_status: {
-        deploy_status: 'success',
-        deployed: true,
-        app_url: 'https://test-app-main.fly.dev'
       }
     }
 
@@ -34,7 +46,12 @@ describe('AppStatus', () => {
     
     expect(screen.getByText('🌿 feature-branch')).toBeInTheDocument()
     expect(screen.getByText('🔗 #123 - Add new feature')).toBeInTheDocument()
-    expect(screen.getAllByText('✅ Passing')).toHaveLength(2) // CI and Deploy status
+    
+    // Wait for deployment status to load, then check for both CI and Deploy status
+    await waitFor(() => {
+      expect(screen.getAllByText('✅ Passing')).toHaveLength(2) // CI and Deploy status
+    })
+    
     expect(screen.getByText('🟢 Open')).toBeInTheDocument()
     expect(screen.getByText('✅ Mergeable')).toBeInTheDocument()
     expect(screen.getByText('📁 5 files')).toBeInTheDocument()
@@ -63,22 +80,22 @@ describe('AppStatus', () => {
     expect(screen.getAllByText('🔄 Running')).toHaveLength(2) // CI and Deploy status
   })
 
-  it('displays deployment status section', () => {
+  it('displays deployment status section', async () => {
     const app = {
       slug: 'conversation-123',
-      branch: 'main',
-      deployment_status: {
-        deploy_status: 'success',
-        deployed: true,
-        app_url: 'https://my-project-conversation-123.fly.dev'
-      }
+      branch: 'main'
     }
 
     render(<AppStatus app={app} />)
     
     expect(screen.getByText('🌿 main')).toBeInTheDocument()
-    expect(screen.getByText('✅ Passing')).toBeInTheDocument()
-    expect(screen.getByText('🚀 https://conversation-123-conversation-123.fly.dev')).toBeInTheDocument()
+    
+    // Wait for deployment status to load
+    await waitFor(() => {
+      expect(screen.getByText('✅ Passing')).toBeInTheDocument()
+    })
+    
+    expect(screen.getByText('🚀 https://my-project-conversation-123.fly.dev')).toBeInTheDocument()
   })
 
   it('displays individual check commits', () => {

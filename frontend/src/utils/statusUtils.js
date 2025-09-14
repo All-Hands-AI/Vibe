@@ -69,6 +69,18 @@ export const getBranchStatus = (app) => {
   return 'pending'
 }
 
-export const getDeployStatus = (app) => {
-  return app?.deployment_status?.deploy_status || 'pending'
+export const getDeployStatus = (deploymentStatus) => {
+  if (!deploymentStatus) return 'pending'
+  
+  // Map the new deployment status format to the old format for compatibility
+  switch (deploymentStatus.status) {
+    case 'success':
+      return 'success'
+    case 'error':
+      return 'failure'
+    case 'pending':
+      return 'running'
+    default:
+      return 'pending'
+  }
 }

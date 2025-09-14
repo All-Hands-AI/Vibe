@@ -2,10 +2,8 @@ import { useState, useEffect, useCallback } from 'react'
 import PropTypes from 'prop-types'
 import { 
   getStatusIcon, 
-  getStatusText, 
   getStatusColor, 
-  getBranchStatus, 
-  getDeployStatus 
+  getBranchStatus
 } from '../utils/statusUtils'
 import { 
   getAgentStatus, 
@@ -78,11 +76,7 @@ function CompactStatusPanel({ app, prStatus = null, appSlug, riffSlug }) {
     return app?.github_status?.last_commit
   }
 
-  const getFlyAppUrl = () => {
-    const project = app?.slug || 'project'
-    const conversation = app?.conversation_id || app?.slug || 'main'
-    return `https://${project}-${conversation}.fly.dev`
-  }
+
 
   // Determine agent button state
   const canPlay = agentStatus && (
@@ -159,22 +153,7 @@ function CompactStatusPanel({ app, prStatus = null, appSlug, riffSlug }) {
         </div>
       )}
 
-      {/* Deploy Status Row */}
-      <div className="flex items-center justify-between text-xs font-mono">
-        <div className="flex items-center gap-2">
-          <span className={`${getStatusColor(getDeployStatus(app))}`}>
-            {getStatusIcon(getDeployStatus(app))} {getStatusText(getDeployStatus(app))}
-          </span>
-        </div>
-        <a
-          href={getFlyAppUrl()}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-blue-400 hover:text-blue-300 transition-colors duration-200"
-        >
-          🚀
-        </a>
-      </div>
+
     </div>
   )
 }

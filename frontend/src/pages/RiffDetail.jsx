@@ -4,10 +4,8 @@ import { useSetup } from '../context/SetupContext'
 import { getUserUUID } from '../utils/uuid'
 import ChatWindow from '../components/ChatWindow'
 import LLMErrorModal from '../components/LLMErrorModal'
-import CompactStatusPanel from '../components/CompactStatusPanel'
-import DeploymentBanner from '../components/DeploymentBanner'
 import { startLLMPolling, checkLLMReady } from '../utils/llmService'
-import { getDeployStatus } from '../utils/statusUtils'
+
 
 function RiffDetail() {
   const { slug: appSlug, riffSlug } = useParams()
@@ -16,6 +14,7 @@ function RiffDetail() {
   const [app, setApp] = useState(null)
   const [riff, setRiff] = useState(null)
   const [prStatus, setPrStatus] = useState(null)
+  const [deploymentStatus, setDeploymentStatus] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [, setLlmReady] = useState(true)
@@ -80,34 +79,49 @@ function RiffDetail() {
     }
   }, [appSlug, riffSlug])
 
-  // Fetch PR status for the specific riff
+  // Fetch PR status for the specific riff (kept for backward compatibility with AppStatus component)
   const fetchPrStatus = useCallback(async () => {
     console.log('🔄 Fetching PR status for riff:', { appSlug, riffSlug })
+    try {
+      // NOTE: The old pr-status endpoint has been removed, but we can extract PR info
+      // from the deployment status if needed. For now, we'll set it to null
+      // and rely on the deployment endpoint for deployment status.
+      setPrStatus(null)
+      
+    } catch (err) {
+      console.error('❌ Error fetching PR status:', err)
+      setPrStatus(null)
+    }
+  }, [appSlug, riffSlug])
+
+  // Fetch deployment status for the specific riff
+  const fetchDeploymentStatus = useCallback(async () => {
+    console.log('🚀 Fetching deployment status for riff:', { appSlug, riffSlug })
     try {
       const uuid = getUserUUID()
       const headers = {
         'X-User-UUID': uuid
       }
       
-      const prResponse = await fetch(`/api/apps/${appSlug}/riffs/${riffSlug}/pr-status`, { headers })
-      console.log('📡 PR status response status:', prResponse?.status)
+      const deployResponse = await fetch(`/api/apps/${appSlug}/riffs/${riffSlug}/deployment`, { headers })
+      console.log('📡 Deployment status response status:', deployResponse?.status)
       
-      if (!prResponse || !prResponse.ok) {
-        const errorText = await prResponse?.text() || 'Unknown error'
-        console.error('❌ Fetch PR status failed:', errorText)
-        // Don't throw error for PR status - it's optional
-        setPrStatus(null)
+      if (!deployResponse || !deployResponse.ok) {
+        const errorText = await deployResponse?.text() || 'Unknown error'
+        console.error('❌ Fetch deployment status failed:', errorText)
+        // Don't throw error for deployment status - it's optional
+        setDeploymentStatus(null)
         return
       }
       
-      const prData = await prResponse.json()
-      console.log('📊 Received PR status data:', prData)
-      setPrStatus(prData.pr_status)
+      const deployData = await deployResponse.json()
+      console.log('📊 Received deployment status data:', deployData)
+      setDeploymentStatus(deployData)
       
     } catch (err) {
-      console.error('❌ Error fetching PR status:', err)
-      // Don't fail the whole page if PR status fails
-      setPrStatus(null)
+      console.error('❌ Error fetching deployment status:', err)
+      // Don't fail the whole page if deployment status fails
+      setDeploymentStatus(null)
     }
   }, [appSlug, riffSlug])
 
@@ -150,6 +164,7 @@ function RiffDetail() {
       checkInitialLLMReadiness()
       startPolling()
       fetchPrStatus() // Fetch PR status for this specific riff
+      fetchDeploymentStatus() // Fetch deployment status for this specific riff
     }
     
     // Cleanup polling on unmount
@@ -158,7 +173,7 @@ function RiffDetail() {
         stopPollingRef.current()
       }
     }
-  }, [riff, app, checkInitialLLMReadiness, startPolling, fetchPrStatus])
+  }, [riff, app, checkInitialLLMReadiness, startPolling, fetchPrStatus, fetchDeploymentStatus])
 
   // Scroll to top when route changes
   useEffect(() => {
@@ -251,6 +266,22 @@ function RiffDetail() {
           <div className="flex flex-wrap items-baseline justify-between gap-4 mb-4">
             <div>
               <h1 className="text-3xl font-bold text-cyber-text mb-2 font-mono">{riff.name}</h1>
+              {/* PR Status Subheading */}
+              {prStatus && (
+                <div className="flex items-center gap-3 text-sm font-mono">
+                  <a
+                    href={prStatus.html_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-blue-400 hover:text-blue-300 transition-colors duration-200"
+                  >
+                    #{prStatus.number} {prStatus.title}
+                  </a>
+                  <span className={`${prStatus.draft ? 'text-gray-400' : 'text-green-400'}`}>
+                    {prStatus.draft ? '📝 Draft' : '🟢 Ready'}
+                  </span>
+                </div>
+              )}
             </div>
             <p className="text-cyber-muted font-mono text-sm">
               Created {new Date(riff.created_at).toLocaleDateString()}
@@ -260,17 +291,8 @@ function RiffDetail() {
 
         {/* Main Content Grid - 2 columns */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-[calc(100vh-200px)]">
-          {/* Left Sidebar - Status and Chat */}
-          <div className="flex flex-col space-y-3">
-            {/* Compact Status Panel */}
-            <CompactStatusPanel 
-              app={app} 
-              riff={riff} 
-              prStatus={prStatus} 
-              appSlug={appSlug} 
-              riffSlug={riffSlug} 
-            />
-
+          {/* Left Sidebar - Chat */}
+          <div className="flex flex-col">
             {/* Chat Window */}
             <div className="flex-1 min-h-0">
               {userUUID ? (
@@ -292,23 +314,93 @@ function RiffDetail() {
 
           {/* Right Side - Iframe */}
           <div className="flex flex-col">
+            {/* Deployment Status Header */}
             <div className="mb-2">
-              <h3 className="text-lg font-semibold text-cyber-text font-mono">🚀 Live App Preview</h3>
-              <a
-                href={`https://${app.name}-${riff.name}.fly.dev`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-cyber-muted hover:text-blue-400 font-mono text-xs transition-colors duration-200 underline"
-              >
-                {app.name}-{riff.name}.fly.dev
-              </a>
+              {deploymentStatus ? (
+                <div className="flex items-center justify-between mb-1">
+                  <div className="flex items-center gap-2">
+                    {deploymentStatus.status === 'pending' && (
+                      <>
+                        <div className="w-3 h-3 border-2 border-yellow-400 border-t-transparent rounded-full animate-spin"></div>
+                        <h3 className="text-sm font-semibold text-yellow-400 font-mono">🚀 Deploying...</h3>
+                      </>
+                    )}
+                    {deploymentStatus.status === 'success' && (
+                      <>
+                        <div className="w-3 h-3 bg-green-400 rounded-full"></div>
+                        <h3 className="text-sm font-semibold text-green-400 font-mono">🚀 Live App</h3>
+                      </>
+                    )}
+                    {deploymentStatus.status === 'error' && (
+                      <>
+                        <div className="w-3 h-3 bg-red-400 rounded-full"></div>
+                        <h3 className="text-sm font-semibold text-red-400 font-mono">🚀 Deployment Failed</h3>
+                      </>
+                    )}
+                    <div className="flex items-center gap-3 text-xs">
+                      {deploymentStatus.details?.workflow_url && (
+                        <a
+                          href={deploymentStatus.details.workflow_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-cyber-muted hover:text-blue-400 font-mono transition-colors duration-200 underline"
+                        >
+                          GitHub
+                        </a>
+                      )}
+                      <a
+                        href={`https://fly.io/apps/${app.name}-${riff.name}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-cyber-muted hover:text-blue-400 font-mono transition-colors duration-200 underline"
+                      >
+                        Fly.io
+                      </a>
+                    </div>
+                  </div>
+                  <a
+                    href={`https://${app.name}-${riff.name}.fly.dev`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-cyber-muted hover:text-blue-400 font-mono text-xs transition-colors duration-200 underline"
+                  >
+                    {app.name}-{riff.name}.fly.dev
+                  </a>
+                </div>
+              ) : (
+                <div className="flex items-center justify-between mb-1">
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-sm font-semibold text-cyber-text font-mono">🚀 Live App</h3>
+                    <div className="flex items-center gap-3 text-xs">
+                      <a
+                        href="https://github.com/rbren/OpenVibe/actions"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-cyber-muted hover:text-blue-400 font-mono transition-colors duration-200 underline"
+                      >
+                        GitHub
+                      </a>
+                      <a
+                        href={`https://fly.io/apps/${app.name}-${riff.name}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-cyber-muted hover:text-blue-400 font-mono transition-colors duration-200 underline"
+                      >
+                        Fly.io
+                      </a>
+                    </div>
+                  </div>
+                  <a
+                    href={`https://${app.name}-${riff.name}.fly.dev`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-cyber-muted hover:text-blue-400 font-mono text-xs transition-colors duration-200 underline"
+                  >
+                    {app.name}-{riff.name}.fly.dev
+                  </a>
+                </div>
+              )}
             </div>
-            
-            {/* Deployment Banner */}
-            <DeploymentBanner 
-              deployStatus={getDeployStatus(app)} 
-              prStatus={prStatus} 
-            />
             
             <div className="flex-1 border border-gray-700 rounded-lg overflow-hidden">
               <iframe

@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import PropTypes from 'prop-types'
 import MessageList from './MessageList'
 import MessageInput from './MessageInput'
+import AgentStatusBar from './AgentStatusBar'
 
 function ChatWindow({ app, riff, userUuid }) {
   const [messages, setMessages] = useState([])
@@ -225,22 +226,6 @@ function ChatWindow({ app, riff, userUuid }) {
 
   return (
     <div className="flex flex-col h-full bg-black border border-gray-700 rounded-lg">
-      {/* Chat Header */}
-      <div className="flex items-center justify-between p-4 border-b border-gray-700">
-        <div>
-          <h3 className="text-lg font-semibold text-cyber-text font-mono">
-            💬 {riff.slug}
-          </h3>
-          <p className="text-sm text-cyber-muted">
-            {messages.length} message{messages.length !== 1 ? 's' : ''}
-          </p>
-        </div>
-        <div className="flex items-center space-x-2">
-          <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-          <span className="text-xs text-cyber-muted font-mono">Live</span>
-        </div>
-      </div>
-
       {/* Error Display */}
       {error && (
         <div className="p-3 bg-red-900/20 border-b border-red-500/30">
@@ -258,6 +243,12 @@ function ChatWindow({ app, riff, userUuid }) {
           messagesEndRef={messagesEndRef}
         />
       </div>
+
+      {/* Agent Status Bar */}
+      <AgentStatusBar 
+        appSlug={app.slug}
+        riffSlug={riff.slug}
+      />
 
       {/* Message Input */}
       <div className="border-t border-gray-700">

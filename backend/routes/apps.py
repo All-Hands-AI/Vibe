@@ -9,6 +9,7 @@ from pathlib import Path
 from keys import load_user_keys
 from storage import get_apps_storage, get_riffs_storage
 from agent_loop import agent_loop_manager
+from utils.deployment_status import get_deployment_status
 
 logger = logging.getLogger(__name__)
 
@@ -1288,7 +1289,6 @@ def get_app(slug):
         github_status = None
         fly_status = None
         pr_status = None
-        deployment_status = None
 
         try:
             user_keys = load_user_keys(user_uuid)
@@ -1306,27 +1306,11 @@ def get_app(slug):
                 logger.info(
                     f"🔍 APPS ENDPOINT: Getting PR status for app branch: {branch}"
                 )
-                logger.info(
-                    f"🔍 APPS ENDPOINT: This is the OLD logic that searches for head='{branch}'"
-                )
                 pr_status = get_pr_status(app["github_url"], github_token, branch)
 
             # Get Fly.io status if token is available
             if fly_token and app.get("slug"):
                 fly_status = get_fly_status(app["slug"], fly_token)
-
-                # Create deployment status from fly status and PR status
-                deployment_status = {
-                    "deployed": (
-                        fly_status.get("deployed", False) if fly_status else False
-                    ),
-                    "app_url": fly_status.get("app_url") if fly_status else None,
-                    "deploy_status": (
-                        pr_status.get("deploy_status", "pending")
-                        if pr_status
-                        else "pending"
-                    ),
-                }
 
         except Exception as e:
             logger.warning(f"⚠️ Error getting status information: {str(e)}")
@@ -1345,9 +1329,6 @@ def get_app(slug):
         if pr_status:
             app_with_status["pr_status"] = pr_status
             logger.info(f"🔍 Adding pr_status to response")
-        if deployment_status:
-            app_with_status["deployment_status"] = deployment_status
-            logger.info(f"🔍 Adding deployment_status to response")
 
         logger.debug(f"🔍 Returning app {slug} with status information")
         return jsonify(app_with_status)
@@ -1618,3 +1599,70 @@ def delete_app(slug):
     except Exception as e:
         logger.error(f"💥 Error deleting app: {str(e)}")
         return jsonify({"error": "Failed to delete app"}), 500
+
+
+@apps_bp.route("/api/apps/<slug>/deployment", methods=["GET"])
+def get_app_deployment_status(slug):
+    """Get deployment status for an app (checks main branch)"""
+    logger.info(f"🚀 GET /api/apps/{slug}/deployment - Getting app deployment status")
+
+    try:
+        # Get UUID from headers
+        user_uuid = request.headers.get("X-User-UUID")
+        if not user_uuid:
+            logger.warning("❌ X-User-UUID header is required")
+            return jsonify({"error": "X-User-UUID header is required"}), 400
+
+        user_uuid = user_uuid.strip()
+        if not user_uuid:
+            logger.warning("❌ Empty UUID provided in header")
+            return jsonify({"error": "UUID cannot be empty"}), 400
+
+        # Load app for this user
+        app = load_user_app(user_uuid, slug)
+        if not app:
+            logger.warning(f"❌ App not found: {slug} for user {user_uuid[:8]}")
+            return jsonify({"error": "App not found"}), 404
+
+        # Check if app has GitHub URL
+        github_url = app.get("github_url")
+        if not github_url:
+            logger.info(f"ℹ️ No GitHub URL configured for app {slug}")
+            return jsonify(
+                {
+                    "status": "error",
+                    "message": "No GitHub URL configured for this app",
+                    "details": {"error": "no_github_url"},
+                }
+            )
+
+        # Get user's GitHub token
+        user_keys = load_user_keys(user_uuid)
+        github_token = user_keys.get("github")
+
+        if not github_token:
+            logger.info(f"ℹ️ No GitHub token found for user {user_uuid[:8]}")
+            return jsonify(
+                {
+                    "status": "error",
+                    "message": "No GitHub token configured",
+                    "details": {"error": "no_github_token"},
+                }
+            )
+
+        # Check deployment status for main branch
+        branch_name = "main"
+        logger.info(
+            f"🔍 Checking deployment status for app '{slug}' on branch '{branch_name}'"
+        )
+
+        deployment_status = get_deployment_status(github_url, github_token, branch_name)
+
+        logger.info(
+            f"✅ Deployment status retrieved for app {slug}: {deployment_status['status']}"
+        )
+        return jsonify(deployment_status)
+
+    except Exception as e:
+        logger.error(f"💥 Error getting app deployment status: {str(e)}")
+        return jsonify({"error": "Failed to get deployment status"}), 500

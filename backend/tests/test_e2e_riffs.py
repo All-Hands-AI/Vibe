@@ -196,7 +196,7 @@ class TestRiffsEndpoints:
         assert data["error"] == "X-User-UUID header is required"
 
     def test_create_riff_duplicate_name(self, client, mock_api_keys):
-        """Test creating riff with duplicate name"""
+        """Test creating riff with duplicate name - should adopt existing riff"""
         unique_headers = {
             "X-User-UUID": "test-riff-duplicate-name-uuid",
             "Content-Type": "application/json",
@@ -212,15 +212,17 @@ class TestRiffsEndpoints:
             f"/api/apps/{app_slug}/riffs", headers=unique_headers, json=riff_data
         )
         assert response1.status_code == 201
+        first_riff = response1.get_json()["riff"]
 
-        # Try to create duplicate
+        # Try to create duplicate - should adopt existing riff
         response2 = client.post(
             f"/api/apps/{app_slug}/riffs", headers=unique_headers, json=riff_data
         )
-        assert response2.status_code == 409
+        assert response2.status_code == 200
 
         data = response2.get_json()
-        assert data["error"] == 'Riff with slug "duplicate-riff" already exists'
+        assert "adopted" in data["message"].lower()
+        assert data["riff"]["slug"] == first_riff["slug"]
 
     def test_create_and_list_riffs(self, client, mock_api_keys):
         """Test creating riffs and then listing them"""
