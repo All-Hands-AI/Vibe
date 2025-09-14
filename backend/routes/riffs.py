@@ -7,6 +7,7 @@ from storage import get_riffs_storage, get_apps_storage
 from agent_loop import agent_loop_manager
 from keys import get_user_key
 from utils.repository import setup_riff_workspace
+from utils.event_serializer import serialize_agent_event_to_message
 
 import os
 
@@ -113,67 +114,45 @@ def create_agent_for_user(user_uuid, app_slug, riff_slug):
                 try:
                     logger.info(f"📨 Received event from agent: {type(event).__name__}")
 
-                    # Convert agent events to messages and store them
-                    # This is where we'll implement the event-to-message conversion
-                    from openhands.sdk.event import MessageEvent
+                    # Serialize the event to a message format
+                    serialized_message = serialize_agent_event_to_message(
+                        event, user_uuid, app_slug, riff_slug
+                    )
 
-                    if isinstance(event, MessageEvent):
-                        # Handle message events from the agent
-                        if (
-                            event.source == "assistant"
-                            or event.llm_message.role == "assistant"
+                    if serialized_message:
+                        # Save the serialized message
+                        if add_user_message(
+                            user_uuid, app_slug, riff_slug, serialized_message
                         ):
-                            # This is an assistant response
-                            content = ""
-                            if event.llm_message.content:
-                                for content_item in event.llm_message.content:
-                                    if hasattr(content_item, "text"):
-                                        content += content_item.text
+                            logger.info(
+                                f"✅ Agent event ({type(event).__name__}) saved as message for riff: {riff_slug}"
+                            )
 
-                            if content:
-                                # Create assistant message
-                                assistant_message_id = str(uuid.uuid4())
-                                assistant_created_at = datetime.now(
-                                    timezone.utc
-                                ).isoformat()
-
-                                assistant_message = {
-                                    "id": assistant_message_id,
-                                    "content": content,
-                                    "riff_slug": riff_slug,
-                                    "app_slug": app_slug,
-                                    "created_at": assistant_created_at,
-                                    "created_by": "assistant",
-                                    "type": "assistant",
-                                    "metadata": {"event_type": type(event).__name__},
-                                }
-
-                                # Save assistant message
-                                if add_user_message(
-                                    user_uuid, app_slug, riff_slug, assistant_message
-                                ):
-                                    logger.info(
-                                        f"✅ Agent response saved for riff: {riff_slug}"
-                                    )
-
-                                    # Update riff message stats
-                                    messages = load_user_messages(
-                                        user_uuid, app_slug, riff_slug
-                                    )
-                                    update_riff_message_stats(
-                                        user_uuid,
-                                        app_slug,
-                                        riff_slug,
-                                        len(messages),
-                                        assistant_created_at,
-                                    )
-                                else:
-                                    logger.error(
-                                        f"❌ Failed to save agent response for riff: {riff_slug}"
-                                    )
+                            # Update riff message stats
+                            messages = load_user_messages(
+                                user_uuid, app_slug, riff_slug
+                            )
+                            update_riff_message_stats(
+                                user_uuid,
+                                app_slug,
+                                riff_slug,
+                                len(messages),
+                                serialized_message["created_at"],
+                            )
+                        else:
+                            logger.error(
+                                f"❌ Failed to save agent event ({type(event).__name__}) for riff: {riff_slug}"
+                            )
+                    else:
+                        logger.debug(
+                            f"🔇 Event {type(event).__name__} was not serialized (likely filtered out)"
+                        )
 
                 except Exception as e:
                     logger.error(f"❌ Error in message callback: {e}")
+                    import traceback
+
+                    logger.error(f"❌ Traceback: {traceback.format_exc()}")
 
             # Create and store the agent loop
             logger.info(
