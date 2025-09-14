@@ -103,23 +103,41 @@ function Apps() {
         'X-User-UUID': uuid
       }
 
-      // Fetch details for all apps in parallel
+      // Fetch details and deployment status for all apps in parallel
       const detailPromises = appsList.map(async (app) => {
         try {
           console.log('📡 Fetching details for app:', app.slug)
-          const response = await fetch(`/api/apps/${app.slug}`, { headers })
           
-          if (!response || !response.ok) {
+          // Fetch app details and deployment status in parallel
+          const [detailsResponse, deploymentResponse] = await Promise.all([
+            fetch(`/api/apps/${app.slug}`, { headers }),
+            fetch(`/api/apps/${app.slug}/deployment`, { headers })
+          ])
+          
+          let detailedApp = app // Start with original app data
+          
+          // Process app details
+          if (detailsResponse && detailsResponse.ok) {
+            detailedApp = await detailsResponse.json()
+            console.log('✅ Loaded details for app:', app.slug)
+          } else {
             console.warn('⚠️ Failed to fetch details for app:', app.slug)
-            return app // Return original app data if details fetch fails
           }
           
-          const detailedApp = await response.json()
-          console.log('✅ Loaded details for app:', app.slug)
+          // Process deployment status
+          if (deploymentResponse && deploymentResponse.ok) {
+            const deploymentStatus = await deploymentResponse.json()
+            detailedApp.deployment_status = deploymentStatus
+            console.log('✅ Loaded deployment status for app:', app.slug, deploymentStatus.status)
+          } else {
+            console.warn('⚠️ Failed to fetch deployment status for app:', app.slug)
+            detailedApp.deployment_status = null
+          }
+          
           return detailedApp
         } catch (err) {
-          console.warn('⚠️ Error fetching details for app:', app.slug, err)
-          return app // Return original app data if details fetch fails
+          console.warn('⚠️ Error fetching data for app:', app.slug, err)
+          return app // Return original app data if fetch fails
         }
       })
 
@@ -438,13 +456,36 @@ function Apps() {
                             </span>
                           </div>
                           
-                          {/* Deploy Status - Show loading since we removed the old logic */}
+                          {/* Deploy Status */}
                           <div className="flex items-center gap-2">
                             <span className="text-cyber-muted font-mono text-xs">Deploy:</span>
-                            <div className="flex items-center gap-1">
-                              <div className="w-2 h-2 border border-cyber-muted border-t-transparent rounded-full animate-spin"></div>
-                              <span className="text-cyber-muted font-mono text-xs">Loading...</span>
-                            </div>
+                            {app.deployment_status ? (
+                              <div className="flex items-center gap-1">
+                                {app.deployment_status.status === 'pending' && (
+                                  <>
+                                    <div className="w-2 h-2 border border-yellow-400 border-t-transparent rounded-full animate-spin"></div>
+                                    <span className="text-yellow-400 font-mono text-xs">Deploying</span>
+                                  </>
+                                )}
+                                {app.deployment_status.status === 'success' && (
+                                  <>
+                                    <div className="w-2 h-2 bg-green-400 rounded-full"></div>
+                                    <span className="text-green-400 font-mono text-xs">Live</span>
+                                  </>
+                                )}
+                                {app.deployment_status.status === 'error' && (
+                                  <>
+                                    <div className="w-2 h-2 bg-red-400 rounded-full"></div>
+                                    <span className="text-red-400 font-mono text-xs">Failed</span>
+                                  </>
+                                )}
+                              </div>
+                            ) : (
+                              <div className="flex items-center gap-1">
+                                <div className="w-2 h-2 border border-cyber-muted border-t-transparent rounded-full animate-spin"></div>
+                                <span className="text-cyber-muted font-mono text-xs">Loading...</span>
+                              </div>
+                            )}
                           </div>
                         </>
                       ) : (
