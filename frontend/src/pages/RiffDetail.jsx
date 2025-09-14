@@ -14,6 +14,7 @@ function RiffDetail() {
   const location = useLocation()
   const [app, setApp] = useState(null)
   const [riff, setRiff] = useState(null)
+  const [prStatus, setPrStatus] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [, setLlmReady] = useState(true)
@@ -78,6 +79,37 @@ function RiffDetail() {
     }
   }, [appSlug, riffSlug])
 
+  // Fetch PR status for the specific riff
+  const fetchPrStatus = useCallback(async () => {
+    console.log('🔄 Fetching PR status for riff:', { appSlug, riffSlug })
+    try {
+      const uuid = getUserUUID()
+      const headers = {
+        'X-User-UUID': uuid
+      }
+      
+      const prResponse = await fetch(`/api/apps/${appSlug}/riffs/${riffSlug}/pr-status`, { headers })
+      console.log('📡 PR status response status:', prResponse?.status)
+      
+      if (!prResponse || !prResponse.ok) {
+        const errorText = await prResponse?.text() || 'Unknown error'
+        console.error('❌ Fetch PR status failed:', errorText)
+        // Don't throw error for PR status - it's optional
+        setPrStatus(null)
+        return
+      }
+      
+      const prData = await prResponse.json()
+      console.log('📊 Received PR status data:', prData)
+      setPrStatus(prData.pr_status)
+      
+    } catch (err) {
+      console.error('❌ Error fetching PR status:', err)
+      // Don't fail the whole page if PR status fails
+      setPrStatus(null)
+    }
+  }, [appSlug, riffSlug])
+
   // Check LLM readiness and handle polling
   const handleLLMReadyChange = useCallback((isReady) => {
     console.log('🔍 LLM readiness changed:', isReady)
@@ -111,11 +143,12 @@ function RiffDetail() {
     fetchData()
   }, [fetchData])
 
-  // Check LLM readiness when riff data is loaded
+  // Check LLM readiness and fetch PR status when riff data is loaded
   useEffect(() => {
     if (riff && app) {
       checkInitialLLMReadiness()
       startPolling()
+      fetchPrStatus() // Fetch PR status for this specific riff
     }
     
     // Cleanup polling on unmount
@@ -124,7 +157,7 @@ function RiffDetail() {
         stopPollingRef.current()
       }
     }
-  }, [riff, app, checkInitialLLMReadiness, startPolling])
+  }, [riff, app, checkInitialLLMReadiness, startPolling, fetchPrStatus])
 
   // Scroll to top when route changes
   useEffect(() => {
@@ -229,7 +262,7 @@ function RiffDetail() {
           {/* Sidebar */}
           <div className="lg:col-span-1 space-y-6">
             {/* App Status */}
-            <AppStatus app={app} riff={riff} />
+            <AppStatus app={app} riff={riff} prStatus={prStatus} />
             
             {/* Agent Status Panel */}
             <AgentStatusPanel appSlug={appSlug} riffSlug={riffSlug} />
