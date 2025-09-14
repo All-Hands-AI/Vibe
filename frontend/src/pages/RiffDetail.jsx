@@ -317,11 +317,7 @@ function RiffDetail() {
         <header className="mb-4">
           <div className="flex flex-wrap items-baseline justify-between gap-4 mb-4">
             <div>
-              <div className="flex items-center gap-4 mb-2">
-                <h1 className="text-3xl font-bold text-cyber-text font-mono">{riff.name}</h1>
-                {/* CI Status */}
-                {prStatus && <CIStatus prStatus={prStatus} />}
-              </div>
+              <h1 className="text-3xl font-bold text-cyber-text font-mono mb-2">{riff.name}</h1>
               {/* PR Status Subheading */}
               {prStatus && (
                 <div className="flex items-center gap-3 text-sm font-mono">
@@ -336,6 +332,8 @@ function RiffDetail() {
                   <span className={`${prStatus.draft ? 'text-gray-400' : 'text-green-400'}`}>
                     {prStatus.draft ? '📝 Draft' : '🟢 Ready'}
                   </span>
+                  {/* CI Status */}
+                  <CIStatus prStatus={prStatus} />
                 </div>
               )}
             </div>
