@@ -294,9 +294,14 @@ function RiffDetail() {
           <div className="flex flex-col">
             <div className="mb-2">
               <h3 className="text-lg font-semibold text-cyber-text font-mono">🚀 Live App Preview</h3>
-              <p className="text-cyber-muted font-mono text-xs">
+              <a
+                href={`https://${app.name}-${riff.name}.fly.dev`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-cyber-muted hover:text-blue-400 font-mono text-xs transition-colors duration-200 underline"
+              >
                 {app.name}-{riff.name}.fly.dev
-              </p>
+              </a>
             </div>
             
             {/* Deployment Banner */}
