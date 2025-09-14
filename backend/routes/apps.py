@@ -6,10 +6,9 @@ import re
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
-from keys import load_user_keys, get_user_key
+from keys import load_user_keys
 from storage import get_apps_storage, get_riffs_storage
 from agent_loop import agent_loop_manager
-from utils.repository import setup_riff_workspace
 
 logger = logging.getLogger(__name__)
 
@@ -98,48 +97,12 @@ def add_user_message(user_uuid, app_slug, riff_slug, message):
     return storage.add_message(app_slug, riff_slug, message)
 
 
-def create_agent_for_riff(user_uuid, app_slug, riff_slug, github_url):
-    """Create and store an Agent object for a specific user, app, and riff"""
-    try:
-        # Get user's Anthropic token
-        anthropic_token = get_user_key(user_uuid, "anthropic")
-        if not anthropic_token:
-            logger.warning(f"⚠️ No Anthropic token found for user {user_uuid[:8]}")
-            return False, "Anthropic API key required"
-
-        # Setup workspace: create directory and clone repository
-        logger.info(f"🏗️ Setting up workspace for riff {riff_slug}")
-        workspace_success, workspace_path, workspace_error = setup_riff_workspace(
-            user_uuid, app_slug, riff_slug, github_url
-        )
-
-        if not workspace_success:
-            logger.error(f"❌ Failed to setup workspace: {workspace_error}")
-            return False, workspace_error
-
-        # Create AgentLoop with user's Anthropic token
-        logger.info(f"🤖 Creating AgentLoop for {user_uuid[:8]}:{app_slug}:{riff_slug}")
-        success, error_message = agent_loop_manager.create_agent_loop(
-            user_uuid, app_slug, riff_slug, anthropic_token, workspace_path
-        )
-
-        if not success:
-            logger.error(f"❌ Failed to create AgentLoop: {error_message}")
-            return False, error_message
-
-        logger.info(
-            f"✅ AgentLoop created successfully for {user_uuid[:8]}:{app_slug}:{riff_slug}"
-        )
-        return True, None
-
-    except Exception as e:
-        logger.error(f"💥 Error creating agent for riff: {str(e)}")
-        return False, f"Error creating agent: {str(e)}"
-
-
 def create_initial_riff_and_message(user_uuid, app_slug, app_name, github_url):
     """Create initial riff and message for a new app"""
     try:
+        # Import here to avoid circular imports
+        from routes.riffs import create_agent_for_user
+
         # Create riff name and slug using branch name format
         riff_name = f"rename-to-{app_slug}"
         riff_slug = riff_name  # Already in slug format since app_slug is validated
@@ -186,10 +149,10 @@ def create_initial_riff_and_message(user_uuid, app_slug, app_name, github_url):
             logger.error("❌ Failed to save initial message")
             return False, "Failed to save initial message"
 
-        # Create agent for the riff
+        # Create agent for the riff using the working function from riffs.py
         logger.info(f"🤖 Creating agent for initial riff: {riff_slug}")
-        agent_success, agent_error = create_agent_for_riff(
-            user_uuid, app_slug, riff_slug, github_url
+        agent_success, agent_error = create_agent_for_user(
+            user_uuid, app_slug, riff_slug
         )
 
         if not agent_success:
