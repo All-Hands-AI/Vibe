@@ -1,110 +1,24 @@
-# OpenVibe
+# 🤙 OpenHands Vibe
 
-[![CI](https://github.com/rbren/OpenVibe/actions/workflows/ci.yml/badge.svg)](https://github.com/rbren/OpenVibe/actions/workflows/ci.yml)
-[![Deploy](https://github.com/rbren/OpenVibe/actions/workflows/deploy.yml/badge.svg)](https://github.com/rbren/OpenVibe/actions/workflows/deploy.yml)
+OpenHands Vibe is an extremely opinionated vibecoding framework, oriented towards professional developers.
 
-A basic React application built with Vite.
+## Stack
+* React for frontend
+* Python for backend
+* GitHub for source control
+* GitHub Actions for CI/CD
+* Fly.io for deployments
+* Claude for the LLM
+* OpenHands for the agents
 
-## Getting Started
+## Workflow
+When you create a new App, a corresponding GitHub repo will be created as well. It will start from the [template repo](https://github.com/rbren/openvibe-template)
 
-### Prerequisites
+Your first Riff (a change to the app) will be created automatically. It will do some renaming and bootstrapping from the default template.
+Once the agent has finished and pushed its work, you should be able to see a hello world app running inside the Riff! You can go ahead and merge
+that PR.
 
-- Node.js (v18 or higher)
-- npm
+Create a new Riff for every change you want to make. Preview the change on fly.io, and examine the code changes on GitHub.
+Once you're happy, merge and start a new Riff!
 
-### Installation
-
-1. Clone the repository
-2. Navigate to the frontend directory and install dependencies:
-   ```bash
-   cd frontend
-   npm install
-   ```
-
-### Development
-
-To start the development server:
-
-```bash
-cd frontend
-npm run dev
-```
-
-The app will be available at `http://localhost:12000`
-
-### Build
-
-To build for production:
-
-```bash
-cd frontend
-npm run build
-```
-
-### Preview
-
-To preview the production build:
-
-```bash
-cd frontend
-npm run preview
-```
-
-### Testing
-
-To run tests:
-
-```bash
-cd frontend
-npm test              # Run tests in watch mode
-npm run test:run      # Run tests once
-npm run test:coverage # Run tests with coverage report
-```
-
-### Linting
-
-To lint the code:
-
-```bash
-cd frontend
-npm run lint          # Check for linting errors
-npm run lint:fix      # Fix linting errors automatically
-```
-
-## CI/CD
-
-This project uses GitHub Actions for continuous integration and deployment:
-
-- **CI Workflow** (`.github/workflows/ci.yml`): Runs on every push and pull request
-  - Lints the code with ESLint
-  - Builds the application
-  - Runs all tests with coverage reporting
-  - Provides a quality gate that must pass before merging
-
-- **Deploy Workflow** (`.github/workflows/deploy.yml`): Deploys to Fly.io
-  - Production deployment on pushes to `main`
-  - Preview deployments for pull requests
-  - Automatic cleanup of preview deployments when PRs are closed
-
-## Project Structure
-
-```
-frontend/
-├── src/
-│   ├── components/      # Reusable UI components
-│   ├── pages/          # Route-based page components
-│   ├── context/        # React context providers
-│   ├── utils/          # Utility functions
-│   ├── App.jsx         # Main App component
-│   ├── main.jsx        # React entry point
-│   └── index.css       # Global styles
-├── index.html          # HTML template
-├── package.json        # Frontend dependencies
-├── vite.config.js      # Vite configuration
-└── tailwind.config.js  # Tailwind CSS configuration
-backend/
-├── app.py              # Python backend application
-├── apps.py             # App management logic
-├── keys.py             # API key management
-└── pyproject.toml      # Python dependencies
-```
+You can easily have several Riffs going at once. The agent can figure out how to deal with minor conflicts.
