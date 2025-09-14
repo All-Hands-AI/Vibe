@@ -4,10 +4,9 @@ import { useSetup } from '../context/SetupContext'
 import { getUserUUID } from '../utils/uuid'
 import ChatWindow from '../components/ChatWindow'
 import LLMErrorModal from '../components/LLMErrorModal'
-import DeploymentBanner from '../components/DeploymentBanner'
 import CIStatus from '../components/CIStatus'
 import { startLLMPolling, checkLLMReady } from '../utils/llmService'
-import { getDeployStatus } from '../utils/statusUtils'
+
 
 function RiffDetail() {
   const { slug: appSlug, riffSlug } = useParams()
@@ -16,6 +15,7 @@ function RiffDetail() {
   const [app, setApp] = useState(null)
   const [riff, setRiff] = useState(null)
   const [prStatus, setPrStatus] = useState(null)
+  const [deploymentStatus, setDeploymentStatus] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [, setLlmReady] = useState(true)
@@ -82,32 +82,88 @@ function RiffDetail() {
 
   // Fetch PR status for the specific riff
   const fetchPrStatus = useCallback(async () => {
-    console.log('🔄 Fetching PR status for riff:', { appSlug, riffSlug })
+    console.log('🔄 [PR_STATUS_DEBUG] Starting fetchPrStatus for riff:', { appSlug, riffSlug })
+    console.log('🔄 [PR_STATUS_DEBUG] Current app state:', app ? 'loaded' : 'not loaded')
+    console.log('🔄 [PR_STATUS_DEBUG] Current riff state:', riff ? 'loaded' : 'not loaded')
+    
     try {
       const uuid = getUserUUID()
+      console.log('🔄 [PR_STATUS_DEBUG] User UUID:', uuid ? 'available' : 'missing')
+      
       const headers = {
         'X-User-UUID': uuid
       }
       
-      const prResponse = await fetch(`/api/apps/${appSlug}/riffs/${riffSlug}/pr-status`, { headers })
-      console.log('📡 PR status response status:', prResponse?.status)
+      const apiUrl = `/api/apps/${appSlug}/riffs/${riffSlug}/pr-status`
+      console.log('🔄 [PR_STATUS_DEBUG] Making API call to:', apiUrl)
+      console.log('🔄 [PR_STATUS_DEBUG] Headers:', headers)
+      
+      const prResponse = await fetch(apiUrl, { headers })
+      console.log('📡 [PR_STATUS_DEBUG] PR status response status:', prResponse?.status)
+      console.log('📡 [PR_STATUS_DEBUG] PR status response ok:', prResponse?.ok)
       
       if (!prResponse || !prResponse.ok) {
         const errorText = await prResponse?.text() || 'Unknown error'
-        console.error('❌ Fetch PR status failed:', errorText)
+        console.error('❌ [PR_STATUS_DEBUG] Fetch PR status failed:', errorText)
+        console.error('❌ [PR_STATUS_DEBUG] Response status:', prResponse?.status)
         // Don't throw error for PR status - it's optional
         setPrStatus(null)
         return
       }
       
       const prData = await prResponse.json()
-      console.log('📊 Received PR status data:', prData)
+      console.log('📊 [PR_STATUS_DEBUG] Received PR status data:', prData)
+      console.log('📊 [PR_STATUS_DEBUG] PR status object:', prData.pr_status)
+      
+      if (prData.pr_status) {
+        console.log('✅ [PR_STATUS_DEBUG] Setting PR status:', {
+          number: prData.pr_status.number,
+          title: prData.pr_status.title,
+          ci_status: prData.pr_status.ci_status,
+          checks: prData.pr_status.checks?.length || 0
+        })
+      } else {
+        console.log('ℹ️ [PR_STATUS_DEBUG] No PR status in response')
+      }
+      
       setPrStatus(prData.pr_status)
       
     } catch (err) {
-      console.error('❌ Error fetching PR status:', err)
+      console.error('❌ [PR_STATUS_DEBUG] Error fetching PR status:', err)
+      console.error('❌ [PR_STATUS_DEBUG] Error stack:', err.stack)
       // Don't fail the whole page if PR status fails
       setPrStatus(null)
+    }
+  }, [appSlug, riffSlug, app, riff])
+
+  // Fetch deployment status for the specific riff
+  const fetchDeploymentStatus = useCallback(async () => {
+    console.log('🚀 Fetching deployment status for riff:', { appSlug, riffSlug })
+    try {
+      const uuid = getUserUUID()
+      const headers = {
+        'X-User-UUID': uuid
+      }
+      
+      const deployResponse = await fetch(`/api/apps/${appSlug}/riffs/${riffSlug}/deployment`, { headers })
+      console.log('📡 Deployment status response status:', deployResponse?.status)
+      
+      if (!deployResponse || !deployResponse.ok) {
+        const errorText = await deployResponse?.text() || 'Unknown error'
+        console.error('❌ Fetch deployment status failed:', errorText)
+        // Don't throw error for deployment status - it's optional
+        setDeploymentStatus(null)
+        return
+      }
+      
+      const deployData = await deployResponse.json()
+      console.log('📊 Received deployment status data:', deployData)
+      setDeploymentStatus(deployData)
+      
+    } catch (err) {
+      console.error('❌ Error fetching deployment status:', err)
+      // Don't fail the whole page if deployment status fails
+      setDeploymentStatus(null)
     }
   }, [appSlug, riffSlug])
 
@@ -146,10 +202,21 @@ function RiffDetail() {
 
   // Check LLM readiness and fetch PR status when riff data is loaded
   useEffect(() => {
+    console.log('🔄 [PR_STATUS_DEBUG] useEffect triggered - checking conditions:', {
+      riff: riff ? 'loaded' : 'not loaded',
+      app: app ? 'loaded' : 'not loaded',
+      appSlug,
+      riffSlug
+    })
+    
     if (riff && app) {
+      console.log('✅ [PR_STATUS_DEBUG] Both riff and app loaded, calling fetchPrStatus')
       checkInitialLLMReadiness()
       startPolling()
       fetchPrStatus() // Fetch PR status for this specific riff
+      fetchDeploymentStatus() // Fetch deployment status for this specific riff
+    } else {
+      console.log('⏳ [PR_STATUS_DEBUG] Waiting for riff and app to load before fetching PR status')
     }
     
     // Cleanup polling on unmount
@@ -158,7 +225,7 @@ function RiffDetail() {
         stopPollingRef.current()
       }
     }
-  }, [riff, app, checkInitialLLMReadiness, startPolling, fetchPrStatus])
+  }, [riff, app, checkInitialLLMReadiness, startPolling, fetchPrStatus, fetchDeploymentStatus])
 
   // Scroll to top when route changes
   useEffect(() => {
@@ -303,8 +370,32 @@ function RiffDetail() {
 
           {/* Right Side - Iframe */}
           <div className="flex flex-col">
+            {/* Deployment Status Header */}
             <div className="mb-2">
-              <h3 className="text-lg font-semibold text-cyber-text font-mono">🚀 Live App Preview</h3>
+              {deploymentStatus ? (
+                <div className="flex items-center gap-2 mb-1">
+                  {deploymentStatus.status === 'pending' && (
+                    <>
+                      <div className="w-4 h-4 border-2 border-yellow-400 border-t-transparent rounded-full animate-spin"></div>
+                      <h3 className="text-lg font-semibold text-yellow-400 font-mono">🚀 Deploying...</h3>
+                    </>
+                  )}
+                  {deploymentStatus.status === 'success' && (
+                    <>
+                      <div className="w-4 h-4 bg-green-400 rounded-full"></div>
+                      <h3 className="text-lg font-semibold text-green-400 font-mono">🚀 Live App</h3>
+                    </>
+                  )}
+                  {deploymentStatus.status === 'error' && (
+                    <>
+                      <div className="w-4 h-4 bg-red-400 rounded-full"></div>
+                      <h3 className="text-lg font-semibold text-red-400 font-mono">🚀 Deployment Failed</h3>
+                    </>
+                  )}
+                </div>
+              ) : (
+                <h3 className="text-lg font-semibold text-cyber-text font-mono mb-1">🚀 Live App</h3>
+              )}
               <a
                 href={`https://${app.name}-${riff.name}.fly.dev`}
                 target="_blank"
@@ -314,12 +405,6 @@ function RiffDetail() {
                 {app.name}-{riff.name}.fly.dev
               </a>
             </div>
-            
-            {/* Deployment Banner */}
-            <DeploymentBanner 
-              deployStatus={getDeployStatus(app)} 
-              prStatus={prStatus} 
-            />
             
             <div className="flex-1 border border-gray-700 rounded-lg overflow-hidden">
               <iframe
