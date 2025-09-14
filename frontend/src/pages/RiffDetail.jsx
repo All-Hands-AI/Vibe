@@ -5,7 +5,9 @@ import { getUserUUID } from '../utils/uuid'
 import ChatWindow from '../components/ChatWindow'
 import LLMErrorModal from '../components/LLMErrorModal'
 import CompactStatusPanel from '../components/CompactStatusPanel'
+import DeploymentBanner from '../components/DeploymentBanner'
 import { startLLMPolling, checkLLMReady } from '../utils/llmService'
+import { getDeployStatus } from '../utils/statusUtils'
 
 function RiffDetail() {
   const { slug: appSlug, riffSlug } = useParams()
@@ -296,6 +298,13 @@ function RiffDetail() {
                 {app.name}-{riff.name}.fly.dev
               </p>
             </div>
+            
+            {/* Deployment Banner */}
+            <DeploymentBanner 
+              deployStatus={getDeployStatus(app)} 
+              prStatus={prStatus} 
+            />
+            
             <div className="flex-1 border border-gray-700 rounded-lg overflow-hidden">
               <iframe
                 src={`https://${app.name}-${riff.name}.fly.dev`}
