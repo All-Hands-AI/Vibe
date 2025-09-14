@@ -52,8 +52,15 @@ def get_llm_instance(api_key: str, model: str = "claude-3-haiku-20240307"):
 
 from utils.logging import get_logger, log_api_request, log_api_response
 
-# Import get_pr_status from apps route for riff-specific PR status
-from routes.apps import get_pr_status
+# Import functions from apps.py for GitHub and Fly.io operations and PR status
+from routes.apps import (
+    close_github_pr,
+    delete_github_branch,
+    delete_fly_app,
+    load_user_app,
+    get_pr_status,
+    user_app_exists,
+)
 
 logger = get_logger(__name__)
 
@@ -1022,6 +1029,83 @@ def get_riff_pr_status(slug, riff_slug):
             if pr_status:
                 logger.info(f"✅ Found PR status for riff {riff_slug}: #{pr_status['number']}")
             else:
+                logger.info(f"ℹ️ No PR found for riff {riff_slug} (branch: {riff_branch})")
+            
+            log_api_response(logger, "GET", f"/api/apps/{slug}/riffs/{riff_slug}/pr-status", 200)
+            return jsonify({"pr_status": pr_status})
+            
+        except Exception as e:
+            logger.warning(f"⚠️ Error getting PR status: {str(e)}")
+            log_api_response(logger, "GET", f"/api/apps/{slug}/riffs/{riff_slug}/pr-status", 200)
+            return jsonify({"pr_status": None, "error": str(e)})
+
+    except Exception as e:
+        logger.error(f"💥 Error getting riff PR status: {str(e)}")
+        log_api_response(logger, "GET", f"/api/apps/{slug}/riffs/{riff_slug}/pr-status", 500)
+        return jsonify({"error": "Failed to get PR status"}), 500
+
+
+@riffs_bp.route("/api/apps/<slug>/riffs/<riff_slug>", methods=["DELETE"])
+def delete_riff(slug, riff_slug):
+    """Delete a riff and its associated Fly.io app, close PR, and delete branch"""
+    logger.info(f"🗑️ DELETE /api/apps/{slug}/riffs/{riff_slug} - Deleting riff")
+
+    try:
+        # Get UUID from headers
+        user_uuid = request.headers.get("X-User-UUID")
+        if not user_uuid:
+            logger.warning("❌ X-User-UUID header is required")
+            return jsonify({"error": "X-User-UUID header is required"}), 400
+
+        user_uuid = user_uuid.strip()
+        if not user_uuid:
+            logger.warning("❌ Empty UUID provided in header")
+            return jsonify({"error": "UUID cannot be empty"}), 400
+
+        # Load app to get GitHub URL
+        apps_storage = get_apps_storage(user_uuid)
+        app = apps_storage.load_app(slug)
+        if not app:
+            logger.warning(f"❌ App not found: {slug} for user {user_uuid[:8]}")
+            log_api_response(logger, "GET", f"/api/apps/{slug}/riffs/{riff_slug}/pr-status", 404)
+            return jsonify({"error": "App not found"}), 404
+
+        # Check if app has GitHub URL
+        github_url = app.get("github_url")
+        if not github_url:
+            logger.info(f"ℹ️ No GitHub URL configured for app {slug}")
+            log_api_response(logger, "GET", f"/api/apps/{slug}/riffs/{riff_slug}/pr-status", 200)
+            return jsonify({"pr_status": None, "message": "No GitHub URL configured"})
+
+        # Get user's GitHub token
+        try:
+            user_keys = load_user_keys(user_uuid)
+            github_token = user_keys.get("github")
+            
+            if not github_token:
+                logger.info(f"ℹ️ No GitHub token found for user {user_uuid[:8]}")
+                log_api_response(logger, "GET", f"/api/apps/{slug}/riffs/{riff_slug}/pr-status", 200)
+                return jsonify({"pr_status": None, "message": "No GitHub token configured"})
+
+            # Use riff name as the HEAD branch name (source branch)
+            riff_branch = riff_slug
+            logger.info(f"🔍 RIFF ENDPOINT: Getting PR status for riff: {riff_branch}")
+            logger.info(f"🔍 RIFF ENDPOINT: Looking for PRs with head='{riff_branch}' and base='main'")
+            logger.info(f"🔍 RIFF ENDPOINT: This should find PRs FROM '{riff_branch}' TO 'main'")
+            
+            # Search for PRs FROM the riff branch TO main (the typical workflow)
+            # This means: head=riff_branch, base=main
+            pr_status = get_pr_status(github_url, github_token, riff_branch, search_by_base=False)
+            
+            if pr_status:
+                logger.info(f"✅ Found PR from riff branch '{riff_branch}' to main")
+            else:
+                logger.info(f"ℹ️ No PR found from riff branch '{riff_branch}' to main")
+                # Note: We don't try base search here because riffs are source branches, not target branches
+            
+            if pr_status:
+                logger.info(f"✅ Found PR status for riff {riff_slug}: #{pr_status['number']}")
+            else:
                 logger.info(f"ℹ️ No PR found for riff {riff_slug} (branch: {branch_name})")
             
             log_api_response(logger, "GET", f"/api/apps/{slug}/riffs/{riff_slug}/pr-status", 200)
@@ -1036,3 +1120,132 @@ def get_riff_pr_status(slug, riff_slug):
         logger.error(f"💥 Error getting riff PR status: {str(e)}")
         log_api_response(logger, "GET", f"/api/apps/{slug}/riffs/{riff_slug}/pr-status", 500)
         return jsonify({"error": "Failed to get PR status"}), 500
+
+
+        # Verify app exists
+        if not user_app_exists(user_uuid, slug):
+            logger.warning(f"❌ App not found: {slug} for user {user_uuid[:8]}")
+            return jsonify({"error": "App not found"}), 404
+
+        # Load riff for this user
+        riff = load_user_riff(user_uuid, slug, riff_slug)
+        if not riff:
+            logger.warning(f"❌ Riff not found: {riff_slug} for user {user_uuid[:8]}")
+            return jsonify({"error": "Riff not found"}), 404
+
+        logger.info(f"🔍 Found riff to delete: {riff['name']} for user {user_uuid[:8]}")
+
+        # Load app data to get GitHub URL
+        app = load_user_app(user_uuid, slug)
+        if not app:
+            logger.warning(f"❌ App data not found: {slug} for user {user_uuid[:8]}")
+            return jsonify({"error": "App data not found"}), 404
+
+        # Get user's API keys
+        user_keys = load_user_keys(user_uuid)
+        github_token = user_keys.get("github")
+        fly_token = user_keys.get("fly")
+
+        deletion_results = {
+            "github_pr_success": False,
+            "github_pr_error": None,
+            "github_branch_success": False,
+            "github_branch_error": None,
+            "fly_success": False,
+            "fly_error": None,
+        }
+
+        # Close GitHub PR if URL exists and token is available
+        if app.get("github_url") and github_token:
+            logger.info(f"🔀 Closing PR for branch: {riff_slug}")
+            pr_success, pr_message = close_github_pr(
+                app["github_url"], github_token, riff_slug
+            )
+            deletion_results["github_pr_success"] = pr_success
+            if not pr_success:
+                deletion_results["github_pr_error"] = pr_message
+                logger.warning(f"⚠️ PR closure failed: {pr_message}")
+            else:
+                logger.info(f"✅ PR closed: {pr_message}")
+        else:
+            logger.info("⚠️ Skipping PR closure (no GitHub URL or token)")
+
+        # Delete GitHub branch if URL exists and token is available
+        if app.get("github_url") and github_token:
+            logger.info(f"🌿 Deleting branch: {riff_slug}")
+            branch_success, branch_message = delete_github_branch(
+                app["github_url"], github_token, riff_slug
+            )
+            deletion_results["github_branch_success"] = branch_success
+            if not branch_success:
+                deletion_results["github_branch_error"] = branch_message
+                logger.warning(f"⚠️ Branch deletion failed: {branch_message}")
+            else:
+                logger.info(f"✅ Branch deleted: {branch_message}")
+        else:
+            logger.info("⚠️ Skipping branch deletion (no GitHub URL or token)")
+
+        # Delete Fly.io app if name exists and token is available
+        fly_app_name = f"{slug}-{riff_slug}"
+        if fly_token:
+            logger.info(f"🛩️ Deleting Fly.io app: {fly_app_name}")
+            fly_success, fly_message = delete_fly_app(fly_app_name, fly_token)
+            deletion_results["fly_success"] = fly_success
+            if not fly_success:
+                deletion_results["fly_error"] = fly_message
+                logger.warning(f"⚠️ Fly.io deletion failed: {fly_message}")
+            else:
+                logger.info(f"✅ Fly.io app deleted: {fly_message}")
+        else:
+            logger.info("⚠️ Skipping Fly.io deletion (no token)")
+
+        # Stop and remove agent loop if it exists
+        try:
+            agent_loop = agent_loop_manager.get_agent_loop(user_uuid, slug, riff_slug)
+            if agent_loop:
+                logger.info(f"🤖 Stopping agent loop for riff: {riff_slug}")
+                agent_loop_manager.remove_agent_loop(user_uuid, slug, riff_slug)
+                logger.info(f"✅ Agent loop stopped and removed")
+        except Exception as e:
+            logger.warning(f"⚠️ Error stopping agent loop: {e}")
+
+        # Delete riff data
+        if delete_user_riff(user_uuid, slug, riff_slug):
+            logger.info(
+                f"✅ Riff {riff_slug} and all associated data deleted for user {user_uuid[:8]}"
+            )
+        else:
+            logger.error(f"❌ Failed to delete riff data")
+            return jsonify({"error": "Failed to delete riff data"}), 500
+
+        # Prepare response
+        response_data = {
+            "message": f'Riff "{riff.get("name")}" deleted successfully',
+            "riff_name": riff.get("name"),
+            "riff_slug": riff_slug,
+            "app_slug": slug,
+            "deletion_results": deletion_results,
+        }
+
+        # Add warnings if some deletions failed
+        warnings = []
+        if deletion_results["github_pr_error"]:
+            warnings.append(f"PR closure failed: {deletion_results['github_pr_error']}")
+        if deletion_results["github_branch_error"]:
+            warnings.append(
+                f"Branch deletion failed: {deletion_results['github_branch_error']}"
+            )
+        if deletion_results["fly_error"]:
+            warnings.append(
+                f"Fly.io app deletion failed: {deletion_results['fly_error']}"
+            )
+
+        if warnings:
+            response_data["warnings"] = warnings
+
+        logger.info(f"✅ Riff deletion completed: {riff_slug}")
+        return jsonify(response_data)
+
+    except Exception as e:
+        logger.error(f"💥 Error deleting riff: {str(e)}")
+        return jsonify({"error": "Failed to delete riff"}), 500
