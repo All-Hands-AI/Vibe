@@ -86,7 +86,7 @@ Reusable script that generates clean Fly.io app names from branch names. Used by
 # Output: openvibe-feature-add-new-component
 ```
 
-### `scripts/update-pr-description.js`
+### `workflows/update-pr-description.js`
 Shared utility for updating PR descriptions idempotently. Each workflow can add or update its own section without affecting others.
 
 **Features:**
@@ -108,7 +108,7 @@ Instead of posting comments on PRs, our workflows now update the PR description 
 
 ### How It Works
 
-Each workflow that needs to report status uses the shared script `.github/scripts/update-pr-description.js` to add or update sections in the PR description. Each section is:
+Each workflow that needs to report status uses the shared script `.github/workflows/update-pr-description.js` to add or update sections in the PR description. Each section is:
 
 - **Idempotent**: Running the same workflow multiple times will update the existing section rather than creating duplicates
 - **Independent**: Each workflow manages its own section without affecting others

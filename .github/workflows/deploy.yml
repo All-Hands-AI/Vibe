@@ -93,28 +93,12 @@ jobs:
             // Load the PR description update script
             const fs = require('fs');
             const path = require('path');
-            const scriptPath = path.join(process.cwd(), '.github/scripts/update-pr-description.js');
+            const scriptPath = path.join(process.cwd(), '.github/workflows/update-pr-description.js');
             const scriptContent = fs.readFileSync(scriptPath, 'utf8');
             eval(scriptContent);
             
             // Create the deployment section content
-            const deploymentContent = `## 🚀 Deployment Status
-
-**Environment:** \`${{ steps.deployment-env.outputs.environment }}\`
-**App Name:** \`${{ steps.deployment-env.outputs.app_name }}\`
-**Status:** ✅ Successfully deployed
-
-### 🔗 Preview URL
-**[Visit deployment →](${{ steps.deployment-url.outputs.url }})**
-
-### 📊 Fly.io Management
-- **[View App Status →](https://fly.io/apps/${{ steps.deployment-env.outputs.app_name }})**
-- **[View Metrics →](https://fly.io/apps/${{ steps.deployment-env.outputs.app_name }}/metrics)**
-- **[View Monitoring →](https://fly.io/apps/${{ steps.deployment-env.outputs.app_name }}/monitoring)**
-
-This deployment will be automatically cleaned up when the PR is closed.
-
-<sub>Deployed via GitHub Actions • [View workflow run](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})</sub>`;
+            const deploymentContent = `## 🚀 Deployment Status\n\n**Environment:** \`${{ steps.deployment-env.outputs.environment }}\`\n**App Name:** \`${{ steps.deployment-env.outputs.app_name }}\`\n**Status:** ✅ Successfully deployed\n\n### 🔗 Preview URL\n**[Visit deployment →](${{ steps.deployment-url.outputs.url }})**\n\n### 📊 Fly.io Management\n- **[View App Status →](https://fly.io/apps/${{ steps.deployment-env.outputs.app_name }})**\n- **[View Metrics →](https://fly.io/apps/${{ steps.deployment-env.outputs.app_name }}/metrics)**\n- **[View Monitoring →](https://fly.io/apps/${{ steps.deployment-env.outputs.app_name }}/monitoring)**\n\nThis deployment will be automatically cleaned up when the PR is closed.\n\n<sub>Deployed via GitHub Actions • [View workflow run](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})</sub>`;
             
             // Update the PR description
             await updatePRDescription(github, context, 'deployment', deploymentContent);

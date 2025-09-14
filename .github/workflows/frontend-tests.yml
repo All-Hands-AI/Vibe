@@ -66,7 +66,7 @@ jobs:
             // Load the PR description update script
             const fs = require('fs');
             const path = require('path');
-            const scriptPath = path.join(process.cwd(), '.github/scripts/update-pr-description.js');
+            const scriptPath = path.join(process.cwd(), '.github/workflows/update-pr-description.js');
             const scriptContent = fs.readFileSync(scriptPath, 'utf8');
             eval(scriptContent);
             
@@ -83,22 +83,14 @@ jobs:
                   const branches = total.branches ? `${total.branches.pct}%` : 'N/A';
                   const statements = total.statements ? `${total.statements.pct}%` : 'N/A';
                   
-                  coverageInfo = `📊 **Frontend Test Coverage**
-- **Lines:** ${lines}
-- **Functions:** ${functions}
-- **Branches:** ${branches}
-- **Statements:** ${statements}`;
+                  coverageInfo = `📊 **Frontend Test Coverage**\n- **Lines:** ${lines}\n- **Functions:** ${functions}\n- **Branches:** ${branches}\n- **Statements:** ${statements}`;
                 }
               }
             } catch (error) {
               console.log('Could not read coverage summary:', error.message);
             }
             
-            const frontendTestContent = `## ✅ Frontend Tests
-
-${coverageInfo}
-
-<sub>Frontend tests via GitHub Actions • [View workflow run](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})</sub>`;
+            const frontendTestContent = `## ✅ Frontend Tests\n\n${coverageInfo}\n\n<sub>Frontend tests via GitHub Actions • [View workflow run](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})</sub>`;
             
             // Update the PR description
             await updatePRDescription(github, context, 'frontend-tests', frontendTestContent);

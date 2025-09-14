@@ -54,16 +54,12 @@ jobs:
             // Load the PR description update script
             const fs = require('fs');
             const path = require('path');
-            const scriptPath = path.join(process.cwd(), '.github/scripts/update-pr-description.js');
+            const scriptPath = path.join(process.cwd(), '.github/workflows/update-pr-description.js');
             const scriptContent = fs.readFileSync(scriptPath, 'utf8');
             eval(scriptContent);
             
             const appName = '${{ steps.app-name.outputs.app_name }}';
-            const cleanupContent = `## 🧹 Deployment Cleanup
-
-The feature deployment \`${appName}\` has been automatically destroyed since this PR was closed.
-
-<sub>Cleaned up via GitHub Actions • [View workflow run](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})</sub>`;
+            const cleanupContent = `## 🧹 Deployment Cleanup\n\nThe feature deployment \`${appName}\` has been automatically destroyed since this PR was closed.\n\n<sub>Cleaned up via GitHub Actions • [View workflow run](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})</sub>`;
             
             // Update the PR description
             await updatePRDescription(github, context, 'cleanup', cleanupContent);

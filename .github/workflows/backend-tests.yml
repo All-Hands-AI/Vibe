@@ -83,7 +83,7 @@ jobs:
             // Load the PR description update script
             const fs = require('fs');
             const path = require('path');
-            const scriptPath = path.join(process.cwd(), '.github/scripts/update-pr-description.js');
+            const scriptPath = path.join(process.cwd(), '.github/workflows/update-pr-description.js');
             const scriptContent = fs.readFileSync(scriptPath, 'utf8');
             eval(scriptContent);
             
@@ -101,20 +101,14 @@ jobs:
                   const lineRate = lineRateMatch ? Math.round(parseFloat(lineRateMatch[1]) * 100) : 'N/A';
                   const branchRate = branchRateMatch ? Math.round(parseFloat(branchRateMatch[1]) * 100) : 'N/A';
                   
-                  coverageInfo = `📊 **Backend Unit Test Coverage**
-- **Lines:** ${lineRate}%
-- **Branches:** ${branchRate}%`;
+                  coverageInfo = `📊 **Backend Unit Test Coverage**\n- **Lines:** ${lineRate}%\n- **Branches:** ${branchRate}%`;
                 }
               }
             } catch (error) {
               console.log('Could not read coverage XML:', error.message);
             }
             
-            const backendTestContent = `## ✅ Backend Unit Tests
-
-${coverageInfo}
-
-<sub>Backend unit tests via GitHub Actions • [View workflow run](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})</sub>`;
+            const backendTestContent = `## ✅ Backend Unit Tests\n\n${coverageInfo}\n\n<sub>Backend unit tests via GitHub Actions • [View workflow run](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})</sub>`;
             
             // Update the PR description
             await updatePRDescription(github, context, 'backend-tests', backendTestContent);

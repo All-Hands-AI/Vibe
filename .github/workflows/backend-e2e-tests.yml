@@ -80,7 +80,7 @@ jobs:
             // Load the PR description update script
             const fs = require('fs');
             const path = require('path');
-            const scriptPath = path.join(process.cwd(), '.github/scripts/update-pr-description.js');
+            const scriptPath = path.join(process.cwd(), '.github/workflows/update-pr-description.js');
             const scriptContent = fs.readFileSync(scriptPath, 'utf8');
             eval(scriptContent);
             
@@ -98,30 +98,14 @@ jobs:
                   const lineRate = lineRateMatch ? Math.round(parseFloat(lineRateMatch[1]) * 100) : 'N/A';
                   const branchRate = branchRateMatch ? Math.round(parseFloat(branchRateMatch[1]) * 100) : 'N/A';
                   
-                  coverageInfo = `📊 **Backend E2E Test Coverage**
-- **Lines:** ${lineRate}%
-- **Branches:** ${branchRate}%`;
+                  coverageInfo = `📊 **Backend E2E Test Coverage**\n- **Lines:** ${lineRate}%\n- **Branches:** ${branchRate}%`;
                 }
               }
             } catch (error) {
               console.log('Could not read coverage XML:', error.message);
             }
             
-            const backendE2EContent = `## 🧪 Backend E2E Tests
-
-✅ E2E tests completed in MOCK_MODE
-🎭 All external APIs mocked (Anthropic, GitHub, Fly.io)
-
-${coverageInfo}
-
-**Test Coverage Areas:**
-- Basic Endpoints: Health checks, hello endpoints
-- API Key Management: Setting, validating, retrieving keys
-- Apps Management: Creation, listing, deletion
-- Riffs Management: Creation within apps, listing
-- Key Validation: Mock and real mode validation logic
-
-<sub>Backend E2E tests via GitHub Actions • [View workflow run](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})</sub>`;
+            const backendE2EContent = `## 🧪 Backend E2E Tests\n\n✅ E2E tests completed in MOCK_MODE\n🎭 All external APIs mocked (Anthropic, GitHub, Fly.io)\n\n${coverageInfo}\n\n**Test Coverage Areas:**\n- Basic Endpoints: Health checks, hello endpoints\n- API Key Management: Setting, validating, retrieving keys\n- Apps Management: Creation, listing, deletion\n- Riffs Management: Creation within apps, listing\n- Key Validation: Mock and real mode validation logic\n\n<sub>Backend E2E tests via GitHub Actions • [View workflow run](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})</sub>`;
             
             // Update the PR description
             await updatePRDescription(github, context, 'backend-e2e-tests', backendE2EContent);
