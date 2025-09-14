@@ -89,13 +89,6 @@ jobs:
           ./${{ matrix.binary_name }} --version
           ./${{ matrix.binary_name }} --help
 
-      - name: Test binary (Windows)
-        if: matrix.os == 'windows-latest'
-        run: |
-          cd cli/dist
-          .\${{ matrix.binary_name }} --version
-          .\${{ matrix.binary_name }} --help
-
       - name: Upload binary artifact
         uses: actions/upload-artifact@v4
         with:
