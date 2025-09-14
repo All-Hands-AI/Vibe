@@ -93,7 +93,7 @@ class AppsStorage(BaseStorage):
         return app_file.exists()
 
     def delete_app(self, app_slug: str) -> bool:
-        """Delete app and all its data"""
+        """Delete app and all its data including workspace directories"""
         logger.info(f"🗑️ Deleting app: {app_slug} for user {self.user_uuid[:8]}...")
 
         app_dir = self.get_app_dir_path(app_slug)
@@ -101,9 +101,28 @@ class AppsStorage(BaseStorage):
             logger.debug(f"🗑️ App directory doesn't exist: {app_slug}")
             return True  # Already deleted
 
+        # Log workspace directories that will be cleaned up
+        riffs_dir = app_dir / "riffs"
+        if riffs_dir.exists():
+            workspace_count = 0
+            try:
+                for riff_dir in riffs_dir.iterdir():
+                    if riff_dir.is_dir():
+                        workspace_dir = riff_dir / "workspace"
+                        if workspace_dir.exists():
+                            workspace_count += 1
+                            logger.info(f"🧹 Will clean up workspace: {workspace_dir}")
+                logger.info(
+                    f"🧹 Found {workspace_count} workspace directories to clean up"
+                )
+            except Exception as e:
+                logger.warning(f"⚠️ Error scanning workspace directories: {e}")
+
         try:
             shutil.rmtree(app_dir)
-            logger.info(f"✅ App deleted successfully: {app_slug}")
+            logger.info(
+                f"✅ App deleted successfully: {app_slug} (including all riffs and workspace directories)"
+            )
             return True
         except Exception as e:
             logger.error(f"❌ Failed to delete app {app_slug}: {e}")

@@ -1,11 +1,9 @@
 from flask import Blueprint, jsonify, request
 import requests
-import json
 import logging
 import re
 import uuid
 from datetime import datetime, timezone
-from pathlib import Path
 from keys import load_user_keys
 from storage import get_apps_storage, get_riffs_storage
 from agent_loop import agent_loop_manager
@@ -47,24 +45,7 @@ def delete_user_app(user_uuid, app_slug):
     return storage.delete_app(app_slug)
 
 
-# Legacy functions for backward compatibility during migration
-def load_apps():
-    """Load apps from legacy file - DEPRECATED"""
-    logger.warning("⚠️ Using deprecated load_apps() function")
-    legacy_file = Path("/data/apps.json")
-    if legacy_file.exists():
-        try:
-            with open(legacy_file, "r") as f:
-                return json.load(f)
-        except Exception as e:
-            logger.error(f"❌ Failed to load legacy apps: {e}")
-    return []
-
-
-def save_apps(apps):
-    """Save apps to legacy file - DEPRECATED"""
-    logger.warning("⚠️ Using deprecated save_apps() function")
-    return False  # Disable legacy saving
+# Legacy functions removed - apps are now stored as individual files in user directories
 
 
 def is_valid_slug(slug):

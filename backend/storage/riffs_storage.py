@@ -99,7 +99,7 @@ class RiffsStorage(BaseStorage):
         return riff_file.exists()
 
     def delete_riff(self, app_slug: str, riff_slug: str) -> bool:
-        """Delete riff and all its data"""
+        """Delete riff and all its data including workspace directory"""
         logger.info(
             f"🗑️ Deleting riff: {app_slug}/{riff_slug} for user {self.user_uuid[:8]}..."
         )
@@ -109,9 +109,18 @@ class RiffsStorage(BaseStorage):
             logger.debug(f"🗑️ Riff directory doesn't exist: {app_slug}/{riff_slug}")
             return True  # Already deleted
 
+        # Log workspace directory that will be cleaned up
+        workspace_dir = riff_dir / "workspace"
+        if workspace_dir.exists():
+            logger.info(f"🧹 Will clean up workspace directory: {workspace_dir}")
+        else:
+            logger.debug(f"🧹 No workspace directory found at: {workspace_dir}")
+
         try:
             shutil.rmtree(riff_dir)
-            logger.info(f"✅ Riff deleted successfully: {app_slug}/{riff_slug}")
+            logger.info(
+                f"✅ Riff deleted successfully: {app_slug}/{riff_slug} (including workspace directory)"
+            )
             return True
         except Exception as e:
             logger.error(f"❌ Failed to delete riff {app_slug}/{riff_slug}: {e}")
