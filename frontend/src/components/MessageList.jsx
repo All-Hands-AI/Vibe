@@ -1,6 +1,7 @@
 import PropTypes from 'prop-types'
+import MarkdownRenderer from './MarkdownRenderer'
 
-function MessageList({ messages, userUuid, scrollContainerRef, onScroll }) {
+function MessageList({ messages, userUuid, scrollContainerRef, onScroll, messagesEndRef }) {
   // No auto-scroll here - handled by parent ChatWindow component
 
   const formatTime = (timestamp) => {
@@ -139,9 +140,10 @@ function MessageList({ messages, userUuid, scrollContainerRef, onScroll }) {
                         </span>
                       </div>
                     ) : (
-                      <p className="whitespace-pre-wrap break-words">
-                        {message.content}
-                      </p>
+                      <MarkdownRenderer 
+                        content={message.content}
+                        className="break-words"
+                      />
                     )}
                   </div>
 
@@ -164,6 +166,9 @@ function MessageList({ messages, userUuid, scrollContainerRef, onScroll }) {
           </div>
         </div>
       ))}
+      
+      {/* Scroll anchor - placed at the very end of messages */}
+      <div ref={messagesEndRef} style={{ height: '1px' }} />
     </div>
   )
 }
@@ -181,7 +186,8 @@ MessageList.propTypes = {
   ).isRequired,
   userUuid: PropTypes.string.isRequired,
   scrollContainerRef: PropTypes.object,
-  onScroll: PropTypes.func
+  onScroll: PropTypes.func,
+  messagesEndRef: PropTypes.object
 }
 
 export default MessageList

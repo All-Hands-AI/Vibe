@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Focus and Alignment Test</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { background: #000; color: #fff; }
+        .cyber-text { color: #e0e0e0; }
+        .cyber-muted { color: #888; }
+        .neon-green { color: #00ff88; }
+    </style>
+</head>
+<body class="p-8">
+    <h1 class="text-2xl mb-4">Chat Input Focus & Alignment Test</h1>
+    
+    <div class="max-w-2xl mx-auto">
+        <div class="bg-black border border-gray-700 rounded-lg p-4">
+            <form id="testForm" class="p-4">
+                <div class="flex gap-3">
+                    <!-- Message Input -->
+                    <div class="flex-1">
+                        <textarea
+                            id="messageInput"
+                            placeholder="Type a message..."
+                            class="w-full bg-gray-800 border border-gray-600 rounded-lg px-4 py-2 text-cyber-text placeholder-cyber-muted resize-none focus:outline-none focus:border-neon-green transition-colors duration-200"
+                            style="min-height: 40px; max-height: 120px;"
+                            rows="1"
+                        ></textarea>
+                    </div>
+
+                    <!-- File Upload Button -->
+                    <button
+                        type="button"
+                        class="h-10 w-10 flex-shrink-0 flex items-center justify-center bg-gray-700 hover:bg-gray-600 border border-gray-600 rounded-lg text-cyber-muted hover:text-cyber-text transition-colors duration-200"
+                        title="Upload file"
+                    >
+                        📎
+                    </button>
+
+                    <!-- Send Button -->
+                    <button
+                        type="submit"
+                        id="sendButton"
+                        class="h-10 px-4 flex-shrink-0 flex items-center justify-center bg-green-500/20 hover:bg-green-500/30 border border-green-500 text-green-500 rounded-lg font-mono text-sm transition-colors duration-200"
+                    >
+                        <div class="flex items-center space-x-2">
+                            <span>💬</span>
+                            <span>Send</span>
+                        </div>
+                    </button>
+                </div>
+            </form>
+            
+            <div id="messages" class="mt-4 p-4 bg-gray-900 rounded-lg min-h-[200px] max-h-[300px] overflow-y-auto">
+                <p class="text-gray-500">Messages will appear here...</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const form = document.getElementById('testForm');
+        const input = document.getElementById('messageInput');
+        const messages = document.getElementById('messages');
+        const sendButton = document.getElementById('sendButton');
+
+        // Auto-resize textarea
+        input.addEventListener('input', function() {
+            this.style.height = 'auto';
+            this.style.height = Math.min(this.scrollHeight, 120) + 'px';
+        });
+
+        // Handle form submission
+        form.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const message = input.value.trim();
+            if (!message) return;
+
+            // Store reference before async operation
+            const textareaElement = input;
+            
+            // Simulate sending message
+            sendButton.disabled = true;
+            sendButton.innerHTML = '<div class="flex items-center space-x-2"><div class="w-4 h-4 border-2 border-green-500 border-t-transparent rounded-full animate-spin"></div><span>Sending...</span></div>';
+            
+            try {
+                // Simulate async operation
+                await new Promise(resolve => setTimeout(resolve, 500));
+                
+                // Add message to chat
+                const messageDiv = document.createElement('div');
+                messageDiv.className = 'mb-2 p-2 bg-green-500/20 rounded border border-green-500/30';
+                messageDiv.innerHTML = `<strong>You:</strong> ${message}`;
+                messages.appendChild(messageDiv);
+                messages.scrollTop = messages.scrollHeight;
+                
+                // Clear input
+                input.value = '';
+                
+                // Reset textarea height and maintain focus
+                if (textareaElement) {
+                    textareaElement.style.height = 'auto';
+                    // Use requestAnimationFrame to ensure DOM updates are complete
+                    requestAnimationFrame(() => {
+                        textareaElement.focus();
+                    });
+                }
+                
+            } catch (error) {
+                console.error('Error:', error);
+                // Still maintain focus even if there's an error
+                if (textareaElement) {
+                    textareaElement.focus();
+                }
+            } finally {
+                sendButton.disabled = false;
+                sendButton.innerHTML = '<div class="flex items-center space-x-2"><span>💬</span><span>Send</span></div>';
+            }
+        });
+
+        // Handle Enter key
+        input.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                form.dispatchEvent(new Event('submit'));
+            }
+        });
+
+        // Focus input on page load and scroll messages to bottom
+        input.focus();
+        
+        // Auto-scroll messages to bottom on page load
+        function scrollToBottom() {
+            messages.scrollTop = messages.scrollHeight;
+        }
+        
+        // Scroll to bottom when page loads
+        window.addEventListener('load', () => {
+            setTimeout(scrollToBottom, 100);
+        });
+        
+        // Also scroll to bottom immediately
+        scrollToBottom();
+    </script>
+</body>
+</html>

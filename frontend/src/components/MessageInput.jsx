@@ -3,19 +3,33 @@ import PropTypes from 'prop-types'
 
 function MessageInput({ onSendMessage, disabled = false, placeholder = 'Type a message...' }) {
   const [message, setMessage] = useState('')
-  const [messageType, setMessageType] = useState('text')
   const textareaRef = useRef(null)
   const fileInputRef = useRef(null)
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
     if (message.trim() && !disabled) {
-      onSendMessage(message, messageType)
-      setMessage('')
-      setMessageType('text')
-      // Reset textarea height
-      if (textareaRef.current) {
-        textareaRef.current.style.height = 'auto'
+      // Store reference before async operation
+      const textareaElement = textareaRef.current
+      
+      try {
+        await onSendMessage(message, 'text')
+        setMessage('')
+        
+        // Reset textarea height and maintain focus
+        if (textareaElement) {
+          textareaElement.style.height = 'auto'
+          // Use requestAnimationFrame to ensure DOM updates are complete
+          requestAnimationFrame(() => {
+            textareaElement.focus()
+          })
+        }
+      } catch (error) {
+        console.error('Error sending message:', error)
+        // Still maintain focus even if there's an error
+        if (textareaElement) {
+          textareaElement.focus()
+        }
       }
     }
   }
@@ -56,33 +70,9 @@ function MessageInput({ onSendMessage, disabled = false, placeholder = 'Type a m
     }
   }
 
-  const getTypeIcon = (type) => {
-    switch (type) {
-      case 'code':
-        return '💻'
-      case 'file':
-        return '📎'
-      default:
-        return '💬'
-    }
-  }
-
   return (
     <form onSubmit={handleSubmit} className="p-4">
-      <div className="flex items-end space-x-3">
-        {/* Message Type Selector */}
-        <div className="flex flex-col space-y-1">
-          <select
-            value={messageType}
-            onChange={(e) => setMessageType(e.target.value)}
-            className="bg-gray-800 border border-gray-600 rounded px-2 py-1 text-xs text-cyber-text font-mono focus:outline-none focus:border-neon-green"
-            disabled={disabled}
-          >
-            <option value="text">💬 Text</option>
-            <option value="code">💻 Code</option>
-          </select>
-        </div>
-
+      <div className="flex gap-3">
         {/* Message Input */}
         <div className="flex-1">
           <textarea
@@ -98,38 +88,35 @@ function MessageInput({ onSendMessage, disabled = false, placeholder = 'Type a m
           />
         </div>
 
-        {/* Action Buttons */}
-        <div className="flex space-x-2">
-          {/* File Upload Button */}
-          <button
-            type="button"
-            onClick={() => fileInputRef.current?.click()}
-            disabled={disabled}
-            className="p-2 bg-gray-700 hover:bg-gray-600 border border-gray-600 rounded-lg text-cyber-muted hover:text-cyber-text transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-            title="Upload file"
-          >
-            📎
-          </button>
+        {/* File Upload Button */}
+        <button
+          type="button"
+          onClick={() => fileInputRef.current?.click()}
+          disabled={disabled}
+          className="h-10 w-10 flex-shrink-0 flex items-center justify-center bg-gray-700 hover:bg-gray-600 border border-gray-600 rounded-lg text-cyber-muted hover:text-cyber-text transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+          title="Upload file"
+        >
+          📎
+        </button>
 
-          {/* Send Button */}
-          <button
-            type="submit"
-            disabled={disabled || !message.trim()}
-            className="px-4 py-2 bg-neon-green/20 hover:bg-neon-green/30 border border-neon-green text-neon-green rounded-lg font-mono text-sm transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {disabled ? (
-              <div className="flex items-center space-x-2">
-                <div className="w-4 h-4 border-2 border-neon-green border-t-transparent rounded-full animate-spin"></div>
-                <span>Sending...</span>
-              </div>
-            ) : (
-              <div className="flex items-center space-x-2">
-                <span>{getTypeIcon(messageType)}</span>
-                <span>Send</span>
-              </div>
-            )}
-          </button>
-        </div>
+        {/* Send Button */}
+        <button
+          type="submit"
+          disabled={disabled || !message.trim()}
+          className="h-10 px-4 flex-shrink-0 flex items-center justify-center bg-neon-green/20 hover:bg-neon-green/30 border border-neon-green text-neon-green rounded-lg font-mono text-sm transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {disabled ? (
+            <div className="flex items-center space-x-2">
+              <div className="w-4 h-4 border-2 border-neon-green border-t-transparent rounded-full animate-spin"></div>
+              <span>Sending...</span>
+            </div>
+          ) : (
+            <div className="flex items-center space-x-2">
+              <span>💬</span>
+              <span>Send</span>
+            </div>
+          )}
+        </button>
       </div>
 
       {/* Hidden File Input */}
@@ -140,11 +127,6 @@ function MessageInput({ onSendMessage, disabled = false, placeholder = 'Type a m
         className="hidden"
         accept="*/*"
       />
-
-      {/* Help Text */}
-      <div className="mt-2 text-xs text-cyber-muted font-mono">
-        Press Enter to send, Shift+Enter for new line
-      </div>
     </form>
   )
 }
