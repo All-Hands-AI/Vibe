@@ -9,7 +9,7 @@ from rich.prompt import Confirm
 from rich.progress import Progress, SpinnerColumn, TextColumn
 from rich.text import Text
 
-from openvibe_cli.api_client import get_api_client, APIError
+from openvibe_cli.backend import get_backend
 from openvibe_cli.config import Config
 
 console = Console()
@@ -29,7 +29,7 @@ def apps():
 def list():
     """List all your apps."""
     try:
-        api = get_api_client()
+        backend = get_backend()
         
         with Progress(
             SpinnerColumn(),
@@ -37,7 +37,7 @@ def list():
             console=console
         ) as progress:
             task = progress.add_task("Loading apps...", total=None)
-            apps_data = api.list_apps()
+            apps_data = backend.list_apps()
             progress.remove_task(task)
         
         if not apps_data:
@@ -74,10 +74,8 @@ def list():
         console.print(table)
         console.print(f"\n💡 Use 'openvibe apps show <slug>' to view app details", style="dim")
         
-    except APIError as e:
-        console.print(f"❌ Error loading apps: {e.message}", style="red")
     except Exception as e:
-        console.print(f"❌ Unexpected error: {str(e)}", style="red")
+        console.print(f"❌ Error loading apps: {str(e)}", style="red")
 
 
 @apps.command()
@@ -92,10 +90,15 @@ def create(name):
         return
     
     try:
-        api = get_api_client()
+        backend = get_backend()
+        
+        # Create slug from name
+        import re
+        slug = re.sub(r'[^a-zA-Z0-9\s-]', '', name.lower())
+        slug = re.sub(r'\s+', '-', slug.strip())
+        slug = slug[:50]  # Limit length
         
         # Show what will be created
-        slug = api.create_slug(name)
         console.print(f"📱 Creating app:", style="bold")
         console.print(f"   Name: {name}")
         console.print(f"   Slug: {slug}")
@@ -110,7 +113,7 @@ def create(name):
             console=console
         ) as progress:
             task = progress.add_task("Creating app...", total=None)
-            app_data = api.create_app(name)
+            app_data = backend.create_app(name, slug)
             progress.remove_task(task)
         
         console.print("✅ App created successfully!", style="green")
@@ -118,17 +121,15 @@ def create(name):
         console.print(f"   Slug: {app_data['slug']}")
         console.print(f"   Created: {app_data['created_at']}")
         
-        if app_data.get('github_url'):
-            console.print(f"   GitHub: {app_data['github_url']}")
+        if app_data.get('github_repo'):
+            console.print(f"   GitHub: {app_data['github_repo']}")
         
         console.print(f"\n💡 Next steps:", style="bold")
         console.print(f"   • View app: openvibe apps show {app_data['slug']}")
         console.print(f"   • Create a riff: openvibe riffs create {app_data['slug']} \"My Riff\"")
         
-    except APIError as e:
-        console.print(f"❌ Error creating app: {e.message}", style="red")
     except Exception as e:
-        console.print(f"❌ Unexpected error: {str(e)}", style="red")
+        console.print(f"❌ Error creating app: {str(e)}", style="red")
 
 
 @apps.command()
@@ -139,7 +140,7 @@ def show(slug):
     SLUG: The slug of the app to show
     """
     try:
-        api = get_api_client()
+        backend = get_backend()
         
         with Progress(
             SpinnerColumn(),
@@ -147,8 +148,12 @@ def show(slug):
             console=console
         ) as progress:
             task = progress.add_task("Loading app details...", total=None)
-            app_data = api.get_app(slug)
+            app_data = backend.get_app(slug)
             progress.remove_task(task)
+        
+        if not app_data:
+            console.print(f"❌ App '{slug}' not found", style="red")
+            return
         
         # Create detailed view
         info_text = Text()
@@ -156,8 +161,8 @@ def show(slug):
         info_text.append(f"Slug: {app_data['slug']}\n")
         info_text.append(f"Created: {app_data['created_at']}\n")
         
-        if app_data.get('github_url'):
-            info_text.append(f"GitHub: {app_data['github_url']}\n", style="green")
+        if app_data.get('github_repo'):
+            info_text.append(f"GitHub: {app_data['github_repo']}\n", style="green")
         else:
             info_text.append("GitHub: Not configured\n", style="dim")
         
@@ -176,7 +181,7 @@ def show(slug):
                 console=console
             ) as progress:
                 task = progress.add_task("Loading riffs...", total=None)
-                riffs_data = api.list_riffs(slug)
+                riffs_data = backend.list_riffs(slug)
                 progress.remove_task(task)
             
             if riffs_data:
@@ -212,16 +217,11 @@ def show(slug):
             if riffs_data:
                 console.print(f"   • Chat with riff: openvibe chat {slug} <riff-slug>")
         
-        except APIError:
+        except Exception:
             console.print("\n⚠️ Could not load riffs for this app", style="yellow")
         
-    except APIError as e:
-        if e.status_code == 404:
-            console.print(f"❌ App '{slug}' not found", style="red")
-        else:
-            console.print(f"❌ Error loading app: {e.message}", style="red")
     except Exception as e:
-        console.print(f"❌ Unexpected error: {str(e)}", style="red")
+        console.print(f"❌ Error loading app: {str(e)}", style="red")
 
 
 @apps.command()
@@ -241,23 +241,21 @@ def delete(slug, force):
     This action cannot be undone.
     """
     try:
-        api = get_api_client()
+        backend = get_backend()
         
         # First, get app details to show what will be deleted
-        try:
-            with Progress(
-                SpinnerColumn(),
-                TextColumn("[progress.description]{task.description}"),
-                console=console
-            ) as progress:
-                task = progress.add_task("Loading app details...", total=None)
-                app_data = api.get_app(slug)
-                progress.remove_task(task)
-        except APIError as e:
-            if e.status_code == 404:
-                console.print(f"❌ App '{slug}' not found", style="red")
-                return
-            raise
+        with Progress(
+            SpinnerColumn(),
+            TextColumn("[progress.description]{task.description}"),
+            console=console
+        ) as progress:
+            task = progress.add_task("Loading app details...", total=None)
+            app_data = backend.get_app(slug)
+            progress.remove_task(task)
+        
+        if not app_data:
+            console.print(f"❌ App '{slug}' not found", style="red")
+            return
         
         # Show what will be deleted
         console.print(f"🗑️ Delete App: {app_data['name']}", style="bold red")
@@ -289,17 +287,13 @@ def delete(slug, force):
             console=console
         ) as progress:
             task = progress.add_task("Deleting app...", total=None)
-            result = api.delete_app(slug)
+            success = backend.delete_app(slug)
             progress.remove_task(task)
         
-        console.print("✅ App deleted successfully!", style="green")
+        if success:
+            console.print("✅ App deleted successfully!", style="green")
+        else:
+            console.print("❌ Failed to delete app", style="red")
         
-        if result.get('warnings'):
-            console.print("\n⚠️ Warnings:", style="yellow")
-            for warning in result['warnings']:
-                console.print(f"   • {warning}")
-        
-    except APIError as e:
-        console.print(f"❌ Error deleting app: {e.message}", style="red")
     except Exception as e:
-        console.print(f"❌ Unexpected error: {str(e)}", style="red")
+        console.print(f"❌ Error deleting app: {str(e)}", style="red")

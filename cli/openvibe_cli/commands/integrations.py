@@ -4,7 +4,7 @@ import click
 from rich.console import Console
 from rich.progress import Progress, SpinnerColumn, TextColumn
 
-from openvibe_cli.api_client import get_api_client, APIError
+from openvibe_cli.backend import get_backend
 from openvibe_cli.config import Config
 
 console = Console()
@@ -29,7 +29,7 @@ def set_key(provider, api_key):
     API_KEY: The API key to set
     """
     try:
-        api = get_api_client()
+        backend = get_backend()
         
         with Progress(
             SpinnerColumn(),
@@ -37,22 +37,16 @@ def set_key(provider, api_key):
             console=console
         ) as progress:
             task = progress.add_task(f"Setting {provider} API key...", total=None)
-            
-            # Make API request to set the key
-            response = api._make_request('POST', f'/integrations/{provider}', json={'api_key': api_key})
-            data = api._handle_response(response)
-            
+            success = backend.set_integration_key(provider, api_key)
             progress.remove_task(task)
         
-        if data.get('valid'):
+        if success:
             console.print(f"✅ {provider.title()} API key set successfully!", style="green")
         else:
-            console.print(f"❌ {provider.title()} API key is invalid", style="red")
+            console.print(f"❌ Failed to set {provider.title()} API key", style="red")
             
-    except APIError as e:
-        console.print(f"❌ Error setting API key: {e.message}", style="red")
     except Exception as e:
-        console.print(f"❌ Unexpected error: {str(e)}", style="red")
+        console.print(f"❌ Error setting API key: {str(e)}", style="red")
 
 
 @integrations.command()
@@ -65,23 +59,23 @@ def setup_mock():
         'openai': 'mock_openai_key_12345'
     }
     
-    console.print("🎭 Setting up mock API keys for testing...", style="yellow")
-    
-    for provider, key in mock_keys.items():
-        try:
-            api = get_api_client()
-            response = api._make_request('POST', f'/integrations/{provider}', json={'api_key': key})
-            data = api._handle_response(response)
+    try:
+        backend = get_backend()
+        
+        console.print("🎭 Setting up mock API keys for testing...", style="yellow")
+        
+        success = backend.setup_mock_keys()
+        
+        if success:
+            console.print("✅ Mock API keys set up successfully!", style="green")
+            console.print("\n🎉 Mock setup complete! You can now:", style="green")
+            console.print("   • Create apps: openvibe apps create \"My App\"")
+            console.print("   • Check status: openvibe status")
+        else:
+            console.print("❌ Failed to set up mock API keys", style="red")
             
-            if data.get('valid'):
-                console.print(f"✅ Mock {provider} key set", style="green")
-            else:
-                console.print(f"❌ Failed to set mock {provider} key", style="red")
-                
-        except Exception as e:
-            console.print(f"❌ Error setting mock {provider} key: {str(e)}", style="red")
-    
-    console.print("\n🎉 Mock API keys setup complete! You can now create apps and test the CLI.", style="green")
+    except Exception as e:
+        console.print(f"❌ Error setting up mock keys: {str(e)}", style="red")
 
 
 @integrations.command()
@@ -89,23 +83,17 @@ def status():
     """Check the status of all API key integrations."""
     providers = ['github', 'fly', 'anthropic', 'openai']
     
+    backend = get_backend()
     console.print("🔑 API Key Status:", style="bold")
     
     for provider in providers:
         try:
-            api = get_api_client()
-            response = api._make_request('GET', f'/integrations/{provider}')
-            data = api._handle_response(response)
+            status_data = backend.get_integration_status(provider)
             
-            if data.get('valid'):
+            if status_data.get('valid'):
                 console.print(f"   ✅ {provider.title()}: Configured", style="green")
             else:
                 console.print(f"   ❌ {provider.title()}: Not configured", style="red")
                 
-        except APIError as e:
-            if e.status_code == 404:
-                console.print(f"   ❌ {provider.title()}: Not configured", style="red")
-            else:
-                console.print(f"   ⚠️ {provider.title()}: Error checking status", style="yellow")
         except Exception:
             console.print(f"   ⚠️ {provider.title()}: Error checking status", style="yellow")

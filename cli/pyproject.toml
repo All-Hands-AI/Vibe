@@ -29,6 +29,10 @@ dependencies = [
     "click>=8.0.0",
     "pydantic>=2.0.0",
     "python-dateutil>=2.8.0",
+    # Backend dependencies
+    "PyNaCl>=1.5.0",
+    "openhands-sdk @ git+https://github.com/all-hands-ai/agent-sdk.git@main#subdirectory=openhands/sdk",
+    "openhands-tools @ git+https://github.com/all-hands-ai/agent-sdk.git@main#subdirectory=openhands/tools",
 ]
 
 [project.optional-dependencies]
