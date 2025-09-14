@@ -445,9 +445,7 @@ def create_riff(slug):
                 400,
             )
 
-        logger.info(
-            f"🔄 Creating riff: {riff_slug} for user {user_uuid[:8]}"
-        )
+        logger.info(f"🔄 Creating riff: {riff_slug} for user {user_uuid[:8]}")
 
         # Check if riff with same slug already exists for this user
         existing_riff = None

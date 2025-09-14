@@ -98,7 +98,9 @@ def add_user_message(user_uuid, app_slug, riff_slug, message):
     return storage.add_message(app_slug, riff_slug, message)
 
 
-def create_initial_riff_and_message(user_uuid, app_slug, app_slug_for_message, github_url):
+def create_initial_riff_and_message(
+    user_uuid, app_slug, app_slug_for_message, github_url
+):
     """Create initial riff and message for a new app"""
     try:
         # Import here to avoid circular imports
@@ -205,7 +207,9 @@ Please work through these steps systematically and let me know if you encounter 
         except Exception as e:
             logger.warning(f"⚠️ Failed to send initial message to agent: {str(e)}")
 
-        logger.info(f"✅ Created initial riff and message for app: {app_slug_for_message}")
+        logger.info(
+            f"✅ Created initial riff and message for app: {app_slug_for_message}"
+        )
         return True, {"riff": riff, "message": message}
 
     except Exception as e:
@@ -1365,8 +1369,6 @@ def create_app():
             logger.warning("❌ App slug cannot be empty")
             return jsonify({"error": "App slug cannot be empty"}), 400
 
-
-
         # Validate slug format
         if not is_valid_slug(app_slug):
             logger.warning(f"❌ Invalid app slug format: {app_slug}")
@@ -1379,9 +1381,7 @@ def create_app():
                 400,
             )
 
-        logger.info(
-            f"🔄 Creating app: {app_slug} for user {user_uuid[:8]}"
-        )
+        logger.info(f"🔄 Creating app: {app_slug} for user {user_uuid[:8]}")
 
         # Check if app with same slug already exists for this user
         if user_app_exists(user_uuid, app_slug):

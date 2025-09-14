@@ -294,9 +294,7 @@ class TestRiffsEndpoints:
             assert data["riff"]["slug"] == slug
 
             # Clean up for next test
-            client.delete(
-                f"/api/apps/{app_slug}/riffs/{slug}", headers=unique_headers
-            )
+            client.delete(f"/api/apps/{app_slug}/riffs/{slug}", headers=unique_headers)
 
         # Test invalid slugs
         invalid_slugs = [
