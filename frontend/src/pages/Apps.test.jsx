@@ -123,7 +123,7 @@ describe('Apps', () => {
     expect(screen.queryByText(/Created:/)).not.toBeInTheDocument()
   })
 
-  it('shows slug preview when typing app name', async () => {
+  it('converts input text to slug as user types', async () => {
     // Mock apps fetch
     fetch.mockResolvedValueOnce({
       ok: true,
@@ -137,10 +137,9 @@ describe('Apps', () => {
     // Type in the input
     fireEvent.change(nameInput, { target: { value: 'My Awesome App!' } })
     
-    // Check slug preview appears
+    // Check that input value is converted to slug
     await waitFor(() => {
-      expect(screen.getByText('Slug:')).toBeInTheDocument()
-      expect(screen.getByText('my-awesome-app')).toBeInTheDocument()
+      expect(nameInput.value).toBe('my-awesome-app')
     })
   })
 
@@ -202,9 +201,9 @@ describe('Apps', () => {
     fireEvent.change(nameInput, { target: { value: 'Test App' } })
     fireEvent.click(createButton)
     
-    // Check success message appears
+    // Check success message appears (now shows slug instead of original name)
     await waitFor(() => {
-      expect(screen.getByText('App "Test App" created successfully!')).toBeInTheDocument()
+      expect(screen.getByText('App "test-app" created successfully!')).toBeInTheDocument()
     })
     
     // Check that form was reset

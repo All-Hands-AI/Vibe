@@ -27,14 +27,42 @@ function AppDetail() {
 
 
 
-  // Create slug from riff name
-  const createSlug = (name) => {
-    return name
+  // Create slug for real-time display (allows trailing hyphens)
+  const createSlugForDisplay = (name) => {
+    console.log('🔧 createSlugForDisplay input:', JSON.stringify(name))
+    
+    const step1 = name.toLowerCase()
+    console.log('🔧 Step 1 (toLowerCase):', JSON.stringify(step1))
+    
+    const step2 = step1.replace(/[^a-zA-Z0-9\s-]/g, '')
+    console.log('🔧 Step 2 (remove invalid chars):', JSON.stringify(step2))
+    
+    const step3 = step2.replace(/\s+/g, '-')
+    console.log('🔧 Step 3 (spaces to hyphens):', JSON.stringify(step3))
+    
+    const step4 = step3.replace(/-+/g, '-')
+    console.log('🔧 Step 4 (collapse multiple hyphens):', JSON.stringify(step4))
+    
+    const step5 = step4.replace(/^-/g, '') // Only remove leading hyphens, keep trailing
+    console.log('🔧 Step 5 (remove leading hyphens only):', JSON.stringify(step5))
+    
+    console.log('🔧 createSlugForDisplay final result:', JSON.stringify(step5))
+    return step5
+  }
+
+  // Create final slug for submission (removes trailing hyphens)
+  const createFinalSlug = (name) => {
+    console.log('🔧 createFinalSlug input:', JSON.stringify(name))
+    
+    const result = name
       .toLowerCase()
       .replace(/[^a-zA-Z0-9\s-]/g, '')
       .replace(/\s+/g, '-')
       .replace(/-+/g, '-')
-      .replace(/^-|-$/g, '')
+      .replace(/^-|-$/g, '') // Remove both leading and trailing hyphens
+    
+    console.log('🔧 createFinalSlug result:', JSON.stringify(result))
+    return result
   }
 
   // Fetch app details
@@ -116,8 +144,8 @@ function AppDetail() {
       return
     }
 
-    const riffSlug = createSlug(newRiffName.trim())
-    console.log('📝 Riff details:', { name: newRiffName.trim(), slug: riffSlug })
+    const riffSlug = createFinalSlug(newRiffName.trim())
+    console.log('📝 Riff details:', { name: riffSlug, slug: riffSlug })
     
     if (!riffSlug) {
       console.warn('❌ Invalid riff slug generated')
@@ -134,7 +162,7 @@ function AppDetail() {
       console.log('🆔 User UUID:', uuid)
 
       const requestData = {
-        name: newRiffName.trim(),
+        name: riffSlug,
         slug: riffSlug
       }
       
@@ -162,7 +190,7 @@ function AppDetail() {
       }
 
       console.log('✅ Riff created successfully:', data.riff)
-      setSuccess(`Riff "${newRiffName}" created successfully!`)
+      setSuccess(`Riff "${riffSlug}" created successfully!`)
       setNewRiffName('')
       
       // Refresh riffs list
@@ -387,18 +415,19 @@ function AppDetail() {
                       <input
                         type="text"
                         value={newRiffName}
-                        onChange={(e) => setNewRiffName(e.target.value)}
+                        onChange={(e) => {
+                          const inputValue = e.target.value
+                          console.log('📝 Riff name input onChange - raw input:', JSON.stringify(inputValue))
+                          const slug = createSlugForDisplay(inputValue)
+                          console.log('📝 Riff name input onChange - setting state to:', JSON.stringify(slug))
+                          setNewRiffName(slug)
+                        }}
                         placeholder="Enter riff name"
                         disabled={creating}
                         className={`w-full px-4 py-3 bg-gray-700 text-cyber-text rounded-md border transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-cyber-muted focus:border-transparent ${
                           error ? 'border-red-500' : 'border-gray-600'
                         }`}
                       />
-                      {newRiffName && (
-                        <div className="mt-2 text-sm text-cyber-muted">
-                          Slug: <code className="bg-gray-700 px-2 py-1 rounded text-cyber-muted">{createSlug(newRiffName)}</code>
-                        </div>
-                      )}
                     </div>
                     
                     <button 
