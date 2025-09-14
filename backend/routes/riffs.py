@@ -201,7 +201,7 @@ def create_agent_for_user(user_uuid, app_slug, riff_slug):
 
         except Exception as e:
             logger.error(f"❌ Failed to create LLM instance: {e}")
-            return False, "Failed to initialize LLM"
+            return False, f"Failed to initialize LLM: {str(e)}"
 
     except Exception as e:
         logger.error(f"❌ Failed to create AgentLoop: {e}")

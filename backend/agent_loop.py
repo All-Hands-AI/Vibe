@@ -28,10 +28,13 @@ WORKSPACE INFORMATION:
 You are working in a cloned GitHub repository located at: {workspace_path}
 
 This directory contains the complete source code of the project you'll be working on. You can:
-- View, edit, and create files using the FileEditor tool
+- View, edit, and create files using the FileEditor tool (use absolute paths starting with {workspace_path})
 - Navigate the repository structure
 - Make changes to the codebase
 - The repository is already checked out to the appropriate branch for this riff
+
+IMPORTANT: When using the FileEditor tool, always use absolute paths that start with {workspace_path}/
+For example: {workspace_path}/src/main.py or {workspace_path}/README.md
 
 Your file operations will be performed within this workspace directory."""
 
@@ -80,7 +83,7 @@ class AgentLoop:
         # Create Agent with development tools
         # Use workspace path for file operations, /data for task tracking
         tools: list = [
-            FileEditorTool.create(working_dir=self.workspace_path),
+            FileEditorTool.create(),
             TaskTrackerTool.create(
                 save_dir="/data"
             ),  # Save task tracking data to /data directory
