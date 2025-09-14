@@ -3,10 +3,12 @@ import requests
 import json
 import logging
 import re
+import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 from keys import load_user_keys
-from storage import get_apps_storage
+from storage import get_apps_storage, get_riffs_storage
+from agent_loop import agent_loop_manager
 
 logger = logging.getLogger(__name__)
 
@@ -64,6 +66,16 @@ def save_apps(apps):
     return False  # Disable legacy saving
 
 
+def is_valid_slug(slug):
+    """Validate that a slug contains only lowercase letters, numbers, and hyphens"""
+    if not slug:
+        return False
+    # Check if slug matches the pattern: lowercase letters, numbers, and hyphens only
+    # Must not start or end with hyphen, and no consecutive hyphens
+    pattern = r"^[a-z0-9]+(-[a-z0-9]+)*$"
+    return bool(re.match(pattern, slug))
+
+
 def create_slug(name):
     """Convert app name to slug format"""
     # Convert to lowercase and replace spaces/special chars with hyphens
@@ -71,6 +83,134 @@ def create_slug(name):
     slug = re.sub(r"\s+", "-", slug.strip())
     slug = re.sub(r"-+", "-", slug)
     return slug.strip("-")
+
+
+def save_user_riff(user_uuid, app_slug, riff_slug, riff_data):
+    """Save riff for a specific user"""
+    storage = get_riffs_storage(user_uuid)
+    return storage.save_riff(app_slug, riff_slug, riff_data)
+
+
+def add_user_message(user_uuid, app_slug, riff_slug, message):
+    """Add a message to a riff for a specific user"""
+    storage = get_riffs_storage(user_uuid)
+    return storage.add_message(app_slug, riff_slug, message)
+
+
+def create_initial_riff_and_message(user_uuid, app_slug, app_name, github_url):
+    """Create initial riff and message for a new app"""
+    try:
+        # Import here to avoid circular imports
+        from routes.riffs import create_agent_for_user
+
+        # Create riff name and slug using branch name format
+        riff_name = f"rename-to-{app_slug}"
+        riff_slug = riff_name  # Already in slug format since app_slug is validated
+
+        logger.info(
+            f"🔄 Creating initial riff: {riff_name} -> {riff_slug} for app {app_slug}"
+        )
+
+        # Create riff record
+        riff = {
+            "slug": riff_slug,
+            "name": riff_name,
+            "app_slug": app_slug,
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "created_by": user_uuid,
+            "last_message_at": None,
+            "message_count": 0,
+        }
+
+        # Save riff
+        if not save_user_riff(user_uuid, app_slug, riff_slug, riff):
+            logger.error("❌ Failed to save initial riff")
+            return False, "Failed to save initial riff"
+
+        # Create initial message with instructions
+        message_id = str(uuid.uuid4())
+        created_at = datetime.now(timezone.utc).isoformat()
+
+        initial_message_content = f"""Please complete the following tasks to customize this app template for "{app_name}":
+
+1. **Read TEMPLATE.md** - First, read the TEMPLATE.md file to understand the specific instructions for this template.
+
+2. **Follow the template instructions** - Execute the instructions in TEMPLATE.md to change the app name everywhere in the repository. The template should contain a helpful command or script to automate this process.
+
+3. **Change the app name** - Update all references from the template name to "{app_name}" throughout the codebase. This typically includes:
+   - Package.json or similar dependency files
+   - Configuration files
+   - README files
+   - HTML title tags
+   - Any hardcoded app names in the code
+
+4. **Verify the changes** - Check that the app name has been successfully changed in key locations:
+   - Check the main package.json or equivalent
+   - Check the README.md file
+   - Check any configuration files
+   - Search for any remaining references to the old template name
+
+5. **Delete TEMPLATE.md** - Once you've followed all the instructions, delete the TEMPLATE.md file as it's no longer needed.
+
+6. **Commit and push changes** - Commit all your changes with a descriptive message and push them to the remote repository.
+
+Please work through these steps systematically and let me know if you encounter any issues or need clarification on any step."""
+
+        message = {
+            "id": message_id,
+            "content": initial_message_content,
+            "riff_slug": riff_slug,
+            "app_slug": app_slug,
+            "created_at": created_at,
+            "created_by": user_uuid,
+            "type": "user",
+            "metadata": {"initial_setup": True},
+        }
+
+        # Add message
+        if not add_user_message(user_uuid, app_slug, riff_slug, message):
+            logger.error("❌ Failed to save initial message")
+            return False, "Failed to save initial message"
+
+        # Create agent for the riff using the working function from riffs.py
+        logger.info(f"🤖 Creating agent for initial riff: {riff_slug}")
+        agent_success, agent_error = create_agent_for_user(
+            user_uuid, app_slug, riff_slug
+        )
+
+        if not agent_success:
+            logger.warning(f"⚠️ Failed to create agent for initial riff: {agent_error}")
+            # Don't fail the entire process if agent creation fails
+            return True, {
+                "riff": riff,
+                "message": message,
+                "agent_warning": f"Agent creation failed: {agent_error}",
+            }
+
+        # Send initial message to agent
+        try:
+            agent_loop = agent_loop_manager.get_agent_loop(
+                user_uuid, app_slug, riff_slug
+            )
+            if agent_loop:
+                logger.info(
+                    f"🤖 Sending initial message to agent for {user_uuid[:8]}/{app_slug}/{riff_slug}"
+                )
+                confirmation = agent_loop.send_message(initial_message_content)
+                logger.info(f"✅ Initial message sent to agent: {confirmation}")
+            else:
+                logger.warning(
+                    f"❌ AgentLoop not found after creation for {user_uuid[:8]}:{app_slug}:{riff_slug}"
+                )
+        except Exception as e:
+            logger.warning(f"⚠️ Failed to send initial message to agent: {str(e)}")
+
+        logger.info(f"✅ Created initial riff and message for app: {app_name}")
+        return True, {"riff": riff, "message": message}
+
+    except Exception as e:
+        logger.error(f"💥 Error creating initial riff and message: {str(e)}")
+        return False, f"Error creating initial riff: {str(e)}"
 
 
 def get_user_default_org(fly_token):
@@ -1255,6 +1395,18 @@ def create_app():
             logger.warning("❌ Invalid app name - cannot create slug")
             return jsonify({"error": "Invalid app name"}), 400
 
+        # Validate slug format
+        if not is_valid_slug(app_slug):
+            logger.warning(f"❌ Invalid app slug format: {app_slug}")
+            return (
+                jsonify(
+                    {
+                        "error": "App slug must contain only lowercase letters, numbers, and hyphens (no consecutive hyphens, no leading/trailing hyphens)"
+                    }
+                ),
+                400,
+            )
+
         logger.info(
             f"🔄 Creating app: {app_name} -> {app_slug} for user {user_uuid[:8]}"
         )
@@ -1340,17 +1492,30 @@ def create_app():
             logger.error("❌ Failed to save app to file")
             return jsonify({"error": "Failed to save app"}), 500
 
+        # Create initial riff and message for the new app
+        logger.info(f"🆕 Creating initial riff for app: {app_name}")
+        riff_success, riff_result = create_initial_riff_and_message(
+            user_uuid, app_slug, app_name, github_url
+        )
+
+        warnings = []
+        if not fly_success:
+            warnings.append(f"Fly.io app creation failed: {fly_result}")
+
+        if not riff_success:
+            logger.warning(f"⚠️ Failed to create initial riff: {riff_result}")
+            warnings.append(f"Initial riff creation failed: {riff_result}")
+        else:
+            logger.info(f"✅ Initial riff created successfully for app: {app_name}")
+
         logger.info(f"✅ App created successfully: {app_name}")
         return (
             jsonify(
                 {
                     "message": "App created successfully",
                     "app": app,
-                    "warnings": (
-                        []
-                        if fly_success
-                        else [f"Fly.io app creation failed: {fly_result}"]
-                    ),
+                    "warnings": warnings,
+                    "initial_riff": riff_result if riff_success else None,
                 }
             ),
             201,
