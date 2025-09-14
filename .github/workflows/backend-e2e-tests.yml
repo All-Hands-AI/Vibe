@@ -72,6 +72,59 @@ jobs:
           path: backend/coverage.xml
           retention-days: 7
 
+      - name: Update PR description with E2E test info
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            // Load the PR description update script
+            const fs = require('fs');
+            const path = require('path');
+            const scriptPath = path.join(process.cwd(), '.github/scripts/update-pr-description.js');
+            const scriptContent = fs.readFileSync(scriptPath, 'utf8');
+            eval(scriptContent);
+            
+            // Read coverage XML if available
+            let coverageInfo = '📊 E2E test coverage report generated';
+            try {
+              const coverageXmlPath = 'backend/coverage.xml';
+              if (fs.existsSync(coverageXmlPath)) {
+                const xml = fs.readFileSync(coverageXmlPath, 'utf8');
+                // Simple regex to extract coverage percentage from XML
+                const lineRateMatch = xml.match(/line-rate="([0-9.]+)"/);
+                const branchRateMatch = xml.match(/branch-rate="([0-9.]+)"/);
+                
+                if (lineRateMatch || branchRateMatch) {
+                  const lineRate = lineRateMatch ? Math.round(parseFloat(lineRateMatch[1]) * 100) : 'N/A';
+                  const branchRate = branchRateMatch ? Math.round(parseFloat(branchRateMatch[1]) * 100) : 'N/A';
+                  
+                  coverageInfo = `📊 **Backend E2E Test Coverage**
+- **Lines:** ${lineRate}%
+- **Branches:** ${branchRate}%`;
+                }
+              }
+            } catch (error) {
+              console.log('Could not read coverage XML:', error.message);
+            }
+            
+            const backendE2EContent = `## 🧪 Backend E2E Tests
+
+✅ E2E tests completed in MOCK_MODE
+🎭 All external APIs mocked (Anthropic, GitHub, Fly.io)
+
+${coverageInfo}
+
+**Test Coverage Areas:**
+- Basic Endpoints: Health checks, hello endpoints
+- API Key Management: Setting, validating, retrieving keys
+- Apps Management: Creation, listing, deletion
+- Riffs Management: Creation within apps, listing
+- Key Validation: Mock and real mode validation logic
+
+<sub>Backend E2E tests via GitHub Actions • [View workflow run](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})</sub>`;
+            
+            // Update the PR description
+            await updatePRDescription(github, context, 'backend-e2e-tests', backendE2EContent);
 
       - name: Generate E2E test summary
         if: always()

@@ -4,19 +4,39 @@ This directory contains the GitHub Actions workflows for the OpenVibe project.
 
 ## Workflows
 
-### 🚀 `deploy.yml` - Main Deployment
+### Core Workflows
+
+#### 🚀 `deploy.yml` - Main Deployment
 - **Triggers**: Push to `main`, Pull Requests
 - **Purpose**: Builds and deploys the application to Fly.io
 - **Environments**:
   - **Production**: `openvibe` (main branch)
   - **Preview**: `openvibe-{branch-name}` (PRs and feature branches)
+- **PR Updates**: Adds deployment status and preview URL to PR description
 
-### 🧹 `cleanup-pr.yml` - PR Cleanup
+#### 🧹 `cleanup-pr.yml` - PR Cleanup
 - **Triggers**: When Pull Requests are closed
 - **Purpose**: Automatically cleans up feature deployments when PRs are closed
 - **Actions**:
   - Deletes the associated Fly.io app (`openvibe-{branch-name}`)
-  - Posts a cleanup confirmation comment on the PR
+  - Updates PR description with cleanup confirmation
+
+#### 🔄 `ci.yml` - Continuous Integration
+- **Triggers**: Pull Requests
+- **Purpose**: Orchestrates all tests and checks
+- **Actions**: Runs frontend/backend linting, unit tests, and E2E tests
+
+### Test Workflows
+
+#### 🎨 `frontend-lint.yml` & `frontend-tests.yml`
+- **Purpose**: Frontend code quality and testing
+- **Actions**: ESLint linting, Vitest testing with coverage
+- **PR Updates**: Adds frontend test results and coverage to PR description
+
+#### 🐍 `backend-lint.yml`, `backend-tests.yml`, & `backend-e2e-tests.yml`
+- **Purpose**: Backend code quality and testing
+- **Actions**: Black/Flake8/MyPy linting, pytest unit tests, E2E tests in mock mode
+- **PR Updates**: Adds backend test results and coverage to PR description
 
 ### 🗑️ `cleanup-cron.yml` - Scheduled Cleanup
 - **Triggers**: 
@@ -66,6 +86,15 @@ Reusable script that generates clean Fly.io app names from branch names. Used by
 # Output: openvibe-feature-add-new-component
 ```
 
+### `scripts/update-pr-description.js`
+Shared utility for updating PR descriptions idempotently. Each workflow can add or update its own section without affecting others.
+
+**Features:**
+- Uses HTML comment markers to identify sections
+- Preserves existing PR description content
+- Allows independent updates from multiple workflows
+- Prevents duplicate sections
+
 ## Security
 
 - All workflows use the `FLY_API_TOKEN` secret for Fly.io authentication
@@ -73,9 +102,31 @@ Reusable script that generates clean Fly.io app names from branch names. Used by
 - Cron cleanup has safety checks to prevent accidental deletion of the main app
 - Workflows follow the principle of least privilege with minimal required permissions
 
+## PR Description Updates
+
+Instead of posting comments on PRs, our workflows now update the PR description with status information. This provides a cleaner, more organized view of CI/CD status directly in the PR description.
+
+### How It Works
+
+Each workflow that needs to report status uses the shared script `.github/scripts/update-pr-description.js` to add or update sections in the PR description. Each section is:
+
+- **Idempotent**: Running the same workflow multiple times will update the existing section rather than creating duplicates
+- **Independent**: Each workflow manages its own section without affecting others
+- **Persistent**: Information stays visible in the PR description rather than being buried in comments
+
+### Sections Added to PR Descriptions
+
+When a PR is created or updated, you'll see these sections automatically added to the bottom of the PR description:
+
+1. **🚀 Deployment Status** - Shows preview deployment URL and management links
+2. **✅ Frontend Tests** - Frontend test results and coverage information
+3. **✅ Backend Unit Tests** - Backend unit test results and coverage
+4. **🧪 Backend E2E Tests** - End-to-end test results and coverage
+5. **🧹 Deployment Cleanup** - Confirmation when preview deployments are cleaned up (added when PR is closed)
+
 ## Monitoring
 
-- PR cleanup posts status comments on closed PRs
+- PR descriptions are updated with status information from all workflows
 - Cron cleanup creates GitHub issues with detailed reports
 - All workflows link to their respective workflow runs for debugging
 - Failed operations are logged and reported

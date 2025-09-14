@@ -75,12 +75,49 @@ jobs:
           path: backend/coverage.xml
           retention-days: 7
 
-      - name: Comment coverage on PR
+      - name: Update PR description with backend coverage info
         if: github.event_name == 'pull_request'
-        uses: orgoro/coverage@v3.1
+        uses: actions/github-script@v7
         with:
-          coverageFile: backend/coverage.xml
-          token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            // Load the PR description update script
+            const fs = require('fs');
+            const path = require('path');
+            const scriptPath = path.join(process.cwd(), '.github/scripts/update-pr-description.js');
+            const scriptContent = fs.readFileSync(scriptPath, 'utf8');
+            eval(scriptContent);
+            
+            // Read coverage XML if available
+            let coverageInfo = '📊 Backend unit test coverage report generated';
+            try {
+              const coverageXmlPath = 'backend/coverage.xml';
+              if (fs.existsSync(coverageXmlPath)) {
+                const xml = fs.readFileSync(coverageXmlPath, 'utf8');
+                // Simple regex to extract coverage percentage from XML
+                const lineRateMatch = xml.match(/line-rate="([0-9.]+)"/);
+                const branchRateMatch = xml.match(/branch-rate="([0-9.]+)"/);
+                
+                if (lineRateMatch || branchRateMatch) {
+                  const lineRate = lineRateMatch ? Math.round(parseFloat(lineRateMatch[1]) * 100) : 'N/A';
+                  const branchRate = branchRateMatch ? Math.round(parseFloat(branchRateMatch[1]) * 100) : 'N/A';
+                  
+                  coverageInfo = `📊 **Backend Unit Test Coverage**
+- **Lines:** ${lineRate}%
+- **Branches:** ${branchRate}%`;
+                }
+              }
+            } catch (error) {
+              console.log('Could not read coverage XML:', error.message);
+            }
+            
+            const backendTestContent = `## ✅ Backend Unit Tests
+
+${coverageInfo}
+
+<sub>Backend unit tests via GitHub Actions • [View workflow run](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})</sub>`;
+            
+            // Update the PR description
+            await updatePRDescription(github, context, 'backend-tests', backendTestContent);
 
       - name: Generate test summary
         if: always()

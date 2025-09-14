@@ -47,20 +47,23 @@ jobs:
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
 
-      - name: Comment cleanup status
+      - name: Update PR description with cleanup status
         uses: actions/github-script@v7
         with:
           script: |
+            // Load the PR description update script
+            const fs = require('fs');
+            const path = require('path');
+            const scriptPath = path.join(process.cwd(), '.github/scripts/update-pr-description.js');
+            const scriptContent = fs.readFileSync(scriptPath, 'utf8');
+            eval(scriptContent);
+            
             const appName = '${{ steps.app-name.outputs.app_name }}';
-            const comment = `## 🧹 Deployment Cleanup
+            const cleanupContent = `## 🧹 Deployment Cleanup
+
+The feature deployment \`${appName}\` has been automatically destroyed since this PR was closed.
+
+<sub>Cleaned up via GitHub Actions • [View workflow run](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})</sub>`;
             
-            The feature deployment \`${appName}\` has been automatically destroyed since this PR was closed.
-            
-            <sub>Cleaned up via GitHub Actions • [View workflow run](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})</sub>`;
-            
-            github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: comment
-            });
+            // Update the PR description
+            await updatePRDescription(github, context, 'cleanup', cleanupContent);
