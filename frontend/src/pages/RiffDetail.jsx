@@ -4,6 +4,7 @@ import { useSetup } from '../context/SetupContext'
 import { getUserUUID } from '../utils/uuid'
 import ChatWindow from '../components/ChatWindow'
 import LLMErrorModal from '../components/LLMErrorModal'
+import CIStatus from '../components/CIStatus'
 import { startLLMPolling, checkLLMReady } from '../utils/llmService'
 
 
@@ -79,20 +80,61 @@ function RiffDetail() {
     }
   }, [appSlug, riffSlug])
 
-  // Fetch PR status for the specific riff (kept for backward compatibility with AppStatus component)
+  // Fetch PR status for the specific riff
   const fetchPrStatus = useCallback(async () => {
-    console.log('🔄 Fetching PR status for riff:', { appSlug, riffSlug })
+    console.log('🔄 [PR_STATUS_DEBUG] Starting fetchPrStatus for riff:', { appSlug, riffSlug })
+    console.log('🔄 [PR_STATUS_DEBUG] Current app state:', app ? 'loaded' : 'not loaded')
+    console.log('🔄 [PR_STATUS_DEBUG] Current riff state:', riff ? 'loaded' : 'not loaded')
+    
     try {
-      // NOTE: The old pr-status endpoint has been removed, but we can extract PR info
-      // from the deployment status if needed. For now, we'll set it to null
-      // and rely on the deployment endpoint for deployment status.
-      setPrStatus(null)
+      const uuid = getUserUUID()
+      console.log('🔄 [PR_STATUS_DEBUG] User UUID:', uuid ? 'available' : 'missing')
+      
+      const headers = {
+        'X-User-UUID': uuid
+      }
+      
+      const apiUrl = `/api/apps/${appSlug}/riffs/${riffSlug}/pr-status`
+      console.log('🔄 [PR_STATUS_DEBUG] Making API call to:', apiUrl)
+      console.log('🔄 [PR_STATUS_DEBUG] Headers:', headers)
+      
+      const prResponse = await fetch(apiUrl, { headers })
+      console.log('📡 [PR_STATUS_DEBUG] PR status response status:', prResponse?.status)
+      console.log('📡 [PR_STATUS_DEBUG] PR status response ok:', prResponse?.ok)
+      
+      if (!prResponse || !prResponse.ok) {
+        const errorText = await prResponse?.text() || 'Unknown error'
+        console.error('❌ [PR_STATUS_DEBUG] Fetch PR status failed:', errorText)
+        console.error('❌ [PR_STATUS_DEBUG] Response status:', prResponse?.status)
+        // Don't throw error for PR status - it's optional
+        setPrStatus(null)
+        return
+      }
+      
+      const prData = await prResponse.json()
+      console.log('📊 [PR_STATUS_DEBUG] Received PR status data:', prData)
+      console.log('📊 [PR_STATUS_DEBUG] PR status object:', prData.pr_status)
+      
+      if (prData.pr_status) {
+        console.log('✅ [PR_STATUS_DEBUG] Setting PR status:', {
+          number: prData.pr_status.number,
+          title: prData.pr_status.title,
+          ci_status: prData.pr_status.ci_status,
+          checks: prData.pr_status.checks?.length || 0
+        })
+      } else {
+        console.log('ℹ️ [PR_STATUS_DEBUG] No PR status in response')
+      }
+      
+      setPrStatus(prData.pr_status)
       
     } catch (err) {
-      console.error('❌ Error fetching PR status:', err)
+      console.error('❌ [PR_STATUS_DEBUG] Error fetching PR status:', err)
+      console.error('❌ [PR_STATUS_DEBUG] Error stack:', err.stack)
+      // Don't fail the whole page if PR status fails
       setPrStatus(null)
     }
-  }, [appSlug, riffSlug])
+  }, [appSlug, riffSlug, app, riff])
 
   // Fetch deployment status for the specific riff
   const fetchDeploymentStatus = useCallback(async () => {
@@ -160,11 +202,21 @@ function RiffDetail() {
 
   // Check LLM readiness and fetch PR status when riff data is loaded
   useEffect(() => {
+    console.log('🔄 [PR_STATUS_DEBUG] useEffect triggered - checking conditions:', {
+      riff: riff ? 'loaded' : 'not loaded',
+      app: app ? 'loaded' : 'not loaded',
+      appSlug,
+      riffSlug
+    })
+    
     if (riff && app) {
+      console.log('✅ [PR_STATUS_DEBUG] Both riff and app loaded, calling fetchPrStatus')
       checkInitialLLMReadiness()
       startPolling()
       fetchPrStatus() // Fetch PR status for this specific riff
       fetchDeploymentStatus() // Fetch deployment status for this specific riff
+    } else {
+      console.log('⏳ [PR_STATUS_DEBUG] Waiting for riff and app to load before fetching PR status')
     }
     
     // Cleanup polling on unmount
@@ -173,7 +225,7 @@ function RiffDetail() {
         stopPollingRef.current()
       }
     }
-  }, [riff, app, checkInitialLLMReadiness, startPolling, fetchPrStatus, fetchDeploymentStatus])
+  }, [riff, app, appSlug, riffSlug, checkInitialLLMReadiness, startPolling, fetchPrStatus, fetchDeploymentStatus])
 
   // Scroll to top when route changes
   useEffect(() => {
@@ -265,7 +317,7 @@ function RiffDetail() {
         <header className="mb-4">
           <div className="flex flex-wrap items-baseline justify-between gap-4 mb-4">
             <div>
-              <h1 className="text-3xl font-bold text-cyber-text mb-2 font-mono">{riff.name}</h1>
+              <h1 className="text-3xl font-bold text-cyber-text font-mono mb-2">{riff.name}</h1>
               {/* PR Status Subheading */}
               {prStatus && (
                 <div className="flex items-center gap-3 text-sm font-mono">
@@ -280,6 +332,8 @@ function RiffDetail() {
                   <span className={`${prStatus.draft ? 'text-gray-400' : 'text-green-400'}`}>
                     {prStatus.draft ? '📝 Draft' : '🟢 Ready'}
                   </span>
+                  {/* CI Status */}
+                  <CIStatus prStatus={prStatus} />
                 </div>
               )}
             </div>
