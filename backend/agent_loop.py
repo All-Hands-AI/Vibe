@@ -23,24 +23,16 @@ def create_agent(llm, tools, workspace_path):
     """Create an agent with development tools and workspace configuration"""
     # Create agent context with custom system message suffix that includes workspace info
     system_message_suffix = f"""WORKSPACE INFORMATION:
-You are working in a workspace located at: {workspace_path}
+You are working in a workspace located at: {workspace_path}/project/
 
-The workspace contains:
-- {workspace_path}/project/ - The cloned GitHub repository with the complete source code
-- {workspace_path}/tasks/ - Directory for task tracking data
+This workspace has a git repository in it.
 
-You can:
-- View, edit, and create files using the FileEditor tool (use absolute paths)
-- Navigate the repository structure in the project/ subdirectory
-- Make changes to the codebase
-- Track tasks and progress
-- The repository is already checked out to the appropriate branch for this riff
+When using the FileEditor tool, always use absolute paths.
 
-IMPORTANT: When using the FileEditor tool, always use absolute paths:
-- For repository files: {workspace_path}/project/src/main.py or {workspace_path}/project/README.md
-- For task files: {workspace_path}/tasks/task-name.json
-
-Your file operations will be performed within this workspace directory structure."""
+<WORKFLOW>
+Only work on the current branch. Commit and your work whenver you've made an improvement.
+</WORKFLOW>
+"""
 
     agent_context = AgentContext(system_message_suffix=system_message_suffix)
 
