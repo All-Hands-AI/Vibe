@@ -22,41 +22,51 @@ from openhands.sdk import (
     AgentContext,
     LocalFileStore,
 )
+from openhands.sdk.context import render_template
 from openhands.tools import FileEditorTool, TaskTrackerTool, BashTool
 
 logger = get_logger(__name__)
 
 
+class CustomAgentContext(AgentContext):
+    """Custom AgentContext that can store workspace_path."""
+    workspace_path: str = "/workspace"  # default value
+
+
+class CustomAgent(Agent):
+    """Custom Agent that uses our local system prompt template."""
+    
+    @property
+    def prompt_dir(self) -> str:
+        """Override to use our backend/prompts directory."""
+        return os.path.join(os.path.dirname(__file__), "prompts")
+    
+    @property
+    def system_message(self) -> str:
+        """Compute system message with workspace_path template variable."""
+        # Get the workspace_path from agent_context if available
+        workspace_path = "/workspace"  # default
+        if self.agent_context and isinstance(self.agent_context, CustomAgentContext):
+            workspace_path = self.agent_context.workspace_path
+        
+        system_message = render_template(
+            prompt_dir=self.prompt_dir,
+            template_name=self.system_prompt_filename,
+            cli_mode=self.cli_mode,
+            workspace_path=workspace_path,
+        )
+        
+        # Note: We don't append system_message_suffix since we've integrated 
+        # everything into the main template
+        return system_message
+
+
 def create_agent(llm, tools, workspace_path):
     """Create an agent with development tools and workspace configuration"""
-    # Create agent context with custom system message suffix that includes workspace info
-    system_message_suffix = f"""WORKSPACE INFORMATION:
-You are working in a workspace located at: {workspace_path}/project/
+    # Create a custom agent context to store workspace_path for template rendering
+    agent_context = CustomAgentContext(workspace_path=workspace_path)
 
-<IMPORTANT>
-Some examples you've seen might reference `/workspace`. This directory DOES NOT REALLY EXIST.
-Do all your work in the directory {workspace_path}/project/
-</IMPORTANT>
-
-This workspace has a git repository in it.
-
-When using the FileEditor tool, always use absolute paths.
-
-<WORKFLOW>
-Only work on the current branch. Push to its analog on the remote branch.
-
-<IMPORTANT>
-COMMIT AND PUSH your work whenver you've made an improvement. DO NOT wait for the user to tell you to push.
-</IMPORTANT>
-
-Whenever you push substantial changes, update the PR title and description as necessary,
-especially if they're currently blank. Keep it short!
-</WORKFLOW>
-"""
-
-    agent_context = AgentContext(system_message_suffix=system_message_suffix)
-
-    return Agent(llm=llm, tools=tools, agent_context=agent_context)
+    return CustomAgent(llm=llm, tools=tools, agent_context=agent_context)
 
 
 class AgentLoop:
