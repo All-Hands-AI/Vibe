@@ -321,7 +321,29 @@ def clone_repository(
 
             # If GitHub token is available, push branch and create PR
             if github_token and current_branch == branch_name:
-                logger.info(f"🚀 Pushing branch '{branch_name}' to remote...")
+                logger.info(
+                    f"🚀 Preparing branch '{branch_name}' for push and PR creation..."
+                )
+
+                # Add an empty commit to ensure there's always something to create a PR with
+                # This is especially important when the branch is identical to the base branch
+                empty_commit_cmd = [
+                    "git",
+                    "commit",
+                    "--allow-empty",
+                    "-m",
+                    f"chore: initialize branch '{branch_name}' for development\n\nThis empty commit ensures the branch can have a pull request opened\nfor collaborative development and code review.",
+                ]
+                empty_commit_result = subprocess.run(
+                    empty_commit_cmd, capture_output=True, text=True, timeout=30
+                )
+
+                if empty_commit_result.returncode == 0:
+                    logger.info(f"✅ Added empty commit to branch '{branch_name}'")
+                else:
+                    logger.warning(
+                        f"⚠️ Failed to add empty commit: {empty_commit_result.stderr}"
+                    )
 
                 # The remote URL already has the token embedded from cloning,
                 # so we can directly push the branch
