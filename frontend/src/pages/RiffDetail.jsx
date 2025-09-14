@@ -21,6 +21,8 @@ function RiffDetail() {
   const [, setLlmReady] = useState(true)
   const [showLLMError, setShowLLMError] = useState(false)
   const stopPollingRef = useRef(null)
+  const prStatusPollingRef = useRef(null)
+  const deploymentStatusPollingRef = useRef(null)
 
   // Fetch app and riff details
   const fetchData = useCallback(async () => {
@@ -167,6 +169,54 @@ function RiffDetail() {
     }
   }, [appSlug, riffSlug])
 
+  // Start polling for PR status
+  const startPrStatusPolling = useCallback(() => {
+    if (prStatusPollingRef.current) {
+      clearInterval(prStatusPollingRef.current)
+    }
+    
+    if (appSlug && riffSlug) {
+      console.log('🔄 Starting PR status polling every 5 seconds for:', { appSlug, riffSlug })
+      // Initial fetch
+      fetchPrStatus()
+      // Set up polling interval
+      prStatusPollingRef.current = setInterval(() => {
+        fetchPrStatus()
+      }, 5000) // Poll every 5 seconds
+    }
+  }, [appSlug, riffSlug, fetchPrStatus])
+
+  // Start polling for deployment status
+  const startDeploymentStatusPolling = useCallback(() => {
+    if (deploymentStatusPollingRef.current) {
+      clearInterval(deploymentStatusPollingRef.current)
+    }
+    
+    if (appSlug && riffSlug) {
+      console.log('🚀 Starting deployment status polling every 5 seconds for:', { appSlug, riffSlug })
+      // Initial fetch
+      fetchDeploymentStatus()
+      // Set up polling interval
+      deploymentStatusPollingRef.current = setInterval(() => {
+        fetchDeploymentStatus()
+      }, 5000) // Poll every 5 seconds
+    }
+  }, [appSlug, riffSlug, fetchDeploymentStatus])
+
+  // Stop all status polling
+  const stopStatusPolling = useCallback(() => {
+    if (prStatusPollingRef.current) {
+      console.log('⏹️ Stopping PR status polling')
+      clearInterval(prStatusPollingRef.current)
+      prStatusPollingRef.current = null
+    }
+    if (deploymentStatusPollingRef.current) {
+      console.log('⏹️ Stopping deployment status polling')
+      clearInterval(deploymentStatusPollingRef.current)
+      deploymentStatusPollingRef.current = null
+    }
+  }, [])
+
   // Check LLM readiness and handle polling
   const handleLLMReadyChange = useCallback((isReady) => {
     console.log('🔍 LLM readiness changed:', isReady)
@@ -200,9 +250,9 @@ function RiffDetail() {
     fetchData()
   }, [fetchData])
 
-  // Check LLM readiness and fetch PR status when riff data is loaded
+  // Check LLM readiness and start status polling when riff data is loaded
   useEffect(() => {
-    console.log('🔄 [PR_STATUS_DEBUG] useEffect triggered - checking conditions:', {
+    console.log('🔄 [STATUS_POLLING_DEBUG] useEffect triggered - checking conditions:', {
       riff: riff ? 'loaded' : 'not loaded',
       app: app ? 'loaded' : 'not loaded',
       appSlug,
@@ -210,22 +260,23 @@ function RiffDetail() {
     })
     
     if (riff && app) {
-      console.log('✅ [PR_STATUS_DEBUG] Both riff and app loaded, calling fetchPrStatus')
+      console.log('✅ [STATUS_POLLING_DEBUG] Both riff and app loaded, starting polling')
       checkInitialLLMReadiness()
       startPolling()
-      fetchPrStatus() // Fetch PR status for this specific riff
-      fetchDeploymentStatus() // Fetch deployment status for this specific riff
+      startPrStatusPolling() // Start polling PR status for this specific riff
+      startDeploymentStatusPolling() // Start polling deployment status for this specific riff
     } else {
-      console.log('⏳ [PR_STATUS_DEBUG] Waiting for riff and app to load before fetching PR status')
+      console.log('⏳ [STATUS_POLLING_DEBUG] Waiting for riff and app to load before starting polling')
     }
     
-    // Cleanup polling on unmount
+    // Cleanup all polling on unmount
     return () => {
       if (stopPollingRef.current) {
         stopPollingRef.current()
       }
+      stopStatusPolling()
     }
-  }, [riff, app, appSlug, riffSlug, checkInitialLLMReadiness, startPolling, fetchPrStatus, fetchDeploymentStatus])
+  }, [riff, app, appSlug, riffSlug, checkInitialLLMReadiness, startPolling, startPrStatusPolling, startDeploymentStatusPolling, stopStatusPolling])
 
   // Scroll to top when route changes
   useEffect(() => {
@@ -234,12 +285,14 @@ function RiffDetail() {
 
   // Handle LLM reset
   const handleLLMReset = useCallback(() => {
-    console.log('✅ LLM reset completed, restarting polling')
+    console.log('✅ LLM reset completed, restarting all polling')
     setLlmReady(true)
     setShowLLMError(false)
-    // Restart polling after reset
+    // Restart all polling after reset
     startPolling()
-  }, [startPolling])
+    startPrStatusPolling()
+    startDeploymentStatusPolling()
+  }, [startPolling, startPrStatusPolling, startDeploymentStatusPolling])
 
   const handleCloseLLMError = useCallback(() => {
     setShowLLMError(false)
@@ -269,7 +322,7 @@ function RiffDetail() {
               </Link>
               {app && (
                 <Link to={`/apps/${app.slug}`} className="inline-flex items-center text-cyber-muted hover:text-neon-green font-medium transition-colors duration-200">
-                  ← Back to {app.name}
+                  ← Back to {app.slug}
                 </Link>
               )}
             </div>
@@ -306,10 +359,10 @@ function RiffDetail() {
             </Link>
             <span className="text-gray-500">/</span>
             <Link to={`/apps/${app.slug}`} className="text-cyber-muted hover:text-neon-green transition-colors duration-200">
-              {app.name}
+              {app.slug}
             </Link>
             <span className="text-gray-500">/</span>
-            <span className="text-cyber-muted">{riff.name}</span>
+            <span className="text-cyber-muted">{riff.slug}</span>
           </div>
         </nav>
 
@@ -317,7 +370,7 @@ function RiffDetail() {
         <header className="mb-4">
           <div className="flex flex-wrap items-baseline justify-between gap-4 mb-4">
             <div>
-              <h1 className="text-3xl font-bold text-cyber-text font-mono mb-2">{riff.name}</h1>
+              <h1 className="text-3xl font-bold text-cyber-text font-mono mb-2">{riff.slug}</h1>
               {/* PR Status Subheading */}
               {prStatus && (
                 <div className="flex items-center gap-3 text-sm font-mono">
@@ -403,7 +456,7 @@ function RiffDetail() {
                         </a>
                       )}
                       <a
-                        href={`https://fly.io/apps/${app.name}-${riff.name}`}
+                        href={`https://fly.io/apps/${app.slug}-${riff.slug}`}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="text-cyber-muted hover:text-blue-400 font-mono transition-colors duration-200 underline"
@@ -413,12 +466,12 @@ function RiffDetail() {
                     </div>
                   </div>
                   <a
-                    href={`https://${app.name}-${riff.name}.fly.dev`}
+                    href={`https://${app.slug}-${riff.slug}.fly.dev`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-cyber-muted hover:text-blue-400 font-mono text-xs transition-colors duration-200 underline"
                   >
-                    {app.name}-{riff.name}.fly.dev
+                    {app.slug}-{riff.slug}.fly.dev
                   </a>
                 </div>
               ) : (
@@ -435,7 +488,7 @@ function RiffDetail() {
                         GitHub
                       </a>
                       <a
-                        href={`https://fly.io/apps/${app.name}-${riff.name}`}
+                        href={`https://fly.io/apps/${app.slug}-${riff.slug}`}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="text-cyber-muted hover:text-blue-400 font-mono transition-colors duration-200 underline"
@@ -445,12 +498,12 @@ function RiffDetail() {
                     </div>
                   </div>
                   <a
-                    href={`https://${app.name}-${riff.name}.fly.dev`}
+                    href={`https://${app.slug}-${riff.slug}.fly.dev`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-cyber-muted hover:text-blue-400 font-mono text-xs transition-colors duration-200 underline"
                   >
-                    {app.name}-{riff.name}.fly.dev
+                    {app.slug}-{riff.slug}.fly.dev
                   </a>
                 </div>
               )}
@@ -458,7 +511,7 @@ function RiffDetail() {
             
             <div className="flex-1 border border-gray-700 rounded-lg overflow-hidden">
               <iframe
-                src={`https://${app.name}-${riff.name}.fly.dev`}
+                src={`https://${app.slug}-${riff.slug}.fly.dev`}
                 className="w-full h-full"
                 title="Live App Preview"
                 sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox"
