@@ -4,7 +4,6 @@ import { useSetup } from '../context/SetupContext'
 import { getUserUUID } from '../utils/uuid'
 import ChatWindow from '../components/ChatWindow'
 import LLMErrorModal from '../components/LLMErrorModal'
-import DeploymentBanner from '../components/DeploymentBanner'
 import { startLLMPolling, checkLLMReady } from '../utils/llmService'
 
 
@@ -350,11 +349,6 @@ function RiffDetail() {
                 {app.name}-{riff.name}.fly.dev
               </a>
             </div>
-            
-            {/* Deployment Banner */}
-            <DeploymentBanner 
-              deploymentStatus={deploymentStatus}
-            />
             
             <div className="flex-1 border border-gray-700 rounded-lg overflow-hidden">
               <iframe
