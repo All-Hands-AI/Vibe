@@ -1474,11 +1474,11 @@ def create_app():
             logger.error("❌ Failed to save app to file")
             return jsonify({"error": "Failed to save app"}), 500
 
-        # Wait 10 seconds before creating the first riff to allow for proper setup
+        # Wait 5 seconds before creating the first riff to allow for proper setup
         logger.info(
-            f"⏳ Waiting 10 seconds before creating initial riff for app: {app_name}"
+            f"⏳ Waiting 5 seconds before creating initial riff for app: {app_name}"
         )
-        time.sleep(10)
+        time.sleep(5)
 
         # Create initial riff and message for the new app
         logger.info(f"🆕 Creating initial riff for app: {app_name}")
