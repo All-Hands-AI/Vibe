@@ -1193,11 +1193,11 @@ def get_riff_pr_status(slug, riff_slug):
             return jsonify({"pr_status": pr_status})
 
         except Exception as e:
-            logger.warning(f"⚠️ Error getting PR status: {str(e)}")
+            logger.error(f"❌ Error getting PR status: {str(e)}")
             log_api_response(
-                logger, "GET", f"/api/apps/{slug}/riffs/{riff_slug}/pr-status", 200
+                logger, "GET", f"/api/apps/{slug}/riffs/{riff_slug}/pr-status", 500
             )
-            return jsonify({"pr_status": None, "error": str(e)})
+            return jsonify({"error": f"Failed to get PR status: {str(e)}"}), 500
 
     except Exception as e:
         logger.error(f"💥 Error getting riff PR status: {str(e)}")
