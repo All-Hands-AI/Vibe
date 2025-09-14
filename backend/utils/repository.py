@@ -45,7 +45,7 @@ def clone_repository(
 ) -> Tuple[bool, Optional[str]]:
     """
     Clone a GitHub repository to the workspace and checkout the specified branch.
-    
+
     The cloned repository will have the GITHUB_TOKEN embedded in its remote URL
     to enable authenticated push/pull operations for all users.
 
@@ -70,10 +70,12 @@ def clone_repository(
             shutil.rmtree(project_path)
 
         # Modify GitHub URL to include token for authentication
-        github_token = os.environ.get('GITHUB_TOKEN')
-        if github_token and github_url.startswith('https://github.com/'):
+        github_token = os.environ.get("GITHUB_TOKEN")
+        if github_token and github_url.startswith("https://github.com/"):
             # Insert token into URL for authenticated cloning
-            authenticated_url = github_url.replace('https://github.com/', f'https://{github_token}@github.com/')
+            authenticated_url = github_url.replace(
+                "https://github.com/", f"https://{github_token}@github.com/"
+            )
             logger.info(f"📥 Cloning repository with authentication to {project_path}")
         else:
             authenticated_url = github_url
