@@ -14,7 +14,7 @@ from utils.logging import get_logger
 sys.path.insert(0, ".venv/lib/python3.12/site-packages")
 
 from openhands.sdk import Agent, Conversation, LLM, Message, TextContent, AgentContext
-from openhands.tools import FileEditorTool, TaskTrackerTool
+from openhands.tools import FileEditorTool, TaskTrackerTool, BashTool
 
 logger = get_logger(__name__)
 
@@ -94,7 +94,10 @@ class AgentLoop:
             TaskTrackerTool.create(
                 save_dir=task_dir
             ),  # Save task tracking data to workspace/tasks/ directory
-        ]  # Include FileEditor and TaskTracker tools for development capabilities
+            BashTool.create(
+                working_dir=self.workspace_path
+            ),  # Enable bash command execution in the workspace
+        ]  # Include FileEditor, TaskTracker, and Bash tools for development capabilities
 
         # Use custom agent for testing - it will always reply with "howdy!"
         self.agent = create_test_agent(llm, tools, self.workspace_path)
