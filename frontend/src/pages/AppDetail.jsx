@@ -359,7 +359,7 @@ function AppDetail() {
         <header className="mb-4">
           <div className="flex flex-wrap items-baseline justify-between gap-4 mb-4">
             <div>
-              <h1 className="text-4xl font-bold text-cyber-text mb-2 font-mono">{app.name || app.slug}</h1>
+              <h1 className="text-4xl font-bold text-cyber-text mb-2 font-mono">{app.slug}</h1>
             </div>
             <p className="text-cyber-muted font-mono text-sm">
               Created {new Date(app.created_at).toLocaleDateString()}
@@ -386,7 +386,7 @@ function AppDetail() {
                       <input
                         type="text"
                         value={newRiffName}
-                        onChange={(e) => setNewRiffName(e.target.value)}
+                        onChange={(e) => setNewRiffName(createSlug(e.target.value))}
                         placeholder="Enter riff name"
                         disabled={creating}
                         className={`w-full px-4 py-3 bg-gray-700 text-cyber-text rounded-md border transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-cyber-muted focus:border-transparent ${

@@ -52,7 +52,7 @@ function AppStatus({ app, riff, prStatus = null }) {
   }
 
   const getProjectName = () => {
-    return app?.name || 'project'
+    return app?.slug || 'project'
   }
 
   const getConversationId = () => {

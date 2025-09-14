@@ -79,7 +79,7 @@ function CompactStatusPanel({ app, prStatus = null, appSlug, riffSlug }) {
   }
 
   const getFlyAppUrl = () => {
-    const project = app?.name || 'project'
+    const project = app?.slug || 'project'
     const conversation = app?.conversation_id || app?.slug || 'main'
     return `https://${project}-${conversation}.fly.dev`
   }

@@ -200,7 +200,7 @@ function RiffDetail() {
               </Link>
               {app && (
                 <Link to={`/apps/${app.slug}`} className="inline-flex items-center text-cyber-muted hover:text-neon-green font-medium transition-colors duration-200">
-                  ← Back to {app.name}
+                  ← Back to {app.slug}
                 </Link>
               )}
             </div>
@@ -237,10 +237,10 @@ function RiffDetail() {
             </Link>
             <span className="text-gray-500">/</span>
             <Link to={`/apps/${app.slug}`} className="text-cyber-muted hover:text-neon-green transition-colors duration-200">
-              {app.name}
+              {app.slug}
             </Link>
             <span className="text-gray-500">/</span>
-            <span className="text-cyber-muted">{riff.name}</span>
+            <span className="text-cyber-muted">{riff.slug}</span>
           </div>
         </nav>
 
@@ -248,7 +248,7 @@ function RiffDetail() {
         <header className="mb-4">
           <div className="flex flex-wrap items-baseline justify-between gap-4 mb-4">
             <div>
-              <h1 className="text-3xl font-bold text-cyber-text mb-2 font-mono">{riff.name}</h1>
+              <h1 className="text-3xl font-bold text-cyber-text mb-2 font-mono">{riff.slug}</h1>
             </div>
             <p className="text-cyber-muted font-mono text-sm">
               Created {new Date(riff.created_at).toLocaleDateString()}
@@ -293,12 +293,12 @@ function RiffDetail() {
             <div className="mb-2">
               <h3 className="text-lg font-semibold text-cyber-text font-mono">🚀 Live App Preview</h3>
               <p className="text-cyber-muted font-mono text-xs">
-                {app.name}-{riff.name}.fly.dev
+                {app.slug}-{riff.slug}.fly.dev
               </p>
             </div>
             <div className="flex-1 border border-gray-700 rounded-lg overflow-hidden">
               <iframe
-                src={`https://${app.name}-${riff.name}.fly.dev`}
+                src={`https://${app.slug}-${riff.slug}.fly.dev`}
                 className="w-full h-full"
                 title="Live App Preview"
                 sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox"
