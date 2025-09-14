@@ -155,9 +155,7 @@ def create_initial_riff_and_message(
 
 5. **Delete TEMPLATE.md** - Once you've followed all the instructions, delete the TEMPLATE.md file as it's no longer needed.
 
-6. **Commit and push changes** - Commit all your changes with a descriptive message and push them to the remote repository.
-
-Please work through these steps systematically and let me know if you encounter any issues or need clarification on any step."""
+6. **Commit and push changes** - Commit all your changes with a descriptive message and push them to the remote repository. Update the PR title and description but be brief."""
 
         message = {
             "id": message_id,
