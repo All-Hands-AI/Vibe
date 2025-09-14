@@ -343,7 +343,14 @@ def create_riff(slug):
         success, error_message = create_agent_for_user(user_uuid, slug, riff_slug)
         if not success:
             logger.error(f"❌ Failed to create Agent for riff: {error_message}")
-            return jsonify({"error": error_message}), 400
+            # Return 500 for git/workspace setup failures, 400 for other client errors
+            status_code = (
+                500
+                if "git" in error_message.lower()
+                or "workspace" in error_message.lower()
+                else 400
+            )
+            return jsonify({"error": error_message}), status_code
 
         logger.info(f"✅ Riff created successfully: {riff_name}")
         return jsonify({"message": "Riff created successfully", "riff": riff}), 201

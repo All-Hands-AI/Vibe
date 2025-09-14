@@ -9,12 +9,109 @@ embedded in the remote URL to enable authenticated push/pull operations.
 import os
 import subprocess
 import shutil
+import requests
+import re
 from pathlib import Path
 from typing import Optional, Tuple
 from utils.logging import get_logger
 from keys import load_user_keys
 
 logger = get_logger(__name__)
+
+
+def extract_repo_info(github_url: str) -> Optional[Tuple[str, str]]:
+    """
+    Extract owner and repository name from GitHub URL.
+
+    Args:
+        github_url: GitHub repository URL
+
+    Returns:
+        Tuple[str, str]: (owner, repo) or None if invalid URL
+    """
+    # Handle various GitHub URL formats
+    patterns = [
+        r"https://github\.com/([^/]+)/([^/]+?)(?:\.git)?/?$",
+        r"git@github\.com:([^/]+)/([^/]+?)(?:\.git)?/?$",
+    ]
+
+    for pattern in patterns:
+        match = re.match(pattern, github_url.strip())
+        if match:
+            owner, repo = match.groups()
+            return owner, repo
+
+    logger.error(f"❌ Could not extract repo info from URL: {github_url}")
+    return None
+
+
+def create_pull_request(
+    github_url: str, branch_name: str, github_token: str
+) -> Tuple[bool, Optional[str]]:
+    """
+    Create a pull request for the given branch using GitHub API.
+
+    Args:
+        github_url: GitHub repository URL
+        branch_name: Branch name to create PR for
+        github_token: GitHub API token
+
+    Returns:
+        Tuple[bool, Optional[str]]: (success, pr_url or error_message)
+    """
+    try:
+        repo_info = extract_repo_info(github_url)
+        if not repo_info:
+            return False, "Could not extract repository information from URL"
+
+        owner, repo = repo_info
+
+        # GitHub API endpoint for creating pull requests
+        api_url = f"https://api.github.com/repos/{owner}/{repo}/pulls"
+
+        headers = {
+            "Authorization": f"token {github_token}",
+            "Accept": "application/vnd.github.v3+json",
+            "Content-Type": "application/json",
+        }
+
+        # PR data with branch name as title
+        pr_data = {
+            "title": branch_name,
+            "head": branch_name,
+            "base": "main",  # Default to main branch
+            "body": f"Automated pull request for branch: {branch_name}",
+            "draft": True,  # Create as draft PR
+        }
+
+        logger.info(
+            f"🔀 Creating pull request for branch '{branch_name}' in {owner}/{repo}"
+        )
+
+        response = requests.post(api_url, headers=headers, json=pr_data, timeout=30)
+
+        if response.status_code == 201:
+            pr_data = response.json()
+            pr_url = pr_data.get("html_url")
+            logger.info(f"✅ Successfully created pull request: {pr_url}")
+            return True, pr_url
+        elif response.status_code == 422:
+            # PR might already exist or other validation error
+            error_data = response.json()
+            error_message = error_data.get("message", "Validation error")
+            logger.warning(f"⚠️ Pull request creation failed: {error_message}")
+            return False, f"PR creation failed: {error_message}"
+        else:
+            error_message = (
+                f"GitHub API error: {response.status_code} - {response.text}"
+            )
+            logger.error(f"❌ {error_message}")
+            return False, error_message
+
+    except Exception as e:
+        error_message = f"Error creating pull request: {str(e)}"
+        logger.error(f"❌ {error_message}")
+        return False, error_message
 
 
 def create_workspace_directory(user_uuid: str, app_slug: str, riff_slug: str) -> str:
@@ -46,6 +143,7 @@ def clone_repository(
 ) -> Tuple[bool, Optional[str]]:
     """
     Clone a GitHub repository to the workspace and checkout the specified branch.
+    If user has a GitHub token, push the branch to remote and create a pull request.
 
     The cloned repository will have the user's stored GitHub token embedded in its remote URL
     to enable authenticated push/pull operations for all users.
@@ -112,6 +210,23 @@ def clone_repository(
         original_cwd = os.getcwd()
         try:
             os.chdir(project_path)
+
+            # Configure git user settings for commits
+            git_config_commands = [
+                ["git", "config", "user.name", "openhands"],
+                ["git", "config", "user.email", "openhands@all-hands.dev"],
+            ]
+
+            for config_cmd in git_config_commands:
+                config_result = subprocess.run(
+                    config_cmd, capture_output=True, text=True, timeout=30
+                )
+                if config_result.returncode != 0:
+                    error_msg = f"Failed to configure git: {config_result.stderr}"
+                    logger.error(f"❌ {error_msg}")
+                    return False, error_msg
+
+            logger.info("✅ Git configuration set successfully")
 
             # Check if branch exists (try remote first, then local)
             check_remote_branch_cmd = [
@@ -221,6 +336,63 @@ def clone_repository(
                 current_branch = verify_result.stdout.strip()
                 logger.info(f"📍 Current branch: {current_branch}")
 
+            # If GitHub token is available, push branch and create PR
+            if github_token and current_branch == branch_name:
+                logger.info(
+                    f"🚀 Preparing branch '{branch_name}' for push and PR creation..."
+                )
+
+                # Add an empty commit to ensure there's always something to create a PR with
+                # This is especially important when the branch is identical to the base branch
+                empty_commit_cmd = [
+                    "git",
+                    "commit",
+                    "--allow-empty",
+                    "-m",
+                    f"chore: initialize branch '{branch_name}' for development\n\nThis empty commit ensures the branch can have a pull request opened\nfor collaborative development and code review.",
+                ]
+                empty_commit_result = subprocess.run(
+                    empty_commit_cmd, capture_output=True, text=True, timeout=30
+                )
+
+                if empty_commit_result.returncode == 0:
+                    logger.info(f"✅ Added empty commit to branch '{branch_name}'")
+                else:
+                    error_msg = f"Failed to add empty commit to branch '{branch_name}': {empty_commit_result.stderr}"
+                    logger.error(f"❌ {error_msg}")
+                    return False, error_msg
+
+                # The remote URL already has the token embedded from cloning,
+                # so we can directly push the branch
+                push_cmd = ["git", "push", "-u", "origin", branch_name]
+                push_result = subprocess.run(
+                    push_cmd, capture_output=True, text=True, timeout=120
+                )
+
+                if push_result.returncode == 0:
+                    logger.info(
+                        f"✅ Successfully pushed branch '{branch_name}' to remote"
+                    )
+
+                    # Create pull request
+                    pr_success, pr_result = create_pull_request(
+                        github_url, branch_name, github_token
+                    )
+                    if pr_success:
+                        logger.info(f"🔀 Pull request created: {pr_result}")
+                    else:
+                        error_msg = f"Failed to create pull request for branch '{branch_name}': {pr_result}"
+                        logger.error(f"❌ {error_msg}")
+                        return False, error_msg
+                else:
+                    error_msg = f"Failed to push branch '{branch_name}' to remote: {push_result.stderr}"
+                    logger.error(f"❌ {error_msg}")
+                    return False, error_msg
+            elif not github_token:
+                logger.info(
+                    f"ℹ️ No GitHub token available for user {user_uuid}, skipping push and PR creation"
+                )
+
             return True, None
 
         finally:
@@ -242,6 +414,7 @@ def setup_riff_workspace(
 ) -> Tuple[bool, Optional[str], Optional[str]]:
     """
     Complete workspace setup for a riff: create directory and clone repository.
+    If user has a GitHub token, push the branch to remote and create a pull request.
 
     Args:
         user_uuid: User's UUID

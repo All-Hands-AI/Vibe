@@ -126,7 +126,9 @@ def sample_riff_data():
 def mock_repository_setup(monkeypatch, temp_data_dir):
     """Mock repository workspace setup to avoid actual git cloning in tests"""
 
-    def mock_setup_riff_workspace(user_uuid, app_slug, riff_slug, github_url):
+    def mock_setup_riff_workspace(
+        user_uuid, app_slug, riff_slug, github_url, github_token=None
+    ):
         """Mock implementation that creates directory structure without cloning"""
         workspace_path = (
             f"{temp_data_dir}/{user_uuid}/apps/{app_slug}/riffs/{riff_slug}/workspace"
