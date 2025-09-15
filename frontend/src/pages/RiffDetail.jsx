@@ -460,10 +460,10 @@ function RiffDetail() {
           </div>
         </header>
 
-        {/* Main Content Grid - 2 columns */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-[calc(100vh-200px)]">
+        {/* Main Content Flex - 2 columns */}
+        <div className="flex flex-col lg:flex-row gap-6 h-[calc(100vh-200px)]">
           {/* Left Sidebar - Chat */}
-          <div className="flex flex-col">
+          <div className="flex flex-col h-full flex-1">
             {/* Chat Window */}
             <div className="flex-1 min-h-0">
               {userUUID ? (
@@ -484,7 +484,7 @@ function RiffDetail() {
           </div>
 
           {/* Right Side - Iframe */}
-          <div className="flex flex-col">
+          <div className="flex flex-col h-full flex-1">
             {/* Deployment Status Header */}
             <div className="mb-2">
               {deploymentStatus ? (
