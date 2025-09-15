@@ -6,7 +6,12 @@ import {
   pauseAgent, 
   startAgentStatusPolling, 
   getStatusDescription, 
-  getStatusColor 
+  getStatusColor,
+  canPlayAgent,
+  canPauseAgent,
+  isAgentRunning,
+  isAgentFinished,
+  isAgentPaused
 } from '../utils/agentService'
 
 function AgentStatusPanel({ appSlug, riffSlug }) {
@@ -96,14 +101,12 @@ function AgentStatusPanel({ appSlug, riffSlug }) {
   const statusDescription = getStatusDescription(status)
   const statusColor = getStatusColor(status)
   
-  // Play button logic: can play if paused, or if idle with no messages (to activate agent)
-  const canPlay = status && (
-    status.agent_paused || 
-    (!status.running && !status.agent_finished && status.event_count <= 1)
-  )
-  
-  // Pause button logic: can pause if running and not already paused or finished
-  const canPause = status && status.running && !status.agent_paused && !status.agent_finished
+  // Use helper functions for cleaner logic
+  const canPlay = canPlayAgent(status)
+  const canPause = canPauseAgent(status)
+  const agentRunning = isAgentRunning(status)
+  const agentFinished = isAgentFinished(status)
+  const agentPaused = isAgentPaused(status)
   
   // Determine button text based on state
   const playButtonText = status && status.event_count <= 1 ? 'Activate' : 'Play'
@@ -116,10 +119,10 @@ function AgentStatusPanel({ appSlug, riffSlug }) {
       <div className="mb-4">
         <div className="flex items-center space-x-2 mb-2">
           <div className={`w-3 h-3 rounded-full ${
-            status?.running && status?.thread_alive ? 'bg-neon-green animate-pulse' : 
-            status?.agent_paused ? 'bg-yellow-400' :
-            status?.agent_finished ? 'bg-green-400' :
-            status?.status === 'error' ? 'bg-red-400' :
+            agentRunning && (status?.has_active_task || status?.thread_alive) ? 'bg-neon-green animate-pulse' : 
+            agentPaused ? 'bg-yellow-400' :
+            agentFinished ? 'bg-green-400' :
+            status?.status === 'error' || status?.agent_status === 'error' ? 'bg-red-400' :
             'bg-gray-400'
           }`}></div>
           <span className={`font-mono text-sm font-medium ${statusColor}`}>
@@ -136,9 +139,15 @@ function AgentStatusPanel({ appSlug, riffSlug }) {
             {status.event_count !== undefined && (
               <div>Events: {status.event_count}</div>
             )}
+            {status.agent_status && (
+              <div>Agent Status: {status.agent_status}</div>
+            )}
             <div className="flex space-x-4">
-              <span>Thread: {status.thread_alive ? '✅' : '❌'}</span>
-              <span>Running: {status.running ? '✅' : '❌'}</span>
+              <span>Active Task: {status.has_active_task ? '✅' : '❌'}</span>
+              <span>Running: {(status.is_running || status.running) ? '✅' : '❌'}</span>
+              {status.thread_alive !== undefined && (
+                <span>Thread: {status.thread_alive ? '✅' : '❌'}</span>
+              )}
             </div>
           </div>
         )}

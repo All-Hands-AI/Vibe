@@ -11,7 +11,11 @@ import {
   pauseAgent, 
   startAgentStatusPolling, 
   getStatusDescription, 
-  getStatusColor as getAgentStatusColor 
+  getStatusColor as getAgentStatusColor,
+  canPlayAgent,
+  isAgentRunning,
+  isAgentFinished,
+  isAgentPaused
 } from '../utils/agentService'
 
 function CompactStatusPanel({ app, prStatus = null, appSlug, riffSlug }) {
@@ -54,8 +58,7 @@ function CompactStatusPanel({ app, prStatus = null, appSlug, riffSlug }) {
     setActionLoading(true)
     
     try {
-      const canPlay = agentStatus.agent_paused || 
-        (!agentStatus.running && !agentStatus.agent_finished && agentStatus.event_count <= 1)
+      const canPlay = canPlayAgent(agentStatus)
       
       if (canPlay) {
         await playAgent(appSlug, riffSlug)
@@ -78,12 +81,9 @@ function CompactStatusPanel({ app, prStatus = null, appSlug, riffSlug }) {
 
 
 
-  // Determine agent button state
-  const canPlay = agentStatus && (
-    agentStatus.agent_paused || 
-    (!agentStatus.running && !agentStatus.agent_finished && agentStatus.event_count <= 1)
-  )
-  const isRunning = agentStatus && agentStatus.running && !agentStatus.agent_paused && !agentStatus.agent_finished
+  // Determine agent button state using helper functions
+  const canPlay = canPlayAgent(agentStatus)
+  const isRunning = isAgentRunning(agentStatus) && !isAgentFinished(agentStatus)
 
   return (
     <div className="hacker-card space-y-2">
@@ -91,10 +91,10 @@ function CompactStatusPanel({ app, prStatus = null, appSlug, riffSlug }) {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <div className={`w-2 h-2 rounded-full ${
-            agentStatus?.running && agentStatus?.thread_alive ? 'bg-neon-green animate-pulse' : 
-            agentStatus?.agent_paused ? 'bg-yellow-400' :
-            agentStatus?.agent_finished ? 'bg-green-400' :
-            agentStatus?.status === 'error' ? 'bg-red-400' :
+            isAgentRunning(agentStatus) && (agentStatus?.has_active_task || agentStatus?.thread_alive) ? 'bg-neon-green animate-pulse' : 
+            isAgentPaused(agentStatus) ? 'bg-yellow-400' :
+            isAgentFinished(agentStatus) ? 'bg-green-400' :
+            agentStatus?.status === 'error' || agentStatus?.agent_status === 'error' ? 'bg-red-400' :
             'bg-gray-400'
           }`}></div>
           <span className={`font-mono text-xs ${getAgentStatusColor(agentStatus)}`}>

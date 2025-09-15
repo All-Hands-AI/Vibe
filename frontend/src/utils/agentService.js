@@ -144,6 +144,11 @@ export function startAgentStatusPolling(appSlug, riffSlug, callback, interval = 
       callback({
         status: 'error',
         error: error.message,
+        agent_status: 'error',
+        is_running: false,
+        has_active_task: false,
+        event_count: 0,
+        // Keep old fields for backward compatibility
         agent_finished: false,
         agent_paused: false,
         agent_waiting_for_confirmation: false,
@@ -190,6 +195,31 @@ export function getStatusDescription(status) {
     return 'Not Initialized'
   }
   
+  // Use new agent_status field if available
+  if (status.agent_status) {
+    switch (status.agent_status) {
+      case 'finished':
+        return 'Finished'
+      case 'paused':
+        return 'Paused'
+      case 'waiting_for_confirmation':
+        return 'Waiting for Confirmation'
+      case 'running':
+        return 'Running'
+      case 'idle':
+        // Check if it has any activity
+        if (status.event_count <= 1) {
+          return 'Idle (No Messages)'
+        }
+        return 'Idle'
+      case 'error':
+        return 'Error'
+      default:
+        return status.agent_status
+    }
+  }
+  
+  // Fallback to old status fields for backward compatibility
   if (status.agent_finished) {
     return 'Finished'
   }
@@ -202,8 +232,8 @@ export function getStatusDescription(status) {
     return 'Waiting for Confirmation'
   }
   
-  if (status.running) {
-    return 'Ready'
+  if (status.running || status.is_running) {
+    return 'Running'
   }
   
   // Agent is idle - check if it has any activity
@@ -230,6 +260,27 @@ export function getStatusColor(status) {
     return 'text-gray-400'
   }
   
+  // Use new agent_status field if available
+  if (status.agent_status) {
+    switch (status.agent_status) {
+      case 'finished':
+        return 'text-green-400'
+      case 'paused':
+        return 'text-yellow-400'
+      case 'waiting_for_confirmation':
+        return 'text-blue-400'
+      case 'running':
+        return 'text-neon-green'
+      case 'idle':
+        return 'text-gray-400'
+      case 'error':
+        return 'text-red-400'
+      default:
+        return 'text-gray-400'
+    }
+  }
+  
+  // Fallback to old status fields for backward compatibility
   if (status.agent_finished) {
     return 'text-green-400'
   }
@@ -242,9 +293,98 @@ export function getStatusColor(status) {
     return 'text-blue-400'
   }
   
-  if (status.running) {
+  if (status.running || status.is_running) {
     return 'text-neon-green'
   }
   
   return 'text-gray-400'
+}
+
+/**
+ * Check if agent can be played/resumed
+ * @param {Object} status - Agent status object
+ * @returns {boolean} Whether agent can be played
+ */
+export function canPlayAgent(status) {
+  if (!status) return false
+  
+  // Use new agent_status field if available
+  if (status.agent_status) {
+    return status.agent_status === 'paused' || 
+           (status.agent_status === 'idle' && status.event_count <= 1)
+  }
+  
+  // Fallback to old status fields
+  return status.agent_paused || 
+         (!status.running && !status.agent_finished && status.event_count <= 1)
+}
+
+/**
+ * Check if agent can be paused
+ * @param {Object} status - Agent status object
+ * @returns {boolean} Whether agent can be paused
+ */
+export function canPauseAgent(status) {
+  if (!status) return false
+  
+  // Use new agent_status field if available
+  if (status.agent_status) {
+    return status.agent_status === 'running' || 
+           status.agent_status === 'waiting_for_confirmation'
+  }
+  
+  // Fallback to old status fields
+  return status.running && !status.agent_paused && !status.agent_finished
+}
+
+/**
+ * Check if agent is currently running
+ * @param {Object} status - Agent status object
+ * @returns {boolean} Whether agent is running
+ */
+export function isAgentRunning(status) {
+  if (!status) return false
+  
+  // Use new agent_status field if available
+  if (status.agent_status) {
+    return status.agent_status === 'running' || 
+           status.agent_status === 'waiting_for_confirmation'
+  }
+  
+  // Fallback to old status fields
+  return status.running || status.is_running
+}
+
+/**
+ * Check if agent is finished
+ * @param {Object} status - Agent status object
+ * @returns {boolean} Whether agent is finished
+ */
+export function isAgentFinished(status) {
+  if (!status) return false
+  
+  // Use new agent_status field if available
+  if (status.agent_status) {
+    return status.agent_status === 'finished'
+  }
+  
+  // Fallback to old status fields
+  return status.agent_finished
+}
+
+/**
+ * Check if agent is paused
+ * @param {Object} status - Agent status object
+ * @returns {boolean} Whether agent is paused
+ */
+export function isAgentPaused(status) {
+  if (!status) return false
+  
+  // Use new agent_status field if available
+  if (status.agent_status) {
+    return status.agent_status === 'paused'
+  }
+  
+  // Fallback to old status fields
+  return status.agent_paused
 }
