@@ -21,7 +21,7 @@ class KeysStorage(BaseStorage):
 
     def load_keys(self) -> Dict[str, str]:
         """Load user's API keys"""
-        logger.info(f"🔑 Loading keys for user {self.user_uuid[:8]}...")
+        logger.debug(f"🔑 Loading keys for user {self.user_uuid[:8]}...")
 
         keys_file = self.get_keys_file_path()
         data = self.read_json_file(keys_file)
@@ -34,19 +34,19 @@ class KeysStorage(BaseStorage):
             logger.error(f"❌ Invalid keys data format for user {self.user_uuid[:8]}")
             return {}
 
-        logger.info(f"🔑 Successfully loaded keys for providers: {list(data.keys())}")
+        logger.debug(f"🔑 Successfully loaded keys for providers: {list(data.keys())}")
         return data
 
     def save_keys(self, keys: Dict[str, str]) -> bool:
         """Save user's API keys"""
-        logger.info(f"💾 Saving keys for user {self.user_uuid[:8]}...")
+        logger.debug(f"💾 Saving keys for user {self.user_uuid[:8]}...")
         logger.debug(f"💾 Providers: {list(keys.keys())}")
 
         keys_file = self.get_keys_file_path()
         success = self.write_json_file(keys_file, keys)
 
         if success:
-            logger.info(f"✅ Keys saved successfully for user {self.user_uuid[:8]}")
+            logger.debug(f"✅ Keys saved successfully for user {self.user_uuid[:8]}")
         else:
             logger.error(f"❌ Failed to save keys for user {self.user_uuid[:8]}")
 

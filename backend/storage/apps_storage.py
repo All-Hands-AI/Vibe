@@ -26,7 +26,7 @@ class AppsStorage(BaseStorage):
 
     def load_app(self, app_slug: str) -> Optional[Dict[str, Any]]:
         """Load specific app data"""
-        logger.info(f"📱 Loading app: {app_slug} for user {self.user_uuid[:8]}...")
+        logger.debug(f"📱 Loading app: {app_slug} for user {self.user_uuid[:8]}...")
 
         app_file = self.get_app_file_path(app_slug)
         data = self.read_json_file(app_file)
@@ -39,18 +39,18 @@ class AppsStorage(BaseStorage):
             logger.error(f"❌ Invalid app data format for {app_slug}")
             return None
 
-        logger.info(f"📱 Successfully loaded app: {app_slug}")
+        logger.debug(f"📱 Successfully loaded app: {app_slug}")
         return data
 
     def save_app(self, app_slug: str, app_data: Dict[str, Any]) -> bool:
         """Save app data"""
-        logger.info(f"💾 Saving app: {app_slug} for user {self.user_uuid[:8]}...")
+        logger.debug(f"💾 Saving app: {app_slug} for user {self.user_uuid[:8]}...")
 
         app_file = self.get_app_file_path(app_slug)
         success = self.write_json_file(app_file, app_data)
 
         if success:
-            logger.info(f"✅ App saved successfully: {app_slug}")
+            logger.debug(f"✅ App saved successfully: {app_slug}")
         else:
             logger.error(f"❌ Failed to save app: {app_slug}")
 
@@ -58,7 +58,7 @@ class AppsStorage(BaseStorage):
 
     def list_apps(self) -> List[Dict[str, Any]]:
         """List all apps for user"""
-        logger.info(f"📋 Listing apps for user {self.user_uuid[:8]}...")
+        logger.debug(f"📋 Listing apps for user {self.user_uuid[:8]}...")
 
         apps_dir = self.user_dir / "apps"
         if not apps_dir.exists():
@@ -84,7 +84,7 @@ class AppsStorage(BaseStorage):
             logger.error(f"❌ Error listing apps: {e}")
             return []
 
-        logger.info(f"📋 Found {len(apps)} apps for user {self.user_uuid[:8]}")
+        logger.debug(f"📋 Found {len(apps)} apps for user {self.user_uuid[:8]}")
         return apps
 
     def app_exists(self, app_slug: str) -> bool:
@@ -94,7 +94,7 @@ class AppsStorage(BaseStorage):
 
     def delete_app(self, app_slug: str) -> bool:
         """Delete app and all its data"""
-        logger.info(f"🗑️ Deleting app: {app_slug} for user {self.user_uuid[:8]}...")
+        logger.debug(f"🗑️ Deleting app: {app_slug} for user {self.user_uuid[:8]}...")
 
         app_dir = self.get_app_dir_path(app_slug)
         if not app_dir.exists():
@@ -103,7 +103,7 @@ class AppsStorage(BaseStorage):
 
         try:
             shutil.rmtree(app_dir)
-            logger.info(f"✅ App deleted successfully: {app_slug}")
+            logger.debug(f"✅ App deleted successfully: {app_slug}")
             return True
         except Exception as e:
             logger.error(f"❌ Failed to delete app {app_slug}: {e}")

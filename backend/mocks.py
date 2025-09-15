@@ -280,7 +280,7 @@ def get_mock_response(method: str, url: str, **kwargs) -> MockResponse:
 
     # Default mock response for unknown URLs
     else:
-        logger.warning(f"🎭 MOCK_MODE: No mock defined for {method} {url}")
+        logger.info(f"🎭 MOCK_MODE: No mock defined for {method} {url}")
         return MockResponse(404, {"error": "Mock not implemented"})
 
 

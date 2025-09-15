@@ -93,7 +93,7 @@ def log_api_request(
         user_id: Optional user identifier
     """
     user_info = f" (user: {user_id[:8]})" if user_id else ""
-    logger.info(f"📡 {method} {endpoint}{user_info}")
+    logger.debug(f"📡 {method} {endpoint}{user_info}")
 
 
 def log_api_response(
@@ -117,4 +117,4 @@ def log_api_response(
     status_emoji = (
         "✅" if 200 <= status_code < 300 else "❌" if status_code >= 400 else "⚠️"
     )
-    logger.info(f"{status_emoji} {method} {endpoint} -> {status_code}{user_info}")
+    logger.debug(f"{status_emoji} {method} {endpoint} -> {status_code}{user_info}")

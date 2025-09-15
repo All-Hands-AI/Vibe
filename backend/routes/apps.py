@@ -435,7 +435,7 @@ def get_github_status(repo_url, github_token):
             "User-Agent": "OpenVibe-Backend/1.0",
         }
 
-        logger.info(f"🔍 Request headers: {dict(headers)}")
+        logger.debug(f"🔍 Request headers: {dict(headers)}")
         logger.info(
             f"🔍 Making request to: https://api.github.com/repos/{owner}/{repo}/commits/main"
         )
@@ -506,7 +506,7 @@ def get_github_status(repo_url, github_token):
                 if actions_response.status_code == 200:
                     actions_data = actions_response.json()
                     workflow_runs = actions_data.get("workflow_runs", [])
-                    logger.info(f"🔍 Found {len(workflow_runs)} workflow runs")
+                    logger.debug(f"🔍 Found {len(workflow_runs)} workflow runs")
 
                     if workflow_runs:
                         # Check if all workflows are completed and successful
@@ -659,7 +659,7 @@ def get_pr_status(repo_url, github_token, branch="main", search_by_base=False):
         return None
 
     owner, repo = match.groups()
-    logger.info(f"🔍 Parsed GitHub repo: {owner}/{repo}")
+    logger.debug(f"🔍 Parsed GitHub repo: {owner}/{repo}")
     logger.info(f"🌿 Looking for PRs with branch: '{branch}'")
 
     # Set up headers for GitHub API
@@ -674,16 +674,16 @@ def get_pr_status(repo_url, github_token, branch="main", search_by_base=False):
         if search_by_base:
             # Search for PRs targeting this branch as base
             api_url = f"https://api.github.com/repos/{owner}/{repo}/pulls?base={branch}&state=open"
-            logger.info(f"🔍 Searching for PRs targeting base branch '{branch}'")
+            logger.debug(f"🔍 Searching for PRs targeting base branch '{branch}'")
         else:
             # Search for PRs from this branch as head
             api_url = f"https://api.github.com/repos/{owner}/{repo}/pulls?head={owner}:{branch}&state=open"
-            logger.info(f"🔍 Searching for PRs from head branch '{owner}:{branch}'")
+            logger.debug(f"🔍 Searching for PRs from head branch '{owner}:{branch}'")
 
-        logger.info(f"🔍 API URL: {api_url}")
+        logger.debug(f"🔍 API URL: {api_url}")
 
         pr_response = requests.get(api_url, headers=headers, timeout=10)
-        logger.info(f"🔍 Response status: {pr_response.status_code}")
+        logger.debug(f"🔍 Response status: {pr_response.status_code}")
 
         if pr_response.status_code != 200:
             logger.warning(
@@ -692,10 +692,10 @@ def get_pr_status(repo_url, github_token, branch="main", search_by_base=False):
             return None
 
         prs = pr_response.json()
-        logger.info(f"🔍 Found {len(prs)} PRs")
+        logger.debug(f"🔍 Found {len(prs)} PRs")
 
         if not prs:
-            logger.info(f"ℹ️ No open PRs found for {search_type} branch '{branch}'")
+            logger.debug(f"ℹ️ No open PRs found for {search_type} branch '{branch}'")
             return None
 
         # Log details of found PRs
@@ -871,7 +871,7 @@ def close_github_pr(repo_url, github_token, branch_name):
         prs = pr_response.json()
 
         if not prs:
-            logger.info(f"ℹ️ No open PRs found for branch: {branch_name}")
+            logger.debug(f"ℹ️ No open PRs found for branch: {branch_name}")
             return True, "No open PRs found for this branch"
 
         # Close each PR found (usually there should be only one)
@@ -1099,7 +1099,7 @@ def create_github_repo(repo_name, github_token, fly_token):
 
         user_data = user_response.json()
         owner = user_data["login"]
-        logger.info(f"🔍 GitHub owner: {owner}")
+        logger.debug(f"🔍 GitHub owner: {owner}")
         logger.debug(
             f"🔍 GitHub user authenticated: {user_data.get('login', 'unknown')}"
         )
@@ -1274,7 +1274,7 @@ def get_apps():
         # Sort apps alphabetically by name
         apps.sort(key=lambda x: x.get("name", "").lower())
 
-        logger.info(f"📊 Returning {len(apps)} apps for user {user_uuid[:8]}")
+        logger.debug(f"📊 Returning {len(apps)} apps for user {user_uuid[:8]}")
         return jsonify({"apps": apps, "count": len(apps)})
     except Exception as e:
         logger.error(f"💥 Error fetching apps: {str(e)}")
@@ -1304,7 +1304,7 @@ def get_app(slug):
             logger.warning(f"❌ App not found: {slug} for user {user_uuid[:8]}")
             return jsonify({"error": "App not found"}), 404
 
-        logger.info(f"📊 Found app: {app['slug']} for user {user_uuid[:8]}")
+        logger.debug(f"📊 Found app: {app['slug']} for user {user_uuid[:8]}")
 
         # Get user's API keys for status information
         github_status = None
@@ -1318,8 +1318,8 @@ def get_app(slug):
 
             # Get GitHub status if token is available
             if github_token and app.get("github_url"):
-                logger.info(f"🔍 GitHub token length: {len(github_token)} characters")
-                logger.info(f"🔍 GitHub token starts with: {github_token[:10]}...")
+                logger.debug(f"🔍 GitHub token length: {len(github_token)} characters")
+                logger.debug(f"🔍 GitHub token starts with: {github_token[:10]}...")
                 github_status = get_github_status(app["github_url"], github_token)
 
                 # Get PR status for the current branch
@@ -1344,12 +1344,12 @@ def get_app(slug):
                 f"🔍 Added GitHub status: {github_status.get('status', 'unknown')}"
             )
         else:
-            logger.info(f"🔍 No github_status to add (github_status is None or empty)")
+            logger.debug(f"🔍 No github_status to add (github_status is None or empty)")
         if fly_status:
             app_with_status["fly_status"] = fly_status
         if pr_status:
             app_with_status["pr_status"] = pr_status
-            logger.info(f"🔍 Adding pr_status to response")
+            logger.debug(f"🔍 Adding pr_status to response")
 
         logger.debug(f"🔍 Returning app {slug} with status information")
         return jsonify(app_with_status)
@@ -1543,7 +1543,7 @@ def delete_app(slug):
             logger.warning(f"❌ App not found: {slug} for user {user_uuid[:8]}")
             return jsonify({"error": "App not found"}), 404
 
-        logger.info(f"🔍 Found app to delete: {app['slug']} for user {user_uuid[:8]}")
+        logger.debug(f"🔍 Found app to delete: {app['slug']} for user {user_uuid[:8]}")
 
         # Get user's API keys
         user_keys = load_user_keys(user_uuid)
@@ -1650,7 +1650,7 @@ def get_app_deployment_status(slug):
         # Check if app has GitHub URL
         github_url = app.get("github_url")
         if not github_url:
-            logger.info(f"ℹ️ No GitHub URL configured for app {slug}")
+            logger.debug(f"ℹ️ No GitHub URL configured for app {slug}")
             return jsonify(
                 {
                     "status": "error",
@@ -1664,7 +1664,7 @@ def get_app_deployment_status(slug):
         github_token = user_keys.get("github")
 
         if not github_token:
-            logger.info(f"ℹ️ No GitHub token found for user {user_uuid[:8]}")
+            logger.debug(f"ℹ️ No GitHub token found for user {user_uuid[:8]}")
             return jsonify(
                 {
                     "status": "error",

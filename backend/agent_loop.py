@@ -540,8 +540,8 @@ class AgentLoopManager:
             self.agent_loops[key] = agent_loop
 
             logger.info(f"✅ Created and stored AgentLoop for {key}")
-            logger.info(f"📊 Total agent loops: {len(self.agent_loops)}")
-            logger.info(f"🔑 All stored keys: {list(self.agent_loops.keys())}")
+            logger.debug(f"📊 Total agent loops: {len(self.agent_loops)}")
+            logger.debug(f"🔑 All stored keys: {list(self.agent_loops.keys())}")
 
             return agent_loop
 
@@ -584,8 +584,8 @@ class AgentLoopManager:
             self.agent_loops[key] = agent_loop
 
             logger.info(f"✅ Reconstructed and stored AgentLoop for {key}")
-            logger.info(f"📊 Total agent loops: {len(self.agent_loops)}")
-            logger.info(f"🔑 All stored keys: {list(self.agent_loops.keys())}")
+            logger.debug(f"📊 Total agent loops: {len(self.agent_loops)}")
+            logger.debug(f"🔑 All stored keys: {list(self.agent_loops.keys())}")
 
             return agent_loop
 
@@ -612,7 +612,7 @@ class AgentLoopManager:
                 logger.info(f"✅ Retrieved AgentLoop for {key}")
             else:
                 logger.warning(f"❌ AgentLoop not found for {key}")
-                logger.info(f"🔑 Available keys: {list(self.agent_loops.keys())}")
+                logger.debug(f"🔑 Available keys: {list(self.agent_loops.keys())}")
                 logger.info(f"🔍 Searching for key: '{key}'")
                 # Check for partial matches to help debug
                 for stored_key in self.agent_loops.keys():
@@ -645,7 +645,7 @@ class AgentLoopManager:
 
                 del self.agent_loops[key]
                 logger.info(f"🗑️ Removed AgentLoop for {key}")
-                logger.info(f"📊 Total agent loops: {len(self.agent_loops)}")
+                logger.debug(f"📊 Total agent loops: {len(self.agent_loops)}")
                 return True
             else:
                 logger.warning(f"❌ AgentLoop not found for removal: {key}")
