@@ -71,7 +71,7 @@ def validate_anthropic_key(api_key):
     # In mock mode, accept any non-empty key
     if is_mock_mode():
         is_valid = bool(api_key and api_key.strip())
-        logger.debug(f"🎭 MOCK_MODE: Anthropic key validation result: {is_valid}")
+        logger.info(f"🎭 MOCK_MODE: Anthropic key validation result: {is_valid}")
         return is_valid
 
     try:
@@ -113,7 +113,7 @@ def validate_github_key(api_key):
     # In mock mode, accept any non-empty key
     if is_mock_mode():
         is_valid = bool(api_key and api_key.strip())
-        logger.debug(f"🎭 MOCK_MODE: GitHub key validation result: {is_valid}")
+        logger.info(f"🎭 MOCK_MODE: GitHub key validation result: {is_valid}")
         return is_valid
 
     try:
@@ -146,7 +146,7 @@ def validate_fly_key(api_key):
     # In mock mode, accept any non-empty key
     if is_mock_mode():
         is_valid = bool(api_key and api_key.strip())
-        logger.debug(f"🎭 MOCK_MODE: Fly.io key validation result: {is_valid}")
+        logger.info(f"🎭 MOCK_MODE: Fly.io key validation result: {is_valid}")
         return is_valid
 
     try:
