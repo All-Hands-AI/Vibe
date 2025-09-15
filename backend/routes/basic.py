@@ -10,7 +10,7 @@ basic_bp = Blueprint("basic", __name__)
 
 @basic_bp.route("/")
 def hello_world():
-    logger.info("📍 Root endpoint accessed")
+    logger.debug("📍 Root endpoint accessed")
     return jsonify(
         {
             "message": "Hello World from Python Backend!",
@@ -23,7 +23,7 @@ def hello_world():
 
 @basic_bp.route("/api/health")
 def health_check():
-    logger.info("🏥 Health check endpoint accessed")
+    logger.debug("🏥 Health check endpoint accessed")
     return jsonify(
         {
             "status": "healthy",
@@ -35,7 +35,7 @@ def health_check():
 
 @basic_bp.route("/api/hello")
 def api_hello():
-    logger.info("👋 Hello API endpoint accessed")
+    logger.debug("👋 Hello API endpoint accessed")
     return jsonify(
         {
             "message": "Hello from the API!",
