@@ -119,10 +119,10 @@ function AgentStatusPanel({ appSlug, riffSlug }) {
       <div className="mb-4">
         <div className="flex items-center space-x-2 mb-2">
           <div className={`w-3 h-3 rounded-full ${
-            agentRunning && (status?.has_active_task || status?.thread_alive) ? 'bg-neon-green animate-pulse' : 
+            agentRunning && status?.has_active_task ? 'bg-neon-green animate-pulse' : 
             agentPaused ? 'bg-yellow-400' :
             agentFinished ? 'bg-green-400' :
-            status?.status === 'error' || status?.agent_status === 'error' ? 'bg-red-400' :
+            status?.status === 'error' ? 'bg-red-400' :
             'bg-gray-400'
           }`}></div>
           <span className={`font-mono text-sm font-medium ${statusColor}`}>
@@ -131,7 +131,7 @@ function AgentStatusPanel({ appSlug, riffSlug }) {
         </div>
         
         {/* Additional Status Info */}
-        {status && status.status === 'initialized' && (
+        {status && status.status !== 'not_initialized' && status.status !== 'not_found' && (
           <div className="text-xs text-cyber-muted space-y-1">
             {status.conversation_id && (
               <div>ID: {status.conversation_id.substring(0, 8)}...</div>
@@ -139,15 +139,10 @@ function AgentStatusPanel({ appSlug, riffSlug }) {
             {status.event_count !== undefined && (
               <div>Events: {status.event_count}</div>
             )}
-            {status.agent_status && (
-              <div>Agent Status: {status.agent_status}</div>
-            )}
+            <div>Status: {status.status}</div>
             <div className="flex space-x-4">
               <span>Active Task: {status.has_active_task ? '✅' : '❌'}</span>
-              <span>Running: {(status.is_running || status.running) ? '✅' : '❌'}</span>
-              {status.thread_alive !== undefined && (
-                <span>Thread: {status.thread_alive ? '✅' : '❌'}</span>
-              )}
+              <span>Running: {status.is_running ? '✅' : '❌'}</span>
             </div>
           </div>
         )}

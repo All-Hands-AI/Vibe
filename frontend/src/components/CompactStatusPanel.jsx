@@ -91,10 +91,10 @@ function CompactStatusPanel({ app, prStatus = null, appSlug, riffSlug }) {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <div className={`w-2 h-2 rounded-full ${
-            isAgentRunning(agentStatus) && (agentStatus?.has_active_task || agentStatus?.thread_alive) ? 'bg-neon-green animate-pulse' : 
+            isAgentRunning(agentStatus) && agentStatus?.has_active_task ? 'bg-neon-green animate-pulse' : 
             isAgentPaused(agentStatus) ? 'bg-yellow-400' :
             isAgentFinished(agentStatus) ? 'bg-green-400' :
-            agentStatus?.status === 'error' || agentStatus?.agent_status === 'error' ? 'bg-red-400' :
+            agentStatus?.status === 'error' ? 'bg-red-400' :
             'bg-gray-400'
           }`}></div>
           <span className={`font-mono text-xs ${getAgentStatusColor(agentStatus)}`}>

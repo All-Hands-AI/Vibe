@@ -360,15 +360,15 @@ class AgentLoop:
             return []
 
     def get_agent_status(self) -> Dict[str, Any]:
-        """Get comprehensive agent status information."""
+        """Get agent status information as transparent passthrough from SDK."""
         try:
             if not self.conversation or not hasattr(self.conversation, "state"):
                 return {
                     "status": "not_initialized",
-                    "agent_status": None,
+                    "error": "Conversation not initialized",
                     "is_running": False,
                     "has_active_task": False,
-                    "error": "Conversation not initialized",
+                    "event_count": 0,
                 }
 
             state = self.conversation.state
@@ -383,15 +383,19 @@ class AgentLoop:
             # Get event count for activity indication
             events = getattr(state, "events", [])
 
+            # Return SDK agent_status as the primary status field (transparent passthrough)
+            sdk_status = agent_status.value if agent_status else "idle"
+
             return {
-                "status": "initialized",
-                "agent_status": agent_status.value if agent_status else None,
+                "status": sdk_status,  # Primary status field - direct from SDK
                 "is_running": is_running,
                 "has_active_task": has_active_task,
                 "conversation_id": getattr(state, "id", None),
                 "event_count": len(events),
                 "workspace_path": self.workspace_path,
                 "state_path": self.state_path,
+                # Keep agent_status for backward compatibility
+                "agent_status": sdk_status,
             }
 
         except Exception as e:
@@ -401,6 +405,8 @@ class AgentLoop:
                 "error": str(e),
                 "is_running": False,
                 "has_active_task": False,
+                "event_count": 0,
+                "agent_status": "error",
             }
 
     def pause_agent(self) -> bool:

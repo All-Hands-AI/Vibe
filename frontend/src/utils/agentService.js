@@ -144,16 +144,11 @@ export function startAgentStatusPolling(appSlug, riffSlug, callback, interval = 
       callback({
         status: 'error',
         error: error.message,
-        agent_status: 'error',
         is_running: false,
         has_active_task: false,
         event_count: 0,
-        // Keep old fields for backward compatibility
-        agent_finished: false,
-        agent_paused: false,
-        agent_waiting_for_confirmation: false,
-        thread_alive: false,
-        running: false
+        // Keep agent_status for backward compatibility
+        agent_status: 'error'
       })
     }
 
@@ -183,10 +178,7 @@ export function startAgentStatusPolling(appSlug, riffSlug, callback, interval = 
 export function getStatusDescription(status) {
   if (!status) return 'Unknown'
   
-  if (status.status === 'error') {
-    return 'Error'
-  }
-  
+  // Handle special backend status values
   if (status.status === 'not_found') {
     return 'Not Found'
   }
@@ -195,53 +187,28 @@ export function getStatusDescription(status) {
     return 'Not Initialized'
   }
   
-  // Use new agent_status field if available
-  if (status.agent_status) {
-    switch (status.agent_status) {
-      case 'finished':
-        return 'Finished'
-      case 'paused':
-        return 'Paused'
-      case 'waiting_for_confirmation':
-        return 'Waiting for Confirmation'
-      case 'running':
-        return 'Running'
-      case 'idle':
-        // Check if it has any activity
-        if (status.event_count <= 1) {
-          return 'Idle (No Messages)'
-        }
-        return 'Idle'
-      case 'error':
-        return 'Error'
-      default:
-        return status.agent_status
-    }
+  // Primary status field is now the SDK status (transparent passthrough)
+  switch (status.status) {
+    case 'idle':
+      // Check if it has any activity
+      if (status.event_count <= 1) {
+        return 'Idle (No Messages)'
+      }
+      return 'Idle'
+    case 'running':
+      return 'Running'
+    case 'paused':
+      return 'Paused'
+    case 'waiting_for_confirmation':
+      return 'Waiting for Confirmation'
+    case 'finished':
+      return 'Finished'
+    case 'error':
+      return 'Error'
+    default:
+      // Fallback for any unknown status
+      return status.status || 'Unknown'
   }
-  
-  // Fallback to old status fields for backward compatibility
-  if (status.agent_finished) {
-    return 'Finished'
-  }
-  
-  if (status.agent_paused) {
-    return 'Paused'
-  }
-  
-  if (status.agent_waiting_for_confirmation) {
-    return 'Waiting for Confirmation'
-  }
-  
-  if (status.running || status.is_running) {
-    return 'Running'
-  }
-  
-  // Agent is idle - check if it has any activity
-  if (status.has_recent_activity === false || status.event_count <= 1) {
-    return 'Idle (No Messages)'
-  }
-  
-  return 'Idle'
 }
 
 /**
@@ -252,52 +219,28 @@ export function getStatusDescription(status) {
 export function getStatusColor(status) {
   if (!status) return 'text-gray-400'
   
-  if (status.status === 'error') {
-    return 'text-red-400'
-  }
-  
+  // Handle special backend status values
   if (status.status === 'not_found' || status.status === 'not_initialized') {
     return 'text-gray-400'
   }
   
-  // Use new agent_status field if available
-  if (status.agent_status) {
-    switch (status.agent_status) {
-      case 'finished':
-        return 'text-green-400'
-      case 'paused':
-        return 'text-yellow-400'
-      case 'waiting_for_confirmation':
-        return 'text-blue-400'
-      case 'running':
-        return 'text-neon-green'
-      case 'idle':
-        return 'text-gray-400'
-      case 'error':
-        return 'text-red-400'
-      default:
-        return 'text-gray-400'
-    }
+  // Primary status field is now the SDK status (transparent passthrough)
+  switch (status.status) {
+    case 'idle':
+      return 'text-gray-400'
+    case 'running':
+      return 'text-neon-green'
+    case 'paused':
+      return 'text-yellow-400'
+    case 'waiting_for_confirmation':
+      return 'text-blue-400'
+    case 'finished':
+      return 'text-green-400'
+    case 'error':
+      return 'text-red-400'
+    default:
+      return 'text-gray-400'
   }
-  
-  // Fallback to old status fields for backward compatibility
-  if (status.agent_finished) {
-    return 'text-green-400'
-  }
-  
-  if (status.agent_paused) {
-    return 'text-yellow-400'
-  }
-  
-  if (status.agent_waiting_for_confirmation) {
-    return 'text-blue-400'
-  }
-  
-  if (status.running || status.is_running) {
-    return 'text-neon-green'
-  }
-  
-  return 'text-gray-400'
 }
 
 /**
@@ -308,15 +251,9 @@ export function getStatusColor(status) {
 export function canPlayAgent(status) {
   if (!status) return false
   
-  // Use new agent_status field if available
-  if (status.agent_status) {
-    return status.agent_status === 'paused' || 
-           (status.agent_status === 'idle' && status.event_count <= 1)
-  }
-  
-  // Fallback to old status fields
-  return status.agent_paused || 
-         (!status.running && !status.agent_finished && status.event_count <= 1)
+  // Primary status field is now the SDK status (transparent passthrough)
+  return status.status === 'paused' || 
+         (status.status === 'idle' && status.event_count <= 1)
 }
 
 /**
@@ -327,14 +264,9 @@ export function canPlayAgent(status) {
 export function canPauseAgent(status) {
   if (!status) return false
   
-  // Use new agent_status field if available
-  if (status.agent_status) {
-    return status.agent_status === 'running' || 
-           status.agent_status === 'waiting_for_confirmation'
-  }
-  
-  // Fallback to old status fields
-  return status.running && !status.agent_paused && !status.agent_finished
+  // Primary status field is now the SDK status (transparent passthrough)
+  return status.status === 'running' || 
+         status.status === 'waiting_for_confirmation'
 }
 
 /**
@@ -345,14 +277,9 @@ export function canPauseAgent(status) {
 export function isAgentRunning(status) {
   if (!status) return false
   
-  // Use new agent_status field if available
-  if (status.agent_status) {
-    return status.agent_status === 'running' || 
-           status.agent_status === 'waiting_for_confirmation'
-  }
-  
-  // Fallback to old status fields
-  return status.running || status.is_running
+  // Primary status field is now the SDK status (transparent passthrough)
+  return status.status === 'running' || 
+         status.status === 'waiting_for_confirmation'
 }
 
 /**
@@ -363,13 +290,8 @@ export function isAgentRunning(status) {
 export function isAgentFinished(status) {
   if (!status) return false
   
-  // Use new agent_status field if available
-  if (status.agent_status) {
-    return status.agent_status === 'finished'
-  }
-  
-  // Fallback to old status fields
-  return status.agent_finished
+  // Primary status field is now the SDK status (transparent passthrough)
+  return status.status === 'finished'
 }
 
 /**
@@ -380,11 +302,6 @@ export function isAgentFinished(status) {
 export function isAgentPaused(status) {
   if (!status) return false
   
-  // Use new agent_status field if available
-  if (status.agent_status) {
-    return status.agent_status === 'paused'
-  }
-  
-  // Fallback to old status fields
-  return status.agent_paused
+  // Primary status field is now the SDK status (transparent passthrough)
+  return status.status === 'paused'
 }
