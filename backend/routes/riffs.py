@@ -989,7 +989,9 @@ def get_agent_status(slug, riff_slug):
         # Get agent status
         status = agent_loop.get_agent_status()
 
-        logger.debug(f"📊 Agent status retrieved for {user_uuid[:8]}:{slug}:{riff_slug}")
+        logger.debug(
+            f"📊 Agent status retrieved for {user_uuid[:8]}:{slug}:{riff_slug}"
+        )
         log_api_response(
             logger, "GET", f"/api/apps/{slug}/riffs/{riff_slug}/status", 200, user_uuid
         )
@@ -1274,7 +1276,9 @@ def delete_riff(slug, riff_slug):
             logger.warning(f"❌ Riff not found: {riff_slug} for user {user_uuid[:8]}")
             return jsonify({"error": "Riff not found"}), 404
 
-        logger.debug(f"🔍 Found riff to delete: {riff['slug']} for user {user_uuid[:8]}")
+        logger.debug(
+            f"🔍 Found riff to delete: {riff['slug']} for user {user_uuid[:8]}"
+        )
 
         # Load app data to get GitHub URL
         app = load_user_app(user_uuid, slug)
