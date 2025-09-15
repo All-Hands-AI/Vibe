@@ -347,8 +347,8 @@ function RiffDetail() {
 
   if (loading) {
     return (
-      <div className="h-screen bg-black text-cyber-text">
-        <div className="flex flex-col items-center justify-center h-full">
+      <div className="min-h-screen bg-black text-cyber-text">
+        <div className="flex flex-col items-center justify-center py-16">
           <div className="w-10 h-10 border-4 border-gray-600 border-t-cyber-muted rounded-full animate-spin mb-4"></div>
           <p className="text-cyber-muted">Loading riff...</p>
         </div>
@@ -358,8 +358,8 @@ function RiffDetail() {
 
   if (error) {
     return (
-      <div className="h-screen bg-black text-cyber-text">
-        <div className="max-w-4xl mx-auto px-8 py-16 h-full flex items-center justify-center">
+      <div className="min-h-screen bg-black text-cyber-text">
+        <div className="max-w-4xl mx-auto px-8 py-16">
           <div className="text-center">
             <h2 className="text-3xl font-bold text-red-400 mb-4">Error</h2>
             <p className="text-cyber-muted mb-8">{error}</p>
@@ -381,8 +381,8 @@ function RiffDetail() {
 
   if (!app || !riff) {
     return (
-      <div className="h-screen bg-black text-cyber-text">
-        <div className="max-w-4xl mx-auto px-8 py-16 h-full flex items-center justify-center">
+      <div className="min-h-screen bg-black text-cyber-text">
+        <div className="max-w-4xl mx-auto px-8 py-16">
           <div className="text-center">
             <h2 className="text-3xl font-bold text-red-400 mb-4">Not Found</h2>
             <p className="text-cyber-muted mb-8">The riff could not be found.</p>
@@ -396,10 +396,10 @@ function RiffDetail() {
   }
 
   return (
-    <div className="h-screen bg-black text-cyber-text flex flex-col">
-      <div className="max-w-7xl mx-auto px-6 py-6 flex flex-col h-full">
+    <div className="min-h-screen bg-black text-cyber-text">
+      <div className="max-w-7xl mx-auto px-6 py-6">
         {/* Navigation */}
-        <nav className="mb-4 flex-shrink-0">
+        <nav className="mb-4">
           <div className="flex items-center space-x-2 text-sm">
             <Link to="/" className="text-cyber-muted hover:text-neon-green transition-colors duration-200">
               Apps
@@ -414,7 +414,7 @@ function RiffDetail() {
         </nav>
 
         {/* Riff Header */}
-        <header className="mb-4 flex-shrink-0">
+        <header className="mb-4">
           <div className="flex flex-wrap items-baseline justify-between gap-4 mb-4">
             <div>
               <h1 className="text-3xl font-bold text-cyber-text font-mono mb-2">{riff.slug}</h1>
@@ -461,7 +461,7 @@ function RiffDetail() {
         </header>
 
         {/* Main Content Grid - 2 columns */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 flex-1 min-h-0">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-[calc(100vh-200px)]">
           {/* Left Sidebar - Chat */}
           <div className="flex flex-col">
             {/* Chat Window */}
