@@ -18,7 +18,7 @@ except ImportError:
 
 # Configure logging for Fly.io - stdout only with simplified formatting
 logging.basicConfig(
-    level=logging.DEBUG,
+    level=logging.INFO,
     format="%(levelname).1s %(message)s",
     stream=sys.stdout,
 )

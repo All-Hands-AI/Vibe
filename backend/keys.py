@@ -63,15 +63,15 @@ def validate_anthropic_key(api_key):
     """Validate Anthropic API key by making a test request"""
     # Handle None/invalid input first
     if not api_key:
-        logger.info("🤖 Validating Anthropic API key (empty/None)")
+        logger.debug("🤖 Validating Anthropic API key (empty/None)")
         return False
 
-    logger.info(f"🤖 Validating Anthropic API key (length: {len(api_key)})")
+    logger.debug(f"🤖 Validating Anthropic API key (length: {len(api_key)})")
 
     # In mock mode, accept any non-empty key
     if is_mock_mode():
         is_valid = bool(api_key and api_key.strip())
-        logger.info(f"🎭 MOCK_MODE: Anthropic key validation result: {is_valid}")
+        logger.debug(f"🎭 MOCK_MODE: Anthropic key validation result: {is_valid}")
         return is_valid
 
     try:
@@ -81,7 +81,7 @@ def validate_anthropic_key(api_key):
             "anthropic-version": "2023-06-01",
         }
         # Make a simple request to validate the key
-        logger.info("🔍 Making test request to Anthropic API...")
+        logger.debug("🔍 Making test request to Anthropic API...")
         response = requests.post(
             "https://api.anthropic.com/v1/messages",
             headers=headers,
@@ -92,7 +92,7 @@ def validate_anthropic_key(api_key):
             },
             timeout=10,
         )
-        logger.info(f"📡 Anthropic API response: {response.status_code}")
+        logger.debug(f"📡 Anthropic API response: {response.status_code}")
         if response.status_code != 200:
             logger.warning(f"❌ Anthropic API error: {response.text[:200]}")
         return response.status_code == 200
@@ -105,15 +105,15 @@ def validate_github_key(api_key):
     """Validate GitHub API key by making a test request"""
     # Handle None/invalid input first
     if not api_key:
-        logger.info("🐙 Validating GitHub API key (empty/None)")
+        logger.debug("🐙 Validating GitHub API key (empty/None)")
         return False
 
-    logger.info(f"🐙 Validating GitHub API key (length: {len(api_key)})")
+    logger.debug(f"🐙 Validating GitHub API key (length: {len(api_key)})")
 
     # In mock mode, accept any non-empty key
     if is_mock_mode():
         is_valid = bool(api_key and api_key.strip())
-        logger.info(f"🎭 MOCK_MODE: GitHub key validation result: {is_valid}")
+        logger.debug(f"🎭 MOCK_MODE: GitHub key validation result: {is_valid}")
         return is_valid
 
     try:
@@ -121,11 +121,11 @@ def validate_github_key(api_key):
             "Authorization": f"token {api_key}",
             "Accept": "application/vnd.github.v3+json",
         }
-        logger.info("🔍 Making test request to GitHub API...")
+        logger.debug("🔍 Making test request to GitHub API...")
         response = requests.get(
             "https://api.github.com/user", headers=headers, timeout=10
         )
-        logger.info(f"📡 GitHub API response: {response.status_code}")
+        logger.debug(f"📡 GitHub API response: {response.status_code}")
         if response.status_code != 200:
             logger.warning(f"❌ GitHub API error: {response.text[:200]}")
         return response.status_code == 200
@@ -138,15 +138,15 @@ def validate_fly_key(api_key):
     """Validate Fly.io API key by checking format and making a test request"""
     # Handle None/invalid input first
     if not api_key:
-        logger.info("🪰 Validating Fly.io API key (empty/None)")
+        logger.debug("🪰 Validating Fly.io API key (empty/None)")
         return False
 
-    logger.info(f"🪰 Validating Fly.io API key (length: {len(api_key)})")
+    logger.debug(f"🪰 Validating Fly.io API key (length: {len(api_key)})")
 
     # In mock mode, accept any non-empty key
     if is_mock_mode():
         is_valid = bool(api_key and api_key.strip())
-        logger.info(f"🎭 MOCK_MODE: Fly.io key validation result: {is_valid}")
+        logger.debug(f"🎭 MOCK_MODE: Fly.io key validation result: {is_valid}")
         return is_valid
 
     try:
@@ -159,9 +159,9 @@ def validate_fly_key(api_key):
         valid_prefixes = ["fo1_", "fm1_", "fm2_", "ft1_", "ft2_"]
         has_valid_prefix = any(api_key.startswith(prefix) for prefix in valid_prefixes)
 
-        logger.info(f"🔍 Token prefix check - has valid prefix: {has_valid_prefix}")
+        logger.debug(f"🔍 Token prefix check - has valid prefix: {has_valid_prefix}")
         if has_valid_prefix:
-            logger.info(f"✅ Found valid prefix: {api_key[:4]}...")
+            logger.debug(f"✅ Found valid prefix: {api_key[:4]}...")
 
         # If it doesn't have a known prefix, it might be a personal auth token
         # Personal tokens are typically longer and don't have specific prefixes
@@ -173,22 +173,22 @@ def validate_fly_key(api_key):
         if has_valid_prefix:
             # Tokens created with 'fly tokens create' use FlyV1 format
             auth_header = f"FlyV1 {api_key}"
-            logger.info("🔑 Using FlyV1 authentication format")
+            logger.debug("🔑 Using FlyV1 authentication format")
         else:
             # Personal auth tokens use Bearer format
             auth_header = f"Bearer {api_key}"
-            logger.info("🔑 Using Bearer authentication format")
+            logger.debug("🔑 Using Bearer authentication format")
 
         headers = {"Authorization": auth_header, "Content-Type": "application/json"}
 
         # Try a simple API call to validate the token
         # Use the apps endpoint which should work for most token types
-        logger.info("🔍 Making test request to Fly.io API...")
+        logger.debug("🔍 Making test request to Fly.io API...")
         response = requests.get(
             "https://api.machines.dev/v1/apps", headers=headers, timeout=10
         )
 
-        logger.info(f"📡 Fly.io API response: {response.status_code}")
+        logger.debug(f"📡 Fly.io API response: {response.status_code}")
         if response.status_code not in [200, 403, 404]:
             logger.warning(f"❌ Fly.io API error: {response.text[:200]}")
 
@@ -196,7 +196,7 @@ def validate_fly_key(api_key):
         # 403 might occur if the token doesn't have permission to list apps
         # but it's still a valid token
         if response.status_code in [200, 403]:
-            logger.info("✅ Fly.io token validated successfully")
+            logger.debug("✅ Fly.io token validated successfully")
             return True
         elif response.status_code == 401:
             # 401 means authentication failed - invalid token
@@ -206,7 +206,7 @@ def validate_fly_key(api_key):
             # 404 might mean the endpoint doesn't exist or the token is valid
             # but doesn't have access. For safety, we'll accept this as valid
             # since the token format passed our initial checks
-            logger.info(
+            logger.debug(
                 "⚠️ Fly.io API returned 404, accepting as valid due to format check"
             )
             return True

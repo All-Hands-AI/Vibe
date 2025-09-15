@@ -213,7 +213,7 @@ def get_mock_response(method: str, url: str, **kwargs) -> MockResponse:
     if not MOCK_MODE:
         raise ValueError("get_mock_response should only be called in MOCK_MODE")
 
-    logger.info(f"🎭 MOCK_MODE: {method} {url}")
+    logger.debug(f"🎭 MOCK_MODE: {method} {url}")
 
     # GitHub API mocks
     if "api.github.com" in url:
@@ -280,7 +280,7 @@ def get_mock_response(method: str, url: str, **kwargs) -> MockResponse:
 
     # Default mock response for unknown URLs
     else:
-        logger.warning(f"🎭 MOCK_MODE: No mock defined for {method} {url}")
+        logger.debug(f"🎭 MOCK_MODE: No mock defined for {method} {url}")
         return MockResponse(404, {"error": "Mock not implemented"})
 
 
@@ -318,7 +318,7 @@ def patch_requests_for_mock_mode():
     requests.delete = mock_delete
     requests.put = mock_put
 
-    logger.info("🎭 MOCK_MODE: Patched requests module with mock responses")
+    logger.debug("🎭 MOCK_MODE: Patched requests module with mock responses")
 
     # Return a function to restore original methods
     def restore_requests():
@@ -326,6 +326,6 @@ def patch_requests_for_mock_mode():
         requests.post = original_post
         requests.delete = original_delete
         requests.put = original_put
-        logger.info("🎭 MOCK_MODE: Restored original requests module")
+        logger.debug("🎭 MOCK_MODE: Restored original requests module")
 
     return restore_requests

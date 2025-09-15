@@ -59,7 +59,7 @@ def set_api_key(provider):
         logger.warning("❌ Empty API key provided")
         return jsonify({"error": "API key cannot be empty"}), 400
 
-    logger.info(f"🔍 Validating {provider} API key for user {user_uuid[:8]}...")
+    logger.debug(f"🔍 Validating {provider} API key for user {user_uuid[:8]}...")
 
     # Validate the API key using the keys module
     is_valid = validate_api_key(provider, api_key)
@@ -116,11 +116,11 @@ def check_api_key(provider):
         logger.warning("❌ Empty UUID provided in header")
         return jsonify({"error": "UUID cannot be empty"}), 400
 
-    logger.info(f"🔍 Checking {provider} API key status for user {user_uuid[:8]}...")
+    logger.debug(f"🔍 Checking {provider} API key status for user {user_uuid[:8]}...")
 
     # Check if user has keys file
     if not user_has_keys(user_uuid):
-        logger.info(f"⚠️ No keys file found for user {user_uuid[:8]}")
+        logger.debug(f"⚠️ No keys file found for user {user_uuid[:8]}")
         return jsonify(
             {"valid": False, "message": f"{provider.title()} API key not set"}
         )
@@ -130,12 +130,12 @@ def check_api_key(provider):
     api_key = user_keys.get(provider)
 
     if not api_key:
-        logger.info(f"⚠️ {provider} API key not set for user {user_uuid[:8]}")
+        logger.debug(f"⚠️ {provider} API key not set for user {user_uuid[:8]}")
         return jsonify(
             {"valid": False, "message": f"{provider.title()} API key not set"}
         )
 
-    logger.info(
+    logger.debug(
         f"🔍 Re-validating stored {provider} API key for user {user_uuid[:8]}..."
     )
 

@@ -623,7 +623,7 @@ def get_messages(slug, riff_slug):
         # Sort messages by creation time (oldest first for chat display)
         messages.sort(key=lambda x: x.get("created_at", ""))
 
-        logger.info(f"📊 Returning {len(messages)} messages for riff {riff_slug}")
+        logger.debug(f"📊 Returning {len(messages)} messages for riff {riff_slug}")
         return jsonify(
             {
                 "messages": messages,
@@ -718,7 +718,7 @@ def create_message(slug):
 
             # Debug: Show all available agent loops
             stats = agent_loop_manager.get_stats()
-            logger.info(f"📊 Current AgentLoop stats: {stats}")
+            logger.debug(f"📊 Current AgentLoop stats: {stats}")
 
             agent_loop = agent_loop_manager.get_agent_loop(user_uuid, slug, riff_slug)
             if agent_loop:
@@ -989,7 +989,7 @@ def get_agent_status(slug, riff_slug):
         # Get agent status
         status = agent_loop.get_agent_status()
 
-        logger.info(f"📊 Agent status retrieved for {user_uuid[:8]}:{slug}:{riff_slug}")
+        logger.debug(f"📊 Agent status retrieved for {user_uuid[:8]}:{slug}:{riff_slug}")
         log_api_response(
             logger, "GET", f"/api/apps/{slug}/riffs/{riff_slug}/status", 200, user_uuid
         )
@@ -1182,7 +1182,7 @@ def get_riff_pr_status(slug, riff_slug):
         # Check if app has GitHub URL
         github_url = app.get("github_url")
         if not github_url:
-            logger.info(f"ℹ️ No GitHub URL configured for app {slug}")
+            logger.debug(f"ℹ️ No GitHub URL configured for app {slug}")
             log_api_response(
                 logger, "GET", f"/api/apps/{slug}/riffs/{riff_slug}/pr-status", 200
             )
@@ -1193,7 +1193,7 @@ def get_riff_pr_status(slug, riff_slug):
             user_keys = load_user_keys(user_uuid)
             github_token = user_keys.get("github")
             if not github_token:
-                logger.info(f"ℹ️ No GitHub token configured for user {user_uuid[:8]}")
+                logger.debug(f"ℹ️ No GitHub token configured for user {user_uuid[:8]}")
                 log_api_response(
                     logger, "GET", f"/api/apps/{slug}/riffs/{riff_slug}/pr-status", 200
                 )
@@ -1203,7 +1203,7 @@ def get_riff_pr_status(slug, riff_slug):
 
             # Use riff slug as branch name (this is the typical pattern)
             riff_branch = riff_slug
-            logger.info(f"🔍 Looking for PR from riff branch '{riff_branch}' to main")
+            logger.debug(f"🔍 Looking for PR from riff branch '{riff_branch}' to main")
 
             # Search for PRs FROM the riff branch TO main (the typical workflow)
             # This means: head=riff_branch, base=main
@@ -1214,7 +1214,7 @@ def get_riff_pr_status(slug, riff_slug):
             if pr_status:
                 logger.info(f"✅ Found PR from riff branch '{riff_branch}' to main")
             else:
-                logger.info(f"ℹ️ No PR found from riff branch '{riff_branch}' to main")
+                logger.debug(f"ℹ️ No PR found from riff branch '{riff_branch}' to main")
                 # Note: We don't try base search here because riffs are source branches, not target branches
 
             if pr_status:
@@ -1274,7 +1274,7 @@ def delete_riff(slug, riff_slug):
             logger.warning(f"❌ Riff not found: {riff_slug} for user {user_uuid[:8]}")
             return jsonify({"error": "Riff not found"}), 404
 
-        logger.info(f"🔍 Found riff to delete: {riff['slug']} for user {user_uuid[:8]}")
+        logger.debug(f"🔍 Found riff to delete: {riff['slug']} for user {user_uuid[:8]}")
 
         # Load app data to get GitHub URL
         app = load_user_app(user_uuid, slug)
@@ -1427,7 +1427,7 @@ def get_riff_deployment_status(slug, riff_slug):
         # Check if app has GitHub URL
         github_url = app.get("github_url")
         if not github_url:
-            logger.info(f"ℹ️ No GitHub URL configured for app {slug}")
+            logger.debug(f"ℹ️ No GitHub URL configured for app {slug}")
             return jsonify(
                 {
                     "status": "error",
@@ -1441,7 +1441,7 @@ def get_riff_deployment_status(slug, riff_slug):
         github_token = user_keys.get("github")
 
         if not github_token:
-            logger.info(f"ℹ️ No GitHub token found for user {user_uuid[:8]}")
+            logger.debug(f"ℹ️ No GitHub token found for user {user_uuid[:8]}")
             return jsonify(
                 {
                     "status": "error",
