@@ -85,6 +85,7 @@ function MessageList({ messages, userUuid, scrollContainerRef, onScroll, message
     <div 
       ref={scrollContainerRef}
       className="flex-1 overflow-y-auto p-4 space-y-4"
+      style={{ maxHeight: '400px' }}
       onScroll={onScroll}
     >
       {Object.entries(groupedMessages).map(([date, dateMessages]) => (
