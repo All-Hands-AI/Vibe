@@ -134,28 +134,11 @@ def create_initial_riff_and_message(
         message_id = str(uuid.uuid4())
         created_at = datetime.now(timezone.utc).isoformat()
 
-        initial_message_content = f"""Please complete the following tasks to customize this app template for "{app_slug_for_message}":
-
-1. **Read TEMPLATE.md** - First, read the TEMPLATE.md file to understand the specific instructions for this template.
-
-2. **Follow the template instructions** - Execute the instructions in TEMPLATE.md to change the app name everywhere in the repository. The template should contain a helpful command or script to automate this process.
-
-3. **Change the app name** - Update all references from the template name to "{app_slug_for_message}" throughout the codebase. This typically includes:
-   - Package.json or similar dependency files
-   - Configuration files
-   - README files
-   - HTML title tags
-   - Any hardcoded app names in the code
-
-4. **Verify the changes** - Check that the app name has been successfully changed in key locations:
-   - Check the main package.json or equivalent
-   - Check the README.md file
-   - Check any configuration files
-   - Search for any remaining references to the old template name
-
-5. **Delete TEMPLATE.md** - Once you've followed all the instructions, delete the TEMPLATE.md file as it's no longer needed.
-
-6. **Commit and push changes** - Commit all your changes with a descriptive message and push them to the remote repository. Update the PR title and description but be brief."""
+        initial_message_content = f"""
+We need to customize this app template by renaming everything to "{app_slug_for_message}".
+Read TEMPLATE.md and run the command there to rename everything. Then commit and push your changes.
+Update the corresponding PR title and description but be brief.
+"""
 
         message = {
             "id": message_id,
