@@ -98,6 +98,39 @@ describe('AppStatus', () => {
     expect(screen.getByText('🚀 https://conversation-123-conversation-123.fly.dev')).toBeInTheDocument()
   })
 
+  it('displays waiting deployment status when workflow not found', async () => {
+    // Mock fetch to return waiting status
+    global.fetch = vi.fn(() =>
+      Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve({
+          status: 'waiting',
+          message: 'Waiting for deployment status',
+          details: {
+            reason: 'deploy_workflow_not_found',
+            commit_sha: 'abc123def456'
+          }
+        })
+      })
+    )
+
+    const app = {
+      slug: 'test-app',
+      branch: 'feature-branch'
+    }
+
+    render(<AppStatus app={app} />)
+    
+    expect(screen.getByText('🌿 feature-branch')).toBeInTheDocument()
+    
+    // Wait for deployment status to load and check for waiting status
+    await waitFor(() => {
+      expect(screen.getByText('⏳ Waiting for status')).toBeInTheDocument()
+    })
+    
+    expect(screen.getByText('Waiting for deployment status')).toBeInTheDocument()
+  })
+
   it('displays individual check commits', () => {
     const app = {
       branch: 'bugfix-branch',
