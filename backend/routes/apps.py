@@ -115,6 +115,25 @@ def create_initial_riff_and_message(
 
         logger.info(
 
+
+logger.info(
+    f"🔄 Creating initial riff: {riff_name} -> {riff_slug} for app {app_slug}"
+)
+
+# Check if GitHub repo already exists
+if github_url:
+    logger.info(f"🔍 Checking if GitHub repo already exists: {github_url}")
+    if does_github_repo_exist(github_url, github_token):
+        logger.info(f"✅ GitHub repo already exists: {github_url}")
+        # Skip creating the "rename-to" riff and initial message
+        return True, {"riff": None, "message": None}
+    else:
+        pass
+else:
+    pass
+
+
+
 # Check if GitHub repo already exists
 if github_url:
     logger.info(f"🔍 Checking if GitHub repo already exists: {github_url}")
