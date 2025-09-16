@@ -1533,7 +1533,7 @@ def get_riff_status(slug, riff_slug):
             "ci_status": None,
             "agent_status": None,
             "deployment_status": None,
-            "commit_info": None
+            "commit_info": None,
         }
 
         # Get user's API keys
@@ -1551,7 +1551,7 @@ def get_riff_status(slug, riff_slug):
                 status_response["commit_info"] = {
                     "hash": pr_status.get("commit_hash"),
                     "hash_short": pr_status.get("commit_hash_short"),
-                    "message": pr_status.get("commit_message")
+                    "message": pr_status.get("commit_message"),
                 }
                 logger.info(f"✅ PR status retrieved for riff {riff_slug}")
             else:
@@ -1566,15 +1566,17 @@ def get_riff_status(slug, riff_slug):
                     "status": agent_status,
                     "is_running": agent_status in ["running", "waiting_for_user"],
                     "is_paused": agent_status == "paused",
-                    "is_finished": agent_status == "finished"
+                    "is_finished": agent_status == "finished",
                 }
-                logger.info(f"✅ Agent status retrieved for riff {riff_slug}: {agent_status}")
+                logger.info(
+                    f"✅ Agent status retrieved for riff {riff_slug}: {agent_status}"
+                )
             else:
                 status_response["agent_status"] = {
                     "status": "not_initialized",
                     "is_running": False,
                     "is_paused": False,
-                    "is_finished": False
+                    "is_finished": False,
                 }
                 logger.info(f"ℹ️ No agent found for riff {riff_slug}")
         except Exception as e:
@@ -1583,17 +1585,21 @@ def get_riff_status(slug, riff_slug):
                 "status": "error",
                 "is_running": False,
                 "is_paused": False,
-                "is_finished": False
+                "is_finished": False,
             }
 
         # Get deployment status if GitHub is configured
         if github_url and github_token:
             try:
-                deployment_status = get_deployment_status(github_url, github_token, riff_slug)
+                deployment_status = get_deployment_status(
+                    github_url, github_token, riff_slug
+                )
                 status_response["deployment_status"] = deployment_status
                 logger.info(f"✅ Deployment status retrieved for riff {riff_slug}")
             except Exception as e:
-                logger.warning(f"⚠️ Error getting deployment status for riff {riff_slug}: {e}")
+                logger.warning(
+                    f"⚠️ Error getting deployment status for riff {riff_slug}: {e}"
+                )
 
         logger.info(f"✅ Comprehensive status retrieved for riff {riff_slug}")
         return jsonify(status_response)
