@@ -13,6 +13,7 @@ Key improvements:
 
 import sys
 import os
+import uuid
 from typing import Dict, Optional, Callable, Any
 from threading import Lock
 from concurrent.futures import ThreadPoolExecutor, Future
@@ -191,8 +192,10 @@ class AgentLoop:
             logger.error(f"❌ Failed to create file store for {self.get_key()}: {e}")
             raise
 
-        # Generate conversation ID
-        conversation_id = f"{user_uuid}:{app_slug}:{riff_slug}"
+        # Generate conversation ID as a proper UUID
+        # Use uuid5 to create a deterministic UUID from the user/app/riff combination
+        conversation_key = f"{user_uuid}:{app_slug}:{riff_slug}"
+        conversation_id = str(uuid.uuid5(uuid.NAMESPACE_DNS, conversation_key))
 
         # Create conversation with callbacks
         callbacks = []
