@@ -170,24 +170,38 @@ class TestKeyValidation:
                     f"validate_fly_key raised exception for {invalid_input}: {e}"
                 )
 
-    def test_mock_mode_logging(self, caplog):
-        """Test that MOCK_MODE validation includes appropriate logging"""
-        with caplog.at_level("INFO"):
-            validate_anthropic_key("test-key")
-            validate_github_key("test-key")
-            validate_fly_key("test-key")
-
-        # Check that mock mode logging is present
-        log_messages = [record.message for record in caplog.records]
-        mock_messages = [msg for msg in log_messages if "MOCK_MODE" in msg]
-
-        assert len(mock_messages) >= 3, "Expected at least 3 MOCK_MODE log messages"
-
-        # Check specific providers are mentioned
-        anthropic_logs = [msg for msg in mock_messages if "Anthropic" in msg]
-        github_logs = [msg for msg in mock_messages if "GitHub" in msg]
-        fly_logs = [msg for msg in mock_messages if "Fly.io" in msg]
-
-        assert len(anthropic_logs) >= 1, "Expected Anthropic MOCK_MODE log"
-        assert len(github_logs) >= 1, "Expected GitHub MOCK_MODE log"
-        assert len(fly_logs) >= 1, "Expected Fly.io MOCK_MODE log"
+    def test_mock_mode_behavior(self):
+        """Test that MOCK_MODE validation behaves correctly"""
+        # Reload the keys module to ensure MOCK_MODE environment variable is picked up
+        import importlib
+        import keys
+        import os
+        
+        # Verify MOCK_MODE is enabled
+        assert os.environ.get("MOCK_MODE", "false").lower() == "true"
+        
+        importlib.reload(keys)
+        
+        # Re-import the functions after reload
+        from keys import validate_anthropic_key, validate_github_key, validate_fly_key, is_mock_mode
+        
+        # Verify MOCK_MODE is detected correctly
+        assert is_mock_mode() is True
+        
+        # Test that valid keys return True in MOCK_MODE
+        assert validate_anthropic_key("test-key") is True
+        assert validate_github_key("test-key") is True  
+        assert validate_fly_key("test-key") is True
+        
+        # Test that empty/None keys still return False in MOCK_MODE
+        assert validate_anthropic_key("") is False
+        assert validate_anthropic_key(None) is False
+        assert validate_github_key("") is False
+        assert validate_github_key(None) is False
+        assert validate_fly_key("") is False
+        assert validate_fly_key(None) is False
+        
+        # Test that whitespace-only keys return False
+        assert validate_anthropic_key("   ") is False
+        assert validate_github_key("   ") is False
+        assert validate_fly_key("   ") is False
