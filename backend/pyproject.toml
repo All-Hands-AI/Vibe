@@ -35,8 +35,8 @@ dependencies = [
     "gunicorn==21.2.0",
     "requests>=2.31.0",
     "PyNaCl==1.5.0",
-    "openhands-sdk @ git+https://github.com/all-hands-ai/agent-sdk.git@main#subdirectory=openhands/sdk",
-    "openhands-tools @ git+https://github.com/all-hands-ai/agent-sdk.git@main#subdirectory=openhands/tools",
+    "openhands-sdk @ git+https://github.com/all-hands-ai/agent-sdk.git@752ac3658f95a17c7bcde5f7e197b734c23005b5#subdirectory=openhands/sdk",
+    "openhands-tools @ git+https://github.com/all-hands-ai/agent-sdk.git@752ac3658f95a17c7bcde5f7e197b734c23005b5#subdirectory=openhands/tools",
 ]
 
 [project.optional-dependencies]

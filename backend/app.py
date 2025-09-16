@@ -16,6 +16,15 @@ except ImportError:
     # SDK not available, continue without it (useful for testing)
     pass
 
+# Initialize mock mode if needed for development/testing
+if os.environ.get("MOCK_MODE", "false").lower() == "true":
+    try:
+        from mocks import patch_requests_for_mock_mode
+        patch_requests_for_mock_mode()
+        print("🎭 MOCK_MODE enabled - API calls will be mocked")
+    except ImportError:
+        print("⚠️ MOCK_MODE enabled but mocks module not available")
+
 # Configure logging for Fly.io - stdout only with simplified formatting
 logging.basicConfig(
     level=logging.INFO,

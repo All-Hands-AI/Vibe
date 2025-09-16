@@ -43,13 +43,74 @@ class MockLLM:
 
 def get_llm_instance(api_key: str, model: str = "claude-sonnet-4-20250514"):
     """Get the appropriate LLM instance based on MOCK_MODE environment variable"""
+    import time
+    import json
+    from requests.exceptions import RequestException, ConnectionError, Timeout
+    
     if os.environ.get("MOCK_MODE", "false").lower() == "true":
         # In mock mode, create a real LLM instance but with a fake key
         # The actual API calls will be mocked by the mocks.py module
         return LLM(api_key="mock-key", model=model)
     else:
-        # Use the real API key
-        return LLM(api_key=api_key, model=model)
+        # Use the real API key with retry logic for initialization
+        max_retries = 3
+        retry_delay = 1.0
+        
+        for attempt in range(max_retries):
+            try:
+                logger.info(f"🔄 Attempting to initialize LLM (attempt {attempt + 1}/{max_retries})")
+                llm = LLM(api_key=api_key, model=model)
+                logger.info("✅ LLM initialized successfully")
+                return llm
+                
+            except json.JSONDecodeError as e:
+                logger.warning(f"⚠️ JSON decode error during LLM initialization (attempt {attempt + 1}): {e}")
+                if "Expecting value: line 1 column 1 (char 0)" in str(e):
+                    logger.warning("🔍 This appears to be an empty response from the API")
+                
+                if attempt < max_retries - 1:
+                    logger.info(f"⏳ Retrying in {retry_delay} seconds...")
+                    time.sleep(retry_delay)
+                    retry_delay *= 2  # Exponential backoff
+                else:
+                    logger.error("❌ All retry attempts failed for LLM initialization")
+                    raise ValueError(f"Failed to initialize LLM after {max_retries} attempts: Empty or invalid JSON response from API. This may be due to network issues or API service problems.")
+                    
+            except (ConnectionError, Timeout) as e:
+                logger.warning(f"⚠️ Network error during LLM initialization (attempt {attempt + 1}): {e}")
+                
+                if attempt < max_retries - 1:
+                    logger.info(f"⏳ Retrying in {retry_delay} seconds...")
+                    time.sleep(retry_delay)
+                    retry_delay *= 2  # Exponential backoff
+                else:
+                    logger.error("❌ All retry attempts failed for LLM initialization")
+                    raise ValueError(f"Failed to initialize LLM after {max_retries} attempts: Network connectivity issues. Please check your internet connection and try again.")
+                    
+            except RequestException as e:
+                logger.warning(f"⚠️ Request error during LLM initialization (attempt {attempt + 1}): {e}")
+                
+                if attempt < max_retries - 1:
+                    logger.info(f"⏳ Retrying in {retry_delay} seconds...")
+                    time.sleep(retry_delay)
+                    retry_delay *= 2  # Exponential backoff
+                else:
+                    logger.error("❌ All retry attempts failed for LLM initialization")
+                    raise ValueError(f"Failed to initialize LLM after {max_retries} attempts: API request failed. This may be due to invalid API key or service issues.")
+                    
+            except Exception as e:
+                logger.error(f"❌ Unexpected error during LLM initialization (attempt {attempt + 1}): {e}")
+                
+                if attempt < max_retries - 1:
+                    logger.info(f"⏳ Retrying in {retry_delay} seconds...")
+                    time.sleep(retry_delay)
+                    retry_delay *= 2  # Exponential backoff
+                else:
+                    logger.error("❌ All retry attempts failed for LLM initialization")
+                    raise ValueError(f"Failed to initialize LLM after {max_retries} attempts: {str(e)}")
+        
+        # This should never be reached, but just in case
+        raise ValueError("Failed to initialize LLM: Unexpected error in retry loop")
 
 
 from utils.logging import get_logger, log_api_request, log_api_response
@@ -104,7 +165,7 @@ def reconstruct_agent_from_state(user_uuid, app_slug, riff_slug):
 
         logger.info(f"🔄 Reconstructing agent from state for riff {riff_slug}")
 
-        # Create LLM instance
+        # Create LLM instance with fallback to mock mode
         try:
             llm = get_llm_instance(
                 api_key=anthropic_token, model="claude-sonnet-4-20250514"
@@ -232,7 +293,7 @@ def create_agent_for_user(user_uuid, app_slug, riff_slug, send_initial_message=F
 
         logger.info(f"✅ Workspace ready at: {workspace_path}")
 
-        # Create LLM instance
+        # Create LLM instance with fallback to mock mode
         try:
             llm = get_llm_instance(
                 api_key=anthropic_token, model="claude-sonnet-4-20250514"
