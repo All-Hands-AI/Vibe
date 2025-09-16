@@ -126,7 +126,7 @@ describe('RiffDetail Height Constraints Integration', () => {
     const { container } = render(
       <MemoryRouter initialEntries={['/apps/test-app/riffs/test-riff']}>
         <Routes>
-          <Route path="/apps/:appSlug/riffs/:riffSlug" element={
+          <Route path="/apps/:slug/riffs/:riffSlug" element={
             <div style={{ height: '100vh' }}>
               <RiffDetail />
             </div>
@@ -161,7 +161,7 @@ describe('RiffDetail Height Constraints Integration', () => {
     render(
       <MemoryRouter initialEntries={['/apps/test-app/riffs/test-riff']}>
         <Routes>
-          <Route path="/apps/:appSlug/riffs/:riffSlug" element={
+          <Route path="/apps/:slug/riffs/:riffSlug" element={
             <div style={{ height: '800px' }} data-testid="viewport">
               <RiffDetail />
             </div>
@@ -205,7 +205,7 @@ describe('RiffDetail Height Constraints Integration', () => {
     const { container } = render(
       <MemoryRouter initialEntries={['/apps/test-app/riffs/test-riff']}>
         <Routes>
-          <Route path="/apps/:appSlug/riffs/:riffSlug" element={
+          <Route path="/apps/:slug/riffs/:riffSlug" element={
             <div style={{ height: '100vh' }}>
               <RiffDetail />
             </div>
@@ -237,7 +237,7 @@ describe('RiffDetail Height Constraints Integration', () => {
     render(
       <MemoryRouter initialEntries={['/apps/test-app/riffs/test-riff']}>
         <Routes>
-          <Route path="/apps/:appSlug/riffs/:riffSlug" element={
+          <Route path="/apps/:slug/riffs/:riffSlug" element={
             <div style={{ height: '100vh' }}>
               <RiffDetail />
             </div>
@@ -260,7 +260,7 @@ describe('RiffDetail Height Constraints Integration', () => {
     render(
       <MemoryRouter initialEntries={['/apps/test-app/riffs/test-riff']}>
         <Routes>
-          <Route path="/apps/:appSlug/riffs/:riffSlug" element={
+          <Route path="/apps/:slug/riffs/:riffSlug" element={
             <div style={{ height: '100vh' }}>
               <RiffDetail />
             </div>
@@ -282,7 +282,7 @@ describe('RiffDetail Height Constraints Integration', () => {
     const { container } = render(
       <MemoryRouter initialEntries={['/apps/test-app/riffs/test-riff']}>
         <Routes>
-          <Route path="/apps/:appSlug/riffs/:riffSlug" element={
+          <Route path="/apps/:slug/riffs/:riffSlug" element={
             <div style={{ height: '100vh' }}>
               <RiffDetail />
             </div>
@@ -350,7 +350,7 @@ describe('RiffDetail Height Constraints Integration', () => {
     const { container } = render(
       <MemoryRouter initialEntries={['/apps/test-app/riffs/test-riff']}>
         <Routes>
-          <Route path="/apps/:appSlug/riffs/:riffSlug" element={
+          <Route path="/apps/:slug/riffs/:riffSlug" element={
             <div style={{ height: '100vh' }}>
               <RiffDetail />
             </div>
