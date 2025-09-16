@@ -28,6 +28,26 @@ function AppDetail() {
   // Set page title
   useDocumentTitle(formatPageTitle('app', app?.name))
 
+  // Format relative time (e.g., "5m ago", "2h ago", "3d ago")
+  const formatRelativeTime = (dateString) => {
+    if (!dateString) return null
+    
+    const now = new Date()
+    const date = new Date(dateString)
+    const diffMs = now - date
+    const diffMinutes = Math.floor(diffMs / (1000 * 60))
+    const diffHours = Math.floor(diffMs / (1000 * 60 * 60))
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24))
+    
+    if (diffMinutes < 1) return 'now'
+    if (diffMinutes < 60) return `${diffMinutes}m ago`
+    if (diffHours < 24) return `${diffHours}h ago`
+    if (diffDays < 30) return `${diffDays}d ago`
+    
+    // For older dates, show month/day
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+  }
+
 
 
 
@@ -482,22 +502,18 @@ function AppDetail() {
                           className="block"
                         >
                           <div className="mb-4 pr-12">
-                            <h4 className="text-xl font-semibold text-cyber-text mb-1">{riff.slug}</h4>
-                          </div>
-                          
-                          <div className="space-y-2">
-                            <p className="text-sm text-cyber-muted">
-                              Created: {new Date(riff.created_at).toLocaleDateString()}
-                            </p>
-                            {riff.last_message_at && (
-                              <p className="text-sm text-cyber-muted">
-                                Last activity: {new Date(riff.last_message_at).toLocaleDateString()}
-                              </p>
-                            )}
+                            <div className="flex items-baseline gap-3">
+                              <h4 className="text-xl font-semibold text-cyber-text">{riff.slug}</h4>
+                              {riff.last_message_at && (
+                                <span className="text-xs text-gray-500">
+                                  {formatRelativeTime(riff.last_message_at)}
+                                </span>
+                              )}
+                            </div>
                           </div>
                           
                           {/* Riff Status */}
-                          <div className="mt-4 pt-3 border-t border-gray-700">
+                          <div className="mt-4">
                             <RiffStatus 
                               appSlug={app.slug} 
                               riffSlug={riff.slug} 

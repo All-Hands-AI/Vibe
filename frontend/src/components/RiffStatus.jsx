@@ -51,7 +51,12 @@ function getDeploymentStatusDisplay(deploymentStatus) {
 }
 
 function RiffStatus({ appSlug, riffSlug, compact = false }) {
-  const [status, setStatus] = useState(null)
+  const [status, setStatus] = useState({
+    pr_status: null,
+    agent_status: null,
+    deployment_status: null,
+    commit_info: null
+  })
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
@@ -68,14 +73,51 @@ function RiffStatus({ appSlug, riffSlug, compact = false }) {
           'X-User-UUID': uuid
         }
 
-        const response = await fetch(`/api/apps/${appSlug}/riffs/${riffSlug}/status`, { headers })
-        
-        if (!response.ok) {
-          throw new Error(`Failed to fetch status: ${response.status}`)
+        // Fetch all status data in parallel using existing endpoints
+        const [prResponse, agentResponse, deploymentResponse] = await Promise.allSettled([
+          fetch(`/api/apps/${appSlug}/riffs/${riffSlug}/pr-status`, { headers }),
+          fetch(`/api/apps/${appSlug}/riffs/${riffSlug}/status`, { headers }),
+          fetch(`/api/apps/${appSlug}/riffs/${riffSlug}/deployment`, { headers })
+        ])
+
+        const newStatus = {
+          pr_status: null,
+          agent_status: null,
+          deployment_status: null,
+          commit_info: null
         }
 
-        const data = await response.json()
-        setStatus(data)
+        // Process PR status
+        if (prResponse.status === 'fulfilled' && prResponse.value.ok) {
+          const prData = await prResponse.value.json()
+          newStatus.pr_status = prData
+          if (prData) {
+            newStatus.commit_info = {
+              hash: prData.commit_hash,
+              hash_short: prData.commit_hash_short,
+              message: prData.commit_message
+            }
+          }
+        }
+
+        // Process agent status
+        if (agentResponse.status === 'fulfilled' && agentResponse.value.ok) {
+          const agentData = await agentResponse.value.json()
+          newStatus.agent_status = {
+            status: agentData.status,
+            is_running: agentData.status === 'running' || agentData.status === 'waiting_for_user',
+            is_paused: agentData.status === 'paused',
+            is_finished: agentData.status === 'finished'
+          }
+        }
+
+        // Process deployment status
+        if (deploymentResponse.status === 'fulfilled' && deploymentResponse.value.ok) {
+          const deploymentData = await deploymentResponse.value.json()
+          newStatus.deployment_status = deploymentData
+        }
+
+        setStatus(newStatus)
       } catch (err) {
         console.error('❌ Error fetching riff status:', err)
         setError(err.message)
