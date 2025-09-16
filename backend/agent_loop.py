@@ -14,6 +14,7 @@ Key improvements:
 import sys
 import os
 import uuid
+import traceback
 from typing import Dict, Optional, Callable, Any
 from threading import Lock
 from concurrent.futures import ThreadPoolExecutor, Future
@@ -288,8 +289,6 @@ class AgentLoop:
                 f"❌ Error in conversation execution for {self.get_key()}: {e}"
             )
             # Log the full traceback for debugging
-            import traceback
-
             logger.error(f"❌ Traceback: {traceback.format_exc()}")
         finally:
             with self._lock:

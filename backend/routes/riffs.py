@@ -2,6 +2,7 @@ from flask import Blueprint, jsonify, request
 import re
 import uuid
 import sys
+import traceback
 from datetime import datetime, timezone
 from storage import get_riffs_storage, get_apps_storage
 from agent_loop import agent_loop_manager
@@ -151,8 +152,6 @@ def reconstruct_agent_from_state(user_uuid, app_slug, riff_slug):
 
                 except Exception as e:
                     logger.error(f"❌ Error in message callback: {e}")
-                    import traceback
-
                     logger.error(f"❌ Traceback: {traceback.format_exc()}")
 
             # Create and store the agent loop from existing state
@@ -281,8 +280,6 @@ def create_agent_for_user(user_uuid, app_slug, riff_slug, send_initial_message=F
 
                 except Exception as e:
                     logger.error(f"❌ Error in message callback: {e}")
-                    import traceback
-
                     logger.error(f"❌ Traceback: {traceback.format_exc()}")
 
             # Create and store the agent loop
