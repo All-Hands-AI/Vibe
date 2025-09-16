@@ -94,7 +94,7 @@ def create_tools_with_validation(workspace_path: str) -> list:
 class CustomAgentContext(AgentContext):
     """Custom AgentContext that can store workspace_path."""
 
-    workspace_path: str = "/workspace"  # default value
+    workspace_path: str = "/tmp"  # default value
 
 
 class CustomAgent(Agent):
@@ -109,7 +109,7 @@ class CustomAgent(Agent):
     def system_message(self) -> str:
         """Compute system message with workspace_path template variable."""
         # Get the workspace_path from agent_context if available
-        workspace_path = "/workspace"  # default
+        workspace_path = "/tmp"  # default
         if self.agent_context and isinstance(self.agent_context, CustomAgentContext):
             workspace_path = self.agent_context.workspace_path
 
