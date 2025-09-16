@@ -906,7 +906,9 @@ def reset_riff_llm(slug, riff_slug):
                 f"🧪 Testing LLM functionality for {user_uuid[:8]}:{slug}:{riff_slug}"
             )
             # Send initial message to run ls in the project directory
-            workspace_path = f"/data/{user_uuid}/apps/{slug}/riffs/{riff_slug}/workspace"
+            workspace_path = (
+                f"/data/{user_uuid}/apps/{slug}/riffs/{riff_slug}/workspace"
+            )
             project_path = f"{workspace_path}/project"
             test_message = f"ls {project_path}"
             logger.info(f"📨 Sending test message: {test_message}")
