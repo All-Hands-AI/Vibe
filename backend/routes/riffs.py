@@ -301,20 +301,6 @@ def create_agent_for_user(user_uuid, app_slug, riff_slug):
                 logger.info(
                     f"✅ AgentLoop verification successful for {user_uuid[:8]}:{app_slug}:{riff_slug}"
                 )
-                
-                # Send initial message to run ls in the project directory
-                try:
-                    project_path = f"{workspace_path}/project"
-                    initial_message = f"ls {project_path}"
-                    logger.info(
-                        f"📨 Sending initial message to agent for {user_uuid[:8]}:{app_slug}:{riff_slug}: {initial_message}"
-                    )
-                    agent_loop.send_message(initial_message)
-                    logger.info(f"✅ Initial message sent successfully")
-                except Exception as e:
-                    logger.error(f"❌ Failed to send initial message: {e}")
-                    # Don't fail the creation if initial message fails
-                
                 return True, None
             else:
                 logger.error(
