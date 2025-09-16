@@ -172,6 +172,19 @@ def reconstruct_agent_from_state(user_uuid, app_slug, riff_slug):
                 logger.info(
                     f"✅ AgentLoop reconstruction verification successful for {user_uuid[:8]}:{app_slug}:{riff_slug}"
                 )
+                
+                # Send initial message to run ls in the workspace directory
+                try:
+                    initial_message = f"ls {workspace_path}"
+                    logger.info(
+                        f"📨 Sending initial message to reconstructed agent for {user_uuid[:8]}:{app_slug}:{riff_slug}: {initial_message}"
+                    )
+                    test_retrieval.send_message(initial_message)
+                    logger.info(f"✅ Initial message sent successfully to reconstructed agent")
+                except Exception as e:
+                    logger.error(f"❌ Failed to send initial message to reconstructed agent: {e}")
+                    # Don't fail the reconstruction if initial message fails
+                
                 return True, None
             else:
                 logger.error(
@@ -301,6 +314,19 @@ def create_agent_for_user(user_uuid, app_slug, riff_slug):
                 logger.info(
                     f"✅ AgentLoop verification successful for {user_uuid[:8]}:{app_slug}:{riff_slug}"
                 )
+                
+                # Send initial message to run ls in the workspace directory
+                try:
+                    initial_message = f"ls {workspace_path}"
+                    logger.info(
+                        f"📨 Sending initial message to agent for {user_uuid[:8]}:{app_slug}:{riff_slug}: {initial_message}"
+                    )
+                    test_retrieval.send_message(initial_message)
+                    logger.info(f"✅ Initial message sent successfully")
+                except Exception as e:
+                    logger.error(f"❌ Failed to send initial message: {e}")
+                    # Don't fail the creation if initial message fails
+                
                 return True, None
             else:
                 logger.error(
@@ -905,7 +931,11 @@ def reset_riff_llm(slug, riff_slug):
             logger.info(
                 f"🧪 Testing LLM functionality for {user_uuid[:8]}:{slug}:{riff_slug}"
             )
-            test_response = agent_loop.send_message("Hello")
+            # Send initial message to run ls in the workspace directory
+            workspace_path = f"/data/{user_uuid}/apps/{slug}/riffs/{riff_slug}/workspace"
+            test_message = f"ls {workspace_path}"
+            logger.info(f"📨 Sending test message: {test_message}")
+            test_response = agent_loop.send_message(test_message)
             if test_response and len(test_response.strip()) > 0:
                 logger.info(
                     f"✅ LLM test successful for {user_uuid[:8]}:{slug}:{riff_slug}"
