@@ -1054,7 +1054,14 @@ def delete_fly_app(app_name, fly_token):
 
 
 def create_github_repo(repo_name, github_token, fly_token):
-    """Create a GitHub repository from template and set FLY_API_TOKEN secret"""
+    """Create a GitHub repository from template and set FLY_API_TOKEN secret
+    
+    Returns:
+        tuple: (success, result, was_created)
+        - success: bool indicating if operation succeeded
+        - result: str with URL on success or error message on failure
+        - was_created: bool indicating if repo was newly created (True) or already existed (False)
+    """
     logger.info(f"🐙 Creating GitHub repo: {repo_name}")
     logger.debug(f"🐙 GitHub token length: {len(github_token)}")
     logger.debug(f"🐙 GitHub token prefix: {github_token[:10]}...")
@@ -1080,7 +1087,7 @@ def create_github_repo(repo_name, github_token, fly_token):
         if user_response.status_code != 200:
             logger.error(f"❌ Failed to get GitHub user: {user_response.text}")
             logger.debug(f"🐙 Response content: {user_response.content}")
-            return False, "Failed to authenticate with GitHub"
+            return False, "Failed to authenticate with GitHub", False
 
         user_data = user_response.json()
         owner = user_data["login"]
@@ -1152,7 +1159,7 @@ def create_github_repo(repo_name, github_token, fly_token):
                         f"⚠️ Failed to get public key for secrets on existing repo: {key_response.text}"
                     )
 
-            return True, repo_data["html_url"]
+            return True, repo_data["html_url"], False  # Repo already existed
 
         # Create repo from template
         create_data = {
@@ -1174,7 +1181,7 @@ def create_github_repo(repo_name, github_token, fly_token):
 
         if create_response.status_code != 201:
             logger.error(f"Failed to create repo from template: {create_response.text}")
-            return False, f"Failed to create repository: {create_response.text}"
+            return False, f"Failed to create repository: {create_response.text}", False
 
         repo_data = create_response.json()
         logger.info(f"✅ Created repository: {repo_data['html_url']}")
@@ -1225,11 +1232,11 @@ def create_github_repo(repo_name, github_token, fly_token):
                     f"⚠️ Failed to get public key for secrets: {key_response.text}"
                 )
 
-        return True, repo_data["html_url"]
+        return True, repo_data["html_url"], True  # Repo was newly created
 
     except Exception as e:
         logger.error(f"💥 GitHub repo creation error: {str(e)}")
-        return False, f"Error creating repository: {str(e)}"
+        return False, f"Error creating repository: {str(e)}", False
 
 
 @apps_bp.route("/api/apps", methods=["GET"])
@@ -1415,7 +1422,7 @@ def create_app():
 
         # Create GitHub repository
         logger.info(f"🐙 Creating GitHub repository: {app_slug}")
-        github_success, github_result = create_github_repo(
+        github_success, github_result, repo_was_created = create_github_repo(
             app_slug, github_token, fly_token
         )
 
@@ -1429,7 +1436,10 @@ def create_app():
             )
 
         github_url = github_result
-        logger.info(f"✅ GitHub repository created: {github_url}")
+        if repo_was_created:
+            logger.info(f"✅ GitHub repository created: {github_url}")
+        else:
+            logger.info(f"✅ Using existing GitHub repository: {github_url}")
 
         # Create Fly.io app
         logger.info(f"🛩️ Creating Fly.io app: {app_slug}")
@@ -1459,40 +1469,46 @@ def create_app():
             logger.error("❌ Failed to save app to file")
             return jsonify({"error": "Failed to save app"}), 500
 
-        # Wait 5 seconds before creating the first riff to allow for proper setup
-        logger.info(
-            f"⏳ Waiting 5 seconds before creating initial riff for app: {app_slug}"
-        )
-        time.sleep(5)
-
-        # Create initial riff and message for the new app
-        logger.info(f"🆕 Creating initial riff for app: {app_slug}")
-        riff_success, riff_result = create_initial_riff_and_message(
-            user_uuid, app_slug, app_slug, github_url
-        )
-
         warnings = []
         if not fly_success:
             warnings.append(f"Fly.io app creation failed: {fly_result}")
 
-        if not riff_success:
-            logger.warning(f"⚠️ Failed to create initial riff: {riff_result}")
-            warnings.append(f"Initial riff creation failed: {riff_result}")
+        riff_result = None
+        # Only create initial riff if the GitHub repo was newly created
+        if repo_was_created:
+            # Wait 5 seconds before creating the first riff to allow for proper setup
+            logger.info(
+                f"⏳ Waiting 5 seconds before creating initial riff for app: {app_slug}"
+            )
+            time.sleep(5)
+
+            # Create initial riff and message for the new app
+            logger.info(f"🆕 Creating initial riff for app: {app_slug}")
+            riff_success, riff_result = create_initial_riff_and_message(
+                user_uuid, app_slug, app_slug, github_url
+            )
+
+            if not riff_success:
+                logger.warning(f"⚠️ Failed to create initial riff: {riff_result}")
+                warnings.append(f"Initial riff creation failed: {riff_result}")
+            else:
+                logger.info(f"✅ Initial riff created successfully for app: {app_slug}")
         else:
-            logger.info(f"✅ Initial riff created successfully for app: {app_slug}")
+            logger.info(f"⏭️ Skipping initial riff creation - using existing GitHub repository")
 
         logger.info(f"✅ App created successfully: {app_slug}")
-        return (
-            jsonify(
-                {
-                    "message": "App created successfully",
-                    "app": app,
-                    "warnings": warnings,
-                    "initial_riff": riff_result if riff_success else None,
-                }
-            ),
-            201,
-        )
+        response_data = {
+            "message": "App created successfully",
+            "app": app,
+            "warnings": warnings,
+            "repo_was_created": repo_was_created,
+        }
+        
+        # Only include initial_riff in response if we attempted to create one
+        if repo_was_created:
+            response_data["initial_riff"] = riff_result if 'riff_success' in locals() and riff_success else None
+        
+        return jsonify(response_data), 201
 
     except Exception as e:
         logger.error(f"💥 Error creating app: {str(e)}")
