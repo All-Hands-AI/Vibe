@@ -50,7 +50,7 @@ function getDeploymentStatusDisplay(deploymentStatus) {
   }
 }
 
-function RiffStatus({ appSlug, riffSlug, compact = false }) {
+function RiffStatus({ appSlug, riffSlug, compact = false, showCommitOnly = false }) {
   const [status, setStatus] = useState({
     pr_status: null,
     agent_status: null,
@@ -149,6 +149,25 @@ function RiffStatus({ appSlug, riffSlug, compact = false }) {
 
   if (!status) {
     return null
+  }
+
+  // Show only commit information if requested
+  if (showCommitOnly) {
+    if (!status.commit_info || !status.commit_info.hash_short) {
+      return null
+    }
+    
+    return (
+      <div className="flex items-center gap-2">
+        <span className="text-gray-400">📝</span>
+        <span className="text-gray-400">{status.commit_info.hash_short}</span>
+        {status.commit_info.message && (
+          <span className="text-gray-500 truncate">
+            {status.commit_info.message}
+          </span>
+        )}
+      </div>
+    )
   }
 
   const agentDisplay = getAgentStatusDisplay(status.agent_status)
@@ -264,6 +283,7 @@ RiffStatus.propTypes = {
   appSlug: PropTypes.string.isRequired,
   riffSlug: PropTypes.string.isRequired,
   compact: PropTypes.bool,
+  showCommitOnly: PropTypes.bool,
 }
 
 export default RiffStatus

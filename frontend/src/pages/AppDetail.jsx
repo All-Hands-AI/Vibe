@@ -513,12 +513,21 @@ function AppDetail() {
                           </div>
                           
                           {/* Riff Status */}
-                          <div className="mt-4">
+                          <div className="mt-4 space-y-3">
                             <RiffStatus 
                               appSlug={app.slug} 
                               riffSlug={riff.slug} 
                               compact={true} 
                             />
+                            
+                            {/* Commit Info */}
+                            <div className="text-xs text-gray-500 font-mono">
+                              <RiffStatus 
+                                appSlug={app.slug} 
+                                riffSlug={riff.slug} 
+                                showCommitOnly={true}
+                              />
+                            </div>
                           </div>
                         </Link>
                         
