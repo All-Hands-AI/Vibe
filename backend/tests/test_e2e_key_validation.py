@@ -176,23 +176,28 @@ class TestKeyValidation:
         import importlib
         import keys
         import os
-        
+
         # Verify MOCK_MODE is enabled
         assert os.environ.get("MOCK_MODE", "false").lower() == "true"
-        
+
         importlib.reload(keys)
-        
+
         # Re-import the functions after reload
-        from keys import validate_anthropic_key, validate_github_key, validate_fly_key, is_mock_mode
-        
+        from keys import (
+            validate_anthropic_key,
+            validate_github_key,
+            validate_fly_key,
+            is_mock_mode,
+        )
+
         # Verify MOCK_MODE is detected correctly
         assert is_mock_mode() is True
-        
+
         # Test that valid keys return True in MOCK_MODE
         assert validate_anthropic_key("test-key") is True
-        assert validate_github_key("test-key") is True  
+        assert validate_github_key("test-key") is True
         assert validate_fly_key("test-key") is True
-        
+
         # Test that empty/None keys still return False in MOCK_MODE
         assert validate_anthropic_key("") is False
         assert validate_anthropic_key(None) is False
@@ -200,7 +205,7 @@ class TestKeyValidation:
         assert validate_github_key(None) is False
         assert validate_fly_key("") is False
         assert validate_fly_key(None) is False
-        
+
         # Test that whitespace-only keys return False
         assert validate_anthropic_key("   ") is False
         assert validate_github_key("   ") is False
