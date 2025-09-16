@@ -302,7 +302,7 @@ def create_agent_for_user(user_uuid, app_slug, riff_slug, send_initial_message=F
                 logger.info(
                     f"✅ AgentLoop verification successful for {user_uuid[:8]}:{app_slug}:{riff_slug}"
                 )
-                
+
                 # Send initial message to run ls in the project directory (only for brand new riffs)
                 if send_initial_message:
                     try:
@@ -312,11 +312,15 @@ def create_agent_for_user(user_uuid, app_slug, riff_slug, send_initial_message=F
                             f"📨 Sending initial message to new riff agent for {user_uuid[:8]}:{app_slug}:{riff_slug}: {initial_message}"
                         )
                         agent_loop.send_message(initial_message)
-                        logger.info(f"✅ Initial message sent successfully to new riff agent")
+                        logger.info(
+                            f"✅ Initial message sent successfully to new riff agent"
+                        )
                     except Exception as e:
-                        logger.error(f"❌ Failed to send initial message to new riff agent: {e}")
+                        logger.error(
+                            f"❌ Failed to send initial message to new riff agent: {e}"
+                        )
                         # Don't fail the creation if initial message fails
-                
+
                 return True, None
             else:
                 logger.error(
@@ -543,7 +547,9 @@ def create_riff(slug):
             return jsonify({"error": "Failed to save riff"}), 500
 
         # Create AgentLoop with user's Anthropic token
-        success, error_message = create_agent_for_user(user_uuid, slug, riff_slug, send_initial_message=True)
+        success, error_message = create_agent_for_user(
+            user_uuid, slug, riff_slug, send_initial_message=True
+        )
         if not success:
             logger.error(f"❌ Failed to create Agent for riff: {error_message}")
             # Return 500 for git/workspace setup failures, 400 for other client errors
