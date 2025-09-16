@@ -71,7 +71,7 @@ function MessageList({ messages, userUuid, scrollContainerRef, onScroll, message
 
   if (messages.length === 0) {
     return (
-      <div className="flex-1 flex items-center justify-center p-8">
+      <div className="h-full flex items-center justify-center p-8">
         <div className="text-center">
           <div className="text-6xl mb-4">💬</div>
           <h3 className="text-xl font-semibold text-cyber-muted mb-2">No messages yet</h3>
@@ -84,7 +84,7 @@ function MessageList({ messages, userUuid, scrollContainerRef, onScroll, message
   return (
     <div 
       ref={scrollContainerRef}
-      className="flex-1 overflow-y-auto p-4 space-y-4"
+      className="h-full overflow-y-auto p-4 space-y-4"
       onScroll={onScroll}
     >
       {Object.entries(groupedMessages).map(([date, dateMessages]) => (
