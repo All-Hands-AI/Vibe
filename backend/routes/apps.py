@@ -114,6 +114,23 @@ def create_initial_riff_and_message(
         riff_slug = riff_name  # Already in slug format since app_slug is validated
 
         logger.info(
+
+# Check if GitHub repo already exists
+if github_url:
+    logger.info(f"🔍 Checking if GitHub repo already exists: {github_url}")
+    if does_github_repo_exist(github_url, github_token):
+        logger.info(f"✅ GitHub repo already exists: {github_url}")
+        # Skip creating the "rename-to" riff and initial message
+        return True, {"riff": None, "message": None}
+    else:
+        logger.info(
+            f"🔄 Creating initial riff: {riff_name} -> {riff_slug} for app {app_slug}"
+        )
+else:
+    logger.info(
+        f"🔄 Creating initial riff: {riff_name} -> {riff_slug} for app {app_slug}"
+    )
+
             f"🔄 Creating initial riff: {riff_name} -> {riff_slug} for app {app_slug}"
         )
 
