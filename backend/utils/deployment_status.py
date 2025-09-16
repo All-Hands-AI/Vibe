@@ -126,13 +126,13 @@ def get_deployment_status(repo_url, github_token, branch_name):
 
         if not deploy_run:
             logger.info(
-                f"❌ No 'Deploy to Fly.io' workflow found for commit {commit_sha[:8]}"
+                f"⏳ No 'Deploy to Fly.io' workflow found for commit {commit_sha[:8]} - waiting for status"
             )
             return {
-                "status": "error",
-                "message": f"No 'Deploy to Fly.io' workflow found for commit {commit_sha[:8]}",
+                "status": "waiting",
+                "message": "Waiting for deployment status",
                 "details": {
-                    "error": "deploy_workflow_not_found",
+                    "reason": "deploy_workflow_not_found",
                     "commit_sha": commit_sha,
                     "available_workflows": [
                         run.get("name", "unnamed") for run in workflow_runs[:5]

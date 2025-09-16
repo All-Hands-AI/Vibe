@@ -13,6 +13,8 @@ export const getStatusIcon = (status) => {
     case 'pending':
     case 'running':
       return '🔄'
+    case 'waiting':
+      return '⏳'
     default:
       return '🔄'
   }
@@ -28,6 +30,8 @@ export const getStatusText = (status) => {
     case 'pending':
     case 'running':
       return 'Running'
+    case 'waiting':
+      return 'Waiting for status'
     default:
       return 'Checking...'
   }
@@ -43,6 +47,8 @@ export const getStatusColor = (status) => {
     case 'pending':
     case 'running':
       return 'text-yellow-400'
+    case 'waiting':
+      return 'text-blue-400'
     default:
       return 'text-cyber-muted'
   }
@@ -80,6 +86,8 @@ export const getDeployStatus = (deploymentStatus) => {
       return 'failure'
     case 'pending':
       return 'running'
+    case 'waiting':
+      return 'waiting'
     default:
       return 'pending'
   }
