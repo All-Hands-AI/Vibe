@@ -194,7 +194,9 @@ class AgentLoop:
 
         # Check if existing state exists - if so, use existing conversation ID
         # Otherwise, generate a new deterministic conversation ID
-        conversation_id = self._get_conversation_id_for_creation(user_uuid, app_slug, riff_slug)
+        conversation_id = self._get_conversation_id_for_creation(
+            user_uuid, app_slug, riff_slug
+        )
 
         # Create conversation with callbacks
         callbacks = []
@@ -223,26 +225,28 @@ class AgentLoop:
 
         logger.info(f"🤖 Created improved AgentLoop for {self.get_key()}")
 
-    def _get_conversation_id_for_creation(self, user_uuid: str, app_slug: str, riff_slug: str):
+    def _get_conversation_id_for_creation(
+        self, user_uuid: str, app_slug: str, riff_slug: str
+    ):
         """
         Determine the conversation ID to use when creating a Conversation object.
-        
+
         If existing state is found, read and return the existing conversation ID.
         Otherwise, generate a new deterministic conversation ID.
-        
+
         This ensures that when reset is called, we preserve the existing conversation ID
         from the serialized state instead of creating a brand new one.
-        
+
         Args:
             user_uuid: User's UUID
-            app_slug: App slug identifier  
+            app_slug: App slug identifier
             riff_slug: Riff slug identifier
-            
+
         Returns:
             UUID object (either existing from state or newly generated)
         """
         import json
-        
+
         try:
             # Check if existing base state exists and read the conversation ID
             base_state_content = self.file_store.read("base_state.json")
@@ -255,12 +259,16 @@ class AgentLoop:
                         existing_uuid = uuid.UUID(existing_id)
                     else:
                         existing_uuid = existing_id
-                    logger.info(f"🔄 Using existing conversation ID from state: {existing_uuid}")
+                    logger.info(
+                        f"🔄 Using existing conversation ID from state: {existing_uuid}"
+                    )
                     return existing_uuid
         except Exception as e:
             # File doesn't exist or can't be read - this is normal for new conversations
-            logger.debug(f"📝 No existing state found, will create new conversation ID: {e}")
-        
+            logger.debug(
+                f"📝 No existing state found, will create new conversation ID: {e}"
+            )
+
         # Generate new deterministic conversation ID for new conversation
         conversation_key = f"{user_uuid}:{app_slug}:{riff_slug}"
         conversation_uuid = uuid.uuid5(uuid.NAMESPACE_DNS, conversation_key)
