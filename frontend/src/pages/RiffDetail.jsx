@@ -11,7 +11,7 @@ import { useDocumentTitle, formatPageTitle } from '../utils/useDocumentTitle'
 
 
 function RiffDetail() {
-  const { appSlug, riffSlug } = useParams()
+  const { slug: appSlug, riffSlug } = useParams()
   const { userUUID } = useSetup()
   const location = useLocation()
   const [app, setApp] = useState(null)
