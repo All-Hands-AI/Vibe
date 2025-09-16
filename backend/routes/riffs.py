@@ -172,20 +172,6 @@ def reconstruct_agent_from_state(user_uuid, app_slug, riff_slug):
                 logger.info(
                     f"✅ AgentLoop reconstruction verification successful for {user_uuid[:8]}:{app_slug}:{riff_slug}"
                 )
-                
-                # Send initial message to run ls in the project directory
-                try:
-                    project_path = f"{workspace_path}/project"
-                    initial_message = f"ls {project_path}"
-                    logger.info(
-                        f"📨 Sending initial message to reconstructed agent for {user_uuid[:8]}:{app_slug}:{riff_slug}: {initial_message}"
-                    )
-                    test_retrieval.send_message(initial_message)
-                    logger.info(f"✅ Initial message sent successfully to reconstructed agent")
-                except Exception as e:
-                    logger.error(f"❌ Failed to send initial message to reconstructed agent: {e}")
-                    # Don't fail the reconstruction if initial message fails
-                
                 return True, None
             else:
                 logger.error(
