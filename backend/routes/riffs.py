@@ -1490,3 +1490,89 @@ def get_riff_deployment_status(slug, riff_slug):
     except Exception as e:
         logger.error(f"💥 Error getting riff deployment status: {str(e)}")
         return jsonify({"error": "Failed to get deployment status"}), 500
+
+
+@riffs_bp.route("/api/apps/<slug>/riffs/status", methods=["GET"])
+def get_riffs_status(slug):
+    """Get comprehensive status for all riffs in an app"""
+    logger.info(f"📊 GET /api/apps/{slug}/riffs/status - Getting comprehensive riff status")
+
+    try:
+        # Get UUID from headers
+        user_uuid = request.headers.get("X-User-UUID")
+        if not user_uuid:
+            logger.warning("❌ X-User-UUID header is required")
+            return jsonify({"error": "X-User-UUID header is required"}), 400
+
+        user_uuid = user_uuid.strip()
+        if not user_uuid:
+            logger.warning("❌ Empty UUID provided in header")
+            return jsonify({"error": "UUID cannot be empty"}), 400
+
+        # Verify app exists for this user
+        if not user_app_exists(user_uuid, slug):
+            logger.warning(f"❌ App not found: {slug} for user {user_uuid[:8]}")
+            return jsonify({"error": "App not found"}), 404
+
+        # Load app data
+        apps_storage = get_apps_storage()
+        app_data = None
+        for app in apps_storage.load_user_data(user_uuid):
+            if app["slug"] == slug:
+                app_data = app
+                break
+        
+        if not app_data:
+            logger.warning(f"❌ App data not found: {slug} for user {user_uuid[:8]}")
+            return jsonify({"error": "App data not found"}), 404
+
+        # Load riffs
+        riffs = load_user_riffs(user_uuid, slug)
+        
+        # Get GitHub token
+        user_keys = load_user_keys(user_uuid)
+        github_token = user_keys.get("github_token")
+        
+        if not github_token:
+            logger.warning(f"❌ No GitHub token found for user {user_uuid[:8]}")
+            # Return basic riff info without status
+            basic_statuses = []
+            for riff in riffs:
+                basic_statuses.append({
+                    "riff": {
+                        "slug": riff["slug"],
+                        "name": riff.get("name", riff["slug"]),
+                        "created_at": riff.get("created_at"),
+                        "last_message_at": riff.get("last_message_at"),
+                        "message_count": riff.get("message_count", 0)
+                    },
+                    "commit": {"commit_sha": None, "error": "No GitHub token available"},
+                    "pr": {"has_pr": False, "error": "No GitHub token available"},
+                    "ci": {"status": "error", "message": "No GitHub token available"},
+                    "deploy": {"status": "error", "message": "No GitHub token available"},
+                    "agent": {"status": "unknown", "message": "No GitHub token available"},
+                    "last_updated": datetime.now(timezone.utc).isoformat()
+                })
+            return jsonify({
+                "statuses": basic_statuses,
+                "count": len(basic_statuses),
+                "app_slug": slug,
+                "error": "No GitHub token available - showing basic info only"
+            })
+
+        # Import the status utility
+        from utils.riff_status import get_all_riffs_status
+        
+        # Get comprehensive status for all riffs
+        statuses = get_all_riffs_status(riffs, app_data, user_uuid, github_token)
+        
+        logger.info(f"✅ Returning status for {len(statuses)} riffs in app {slug}")
+        return jsonify({
+            "statuses": statuses,
+            "count": len(statuses),
+            "app_slug": slug
+        })
+
+    except Exception as e:
+        logger.error(f"💥 Error getting riffs status: {str(e)}")
+        return jsonify({"error": "Failed to get riffs status"}), 500

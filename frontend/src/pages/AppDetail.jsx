@@ -3,6 +3,7 @@ import { useParams, Link, useNavigate } from 'react-router-dom'
 import { getUserUUID } from '../utils/uuid'
 import AppStatus from '../components/AppStatus'
 import ConfirmationModal from '../components/ConfirmationModal'
+import RiffStatusTable from '../components/RiffStatusTable'
 import { useDocumentTitle, formatPageTitle } from '../utils/useDocumentTitle'
 
 function AppDetail() {
@@ -456,58 +457,9 @@ function AppDetail() {
                 </div>
               </div>
 
-              {/* Riffs List */}
+              {/* Riff Status Table */}
               <div>
-                <h3 className="text-xl font-semibold text-cyber-text mb-4">All Riffs</h3>
-                
-                {riffsLoading ? (
-                  <div className="flex flex-col items-center justify-center py-16">
-                    <div className="w-10 h-10 border-4 border-gray-600 border-t-cyber-muted rounded-full animate-spin mb-4"></div>
-                    <p className="text-cyber-muted">Loading riffs...</p>
-                  </div>
-                ) : riffs.length === 0 ? (
-                  <div className="text-center py-16">
-                    <p className="text-cyber-muted text-lg">No riffs yet. Create your first riff above!</p>
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {riffs.map((riff) => (
-                      <div 
-                        key={riff.slug} 
-                        className="hacker-card rounded-lg border border-gray-700 hover:border-cyber-muted transition-all duration-300 hover:transform hover:-translate-y-1 p-6 relative"
-                      >
-                        <Link 
-                          to={`/apps/${app.slug}/riffs/${riff.slug}`}
-                          className="block"
-                        >
-                          <div className="mb-4 pr-12">
-                            <h4 className="text-xl font-semibold text-cyber-text mb-1">{riff.slug}</h4>
-                          </div>
-                          
-                          <div className="space-y-2">
-                            <p className="text-sm text-cyber-muted">
-                              Created: {new Date(riff.created_at).toLocaleDateString()}
-                            </p>
-                            {riff.last_message_at && (
-                              <p className="text-sm text-cyber-muted">
-                                Last activity: {new Date(riff.last_message_at).toLocaleDateString()}
-                              </p>
-                            )}
-                          </div>
-                        </Link>
-                        
-                        <button 
-                          className="absolute top-4 right-4 text-red-400 hover:text-red-300 text-lg p-2 hover:bg-red-900/20 rounded transition-colors duration-200 z-10"
-                          onClick={(e) => handleDeleteClick(riff, e)}
-                          title={`Delete riff "${riff.slug}"`}
-                          aria-label={`Delete riff "${riff.slug}"`}
-                        >
-                          🗑️
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                )}
+                <RiffStatusTable appSlug={app.slug} />
               </div>
             </section>
           </div>
