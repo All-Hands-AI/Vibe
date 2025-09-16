@@ -200,7 +200,7 @@ def mock_repository_setup(monkeypatch, temp_data_dir):
             app_slug,
             riff_slug,
             None,
-            f"/mock/workspace/{user_uuid}/{app_slug}/{riff_slug}",
+            f"/mock/tmp/{user_uuid}/{app_slug}/{riff_slug}",
         )
 
     monkeypatch.setattr(

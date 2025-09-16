@@ -173,9 +173,10 @@ def reconstruct_agent_from_state(user_uuid, app_slug, riff_slug):
                     f"✅ AgentLoop reconstruction verification successful for {user_uuid[:8]}:{app_slug}:{riff_slug}"
                 )
                 
-                # Send initial message to run ls in the workspace directory
+                # Send initial message to run ls in the project directory
                 try:
-                    initial_message = f"ls {workspace_path}"
+                    project_path = f"{workspace_path}/project"
+                    initial_message = f"ls {project_path}"
                     logger.info(
                         f"📨 Sending initial message to reconstructed agent for {user_uuid[:8]}:{app_slug}:{riff_slug}: {initial_message}"
                     )
@@ -315,9 +316,10 @@ def create_agent_for_user(user_uuid, app_slug, riff_slug):
                     f"✅ AgentLoop verification successful for {user_uuid[:8]}:{app_slug}:{riff_slug}"
                 )
                 
-                # Send initial message to run ls in the workspace directory
+                # Send initial message to run ls in the project directory
                 try:
-                    initial_message = f"ls {workspace_path}"
+                    project_path = f"{workspace_path}/project"
+                    initial_message = f"ls {project_path}"
                     logger.info(
                         f"📨 Sending initial message to agent for {user_uuid[:8]}:{app_slug}:{riff_slug}: {initial_message}"
                     )
@@ -931,9 +933,10 @@ def reset_riff_llm(slug, riff_slug):
             logger.info(
                 f"🧪 Testing LLM functionality for {user_uuid[:8]}:{slug}:{riff_slug}"
             )
-            # Send initial message to run ls in the workspace directory
+            # Send initial message to run ls in the project directory
             workspace_path = f"/data/{user_uuid}/apps/{slug}/riffs/{riff_slug}/workspace"
-            test_message = f"ls {workspace_path}"
+            project_path = f"{workspace_path}/project"
+            test_message = f"ls {project_path}"
             logger.info(f"📨 Sending test message: {test_message}")
             test_response = agent_loop.send_message(test_message)
             if test_response and len(test_response.strip()) > 0:
