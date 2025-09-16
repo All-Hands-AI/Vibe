@@ -114,11 +114,18 @@ class CustomAgent(Agent):
         if self.agent_context and isinstance(self.agent_context, CustomAgentContext):
             workspace_path = self.agent_context.workspace_path
 
+        # Prepare template kwargs, including cli_mode if available (like base class)
+        template_kwargs = dict(self.system_prompt_kwargs)
+        if hasattr(self, "cli_mode"):
+            template_kwargs["cli_mode"] = getattr(self, "cli_mode")
+
+        # Add workspace_path to template kwargs
+        template_kwargs["workspace_path"] = workspace_path
+
         system_message = render_template(
             prompt_dir=self.prompt_dir,
             template_name=self.system_prompt_filename,
-            cli_mode=self.cli_mode,
-            workspace_path=workspace_path,
+            **template_kwargs,
         )
 
         # Note: We don't append system_message_suffix since we've integrated
@@ -193,10 +200,10 @@ class AgentLoop:
             logger.error(f"❌ Failed to create file store for {self.get_key()}: {e}")
             raise
 
-        # Generate conversation ID as a proper UUID
+        # Generate conversation ID as a proper UUID object
         # Use uuid5 to create a deterministic UUID from the user/app/riff combination
         conversation_key = f"{user_uuid}:{app_slug}:{riff_slug}"
-        conversation_id = str(uuid.uuid5(uuid.NAMESPACE_DNS, conversation_key))
+        conversation_id = uuid.uuid5(uuid.NAMESPACE_DNS, conversation_key)
 
         # Create conversation with callbacks
         callbacks = []
@@ -388,11 +395,15 @@ class AgentLoop:
             # Return SDK agent_status as the primary status field (transparent passthrough)
             sdk_status = agent_status.value if agent_status else "idle"
 
+            # Convert UUID to string for JSON serialization
+            conversation_id = getattr(state, "id", None)
+            conversation_id_str = str(conversation_id) if conversation_id else None
+
             return {
                 "status": sdk_status,  # Primary status field - direct from SDK
                 "is_running": is_running,
                 "has_active_task": has_active_task,
-                "conversation_id": getattr(state, "id", None),
+                "conversation_id": conversation_id_str,
                 "event_count": len(events),
                 "workspace_path": self.workspace_path,
                 "state_path": self.state_path,
