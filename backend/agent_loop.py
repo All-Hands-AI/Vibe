@@ -11,8 +11,9 @@ Key improvements:
 - Resource cleanup and lifecycle management
 """
 
-import sys
+import json
 import os
+import sys
 import uuid
 from typing import Dict, Optional, Callable, Any
 from threading import Lock
@@ -245,8 +246,6 @@ class AgentLoop:
         Returns:
             UUID object (either existing from state or newly generated)
         """
-        import json
-
         try:
             # Check if existing base state exists and read the conversation ID
             base_state_content = self.file_store.read("base_state.json")
