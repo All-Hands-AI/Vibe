@@ -3,6 +3,7 @@ import { useParams, Link, useNavigate } from 'react-router-dom'
 import { getUserUUID } from '../utils/uuid'
 import AppStatus from '../components/AppStatus'
 import ConfirmationModal from '../components/ConfirmationModal'
+import RiffStatus from '../components/RiffStatus'
 import { useDocumentTitle, formatPageTitle } from '../utils/useDocumentTitle'
 
 function AppDetail() {
@@ -493,6 +494,15 @@ function AppDetail() {
                                 Last activity: {new Date(riff.last_message_at).toLocaleDateString()}
                               </p>
                             )}
+                          </div>
+                          
+                          {/* Riff Status */}
+                          <div className="mt-4 pt-3 border-t border-gray-700">
+                            <RiffStatus 
+                              appSlug={app.slug} 
+                              riffSlug={riff.slug} 
+                              compact={true} 
+                            />
                           </div>
                         </Link>
                         
