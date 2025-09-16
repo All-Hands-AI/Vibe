@@ -165,10 +165,10 @@ def reconstruct_agent_from_state(user_uuid, app_slug, riff_slug):
             logger.info(f"🤖 Reconstructed AgentLoop for riff: {riff_slug}")
 
             # Verify it was stored correctly
-            test_retrieval = agent_loop_manager.get_agent_loop(
+            agent_loop = agent_loop_manager.get_agent_loop(
                 user_uuid, app_slug, riff_slug
             )
-            if test_retrieval:
+            if agent_loop:
                 logger.info(
                     f"✅ AgentLoop reconstruction verification successful for {user_uuid[:8]}:{app_slug}:{riff_slug}"
                 )
@@ -294,10 +294,10 @@ def create_agent_for_user(user_uuid, app_slug, riff_slug):
             logger.info(f"🤖 Created AgentLoop for riff: {riff_slug}")
 
             # Verify it was stored correctly
-            test_retrieval = agent_loop_manager.get_agent_loop(
+            agent_loop = agent_loop_manager.get_agent_loop(
                 user_uuid, app_slug, riff_slug
             )
-            if test_retrieval:
+            if agent_loop:
                 logger.info(
                     f"✅ AgentLoop verification successful for {user_uuid[:8]}:{app_slug}:{riff_slug}"
                 )
@@ -309,7 +309,7 @@ def create_agent_for_user(user_uuid, app_slug, riff_slug):
                     logger.info(
                         f"📨 Sending initial message to agent for {user_uuid[:8]}:{app_slug}:{riff_slug}: {initial_message}"
                     )
-                    test_retrieval.send_message(initial_message)
+                    agent_loop.send_message(initial_message)
                     logger.info(f"✅ Initial message sent successfully")
                 except Exception as e:
                     logger.error(f"❌ Failed to send initial message: {e}")
