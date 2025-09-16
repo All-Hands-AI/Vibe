@@ -1,5 +1,5 @@
 """
-AgentLoop and AgentLoopManager classes for OpenVibe backend.
+AgentLoop and AgentLoopManager classes for openvibe backend.
 Manages agent conversations using openhands-sdk Agent and Conversation.
 """
 

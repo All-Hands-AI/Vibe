@@ -1,5 +1,5 @@
 """
-Key management utilities for OpenVibe backend.
+Key management utilities for openvibe backend.
 Handles API key storage, validation, and user-specific key operations.
 """
 

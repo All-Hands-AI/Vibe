@@ -11,7 +11,7 @@ function Header() {
         <Link to="/" className="text-cyber-text no-underline group hover:text-neon-green transition-colors duration-300">
           <h1 className="text-3xl font-bold m-0 font-mono">
             <span className="text-cyber-muted">{'<'}</span>
-            OpenVibe
+            openvibe
             <span className="text-cyber-muted">{'/>'}</span>
           </h1>
         </Link>

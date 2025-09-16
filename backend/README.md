@@ -1,4 +1,4 @@
-# OpenVibe Python Backend
+# openvibe Python Backend
 
 A simple Flask-based backend API for the OpenVibe application.
 

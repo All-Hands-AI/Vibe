@@ -550,7 +550,7 @@ function Apps() {
               <br /><br />
               <strong>This action will permanently delete:</strong>
               <ul style={{ marginTop: '0.5rem', paddingLeft: '1.5rem' }}>
-                <li>The app from OpenVibe</li>
+                <li>The app from openvibe</li>
                 {deleteModal.app.github_url && <li>The associated GitHub repository</li>}
                 <li>The associated Fly.io application</li>
                 <li>All app riffs and data</li>

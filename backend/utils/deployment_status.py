@@ -51,7 +51,7 @@ def get_deployment_status(repo_url, github_token, branch_name):
     headers = {
         "Authorization": f"token {github_token}",
         "Accept": "application/vnd.github.v3+json",
-        "User-Agent": "OpenVibe-Backend/1.0",
+        "User-Agent": "openvibe-Backend/1.0",
     }
 
     try:

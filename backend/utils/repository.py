@@ -1,5 +1,5 @@
 """
-Repository management utilities for OpenVibe backend.
+Repository management utilities for openvibe backend.
 Handles cloning and managing GitHub repositories for riffs.
 
 When cloning repositories, the user's stored GitHub token is automatically

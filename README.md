@@ -1,4 +1,4 @@
-# OpenVibe
+# openvibe
 
 [![CI](https://github.com/rbren/OpenVibe/actions/workflows/ci.yml/badge.svg)](https://github.com/rbren/OpenVibe/actions/workflows/ci.yml)
 [![Deploy](https://github.com/rbren/OpenVibe/actions/workflows/deploy.yml/badge.svg)](https://github.com/rbren/OpenVibe/actions/workflows/deploy.yml)

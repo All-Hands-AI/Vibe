@@ -32,7 +32,7 @@ class TestBasicEndpoints:
         data = response.get_json()
 
         assert data["status"] == "healthy"
-        assert data["service"] == "OpenVibe Backend"
+        assert data["service"] == "openvibe Backend"
         assert "timestamp" in data
 
         # Verify timestamp is valid ISO format

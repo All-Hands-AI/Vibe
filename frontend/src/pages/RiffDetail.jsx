@@ -501,7 +501,7 @@ function RiffDetail() {
                     <h3 className="text-sm font-semibold text-cyber-text font-mono">🚀 Live App</h3>
                     <div className="flex items-center gap-3 text-xs">
                       <a
-                        href="https://github.com/rbren/OpenVibe/actions"
+                        href="https://github.com/rbren/openvibe/actions"
                         target="_blank"
                         rel="noopener noreferrer"
                         className="text-cyber-muted hover:text-blue-400 font-mono transition-colors duration-200 underline"

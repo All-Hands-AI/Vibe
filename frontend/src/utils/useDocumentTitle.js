@@ -20,7 +20,7 @@ export function useDocumentTitle(title) {
  * @returns {string} Formatted title
  */
 export function formatPageTitle(pageType, appName = null, riffName = null) {
-  const baseTitle = 'OpenVibe'
+  const baseTitle = 'openvibe'
   
   switch (pageType) {
     case 'apps':

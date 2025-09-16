@@ -1,5 +1,5 @@
 """
-Apps storage class for OpenVibe backend.
+Apps storage class for openvibe backend.
 Handles user app data storage and management.
 """
 

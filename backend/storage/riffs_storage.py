@@ -1,5 +1,5 @@
 """
-Riffs storage class for OpenVibe backend.
+Riffs storage class for openvibe backend.
 Handles user riff (conversation) data storage and management.
 """
 

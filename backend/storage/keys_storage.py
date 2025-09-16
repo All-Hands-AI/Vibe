@@ -1,5 +1,5 @@
 """
-Keys storage class for OpenVibe backend.
+Keys storage class for openvibe backend.
 Handles user API key storage and management.
 """
 

@@ -1,5 +1,5 @@
 """
-Base storage class for OpenVibe backend.
+Base storage class for openvibe backend.
 Provides common file operations and utilities for all storage classes.
 """
 

@@ -1,4 +1,4 @@
 """
-Routes package for OpenVibe backend.
+Routes package for openvibe backend.
 Contains all route blueprints organized by functionality.
 """

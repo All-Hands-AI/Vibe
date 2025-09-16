@@ -1,5 +1,5 @@
 """
-Storage package for OpenVibe backend.
+Storage package for openvibe backend.
 Provides user-specific file-based storage for keys, apps, and riffs.
 """
 

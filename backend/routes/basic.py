@@ -27,7 +27,7 @@ def health_check():
     return jsonify(
         {
             "status": "healthy",
-            "service": "OpenVibe Backend",
+            "service": "openvibe Backend",
             "timestamp": datetime.now(timezone.utc).isoformat(),
         }
     )
