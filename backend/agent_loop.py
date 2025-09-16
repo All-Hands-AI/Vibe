@@ -114,11 +114,18 @@ class CustomAgent(Agent):
         if self.agent_context and isinstance(self.agent_context, CustomAgentContext):
             workspace_path = self.agent_context.workspace_path
 
+        # Prepare template kwargs, including cli_mode if available (like base class)
+        template_kwargs = dict(self.system_prompt_kwargs)
+        if hasattr(self, "cli_mode"):
+            template_kwargs["cli_mode"] = getattr(self, "cli_mode")
+
+        # Add workspace_path to template kwargs
+        template_kwargs["workspace_path"] = workspace_path
+
         system_message = render_template(
             prompt_dir=self.prompt_dir,
             template_name=self.system_prompt_filename,
-            cli_mode=self.cli_mode,
-            workspace_path=workspace_path,
+            **template_kwargs,
         )
 
         # Note: We don't append system_message_suffix since we've integrated
