@@ -3,8 +3,6 @@ Test for the conditional riff creation logic.
 Tests that rename-to riff is only created when GitHub repo is newly created.
 """
 
-import pytest
-import requests
 from unittest.mock import patch
 from mocks import MockResponse
 
@@ -18,7 +16,7 @@ class TestRiffCreationLogic:
             "X-User-UUID": "test-new-repo-creates-riff-uuid",
             "Content-Type": "application/json",
         }
-        
+
         # Set up API keys
         for provider, key in mock_api_keys.items():
             client.post(
@@ -38,7 +36,7 @@ class TestRiffCreationLogic:
                 MockResponse(404),  # Repo doesn't exist
                 MockResponse(200, {"key": "mock-key", "key_id": "123"}),  # Public key for secrets
             ]
-            
+
             # Repo creation call
             mock_post.return_value = MockResponse(201, {
                 "id": 123456,
@@ -66,7 +64,7 @@ class TestRiffCreationLogic:
             "X-User-UUID": "test-existing-repo-skips-riff-uuid",
             "Content-Type": "application/json",
         }
-        
+
         # Set up API keys
         for provider, key in mock_api_keys.items():
             client.post(
@@ -105,7 +103,7 @@ class TestRiffCreationLogic:
     def test_create_github_repo_function_returns_correct_status(self):
         """Test that create_github_repo function returns correct was_created status"""
         from routes.apps import create_github_repo
-        
+
         # Test with new repo (404 then 201)
         with patch('requests.get') as mock_get, patch('requests.post') as mock_post, patch('requests.put') as mock_put:
             mock_get.side_effect = [
@@ -117,9 +115,9 @@ class TestRiffCreationLogic:
                 "html_url": "https://github.com/mockuser/test-repo"
             })
             mock_put.return_value = MockResponse(201)  # Secret creation
-            
+
             success, url, was_created = create_github_repo("test-repo", "mock-token", "mock-fly-token")
-            
+
             assert success is True
             assert url == "https://github.com/mockuser/test-repo"
             assert was_created is True
@@ -134,9 +132,9 @@ class TestRiffCreationLogic:
                 MockResponse(200, {"key": "mock-key", "key_id": "123"}),  # Public key
             ]
             mock_put.return_value = MockResponse(201)  # Secret creation
-            
+
             success, url, was_created = create_github_repo("existing-repo", "mock-token", "mock-fly-token")
-            
+
             assert success is True
             assert url == "https://github.com/mockuser/existing-repo"
             assert was_created is False

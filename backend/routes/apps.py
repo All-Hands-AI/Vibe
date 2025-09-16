@@ -1055,7 +1055,7 @@ def delete_fly_app(app_name, fly_token):
 
 def create_github_repo(repo_name, github_token, fly_token):
     """Create a GitHub repository from template and set FLY_API_TOKEN secret
-    
+
     Returns:
         tuple: (success, result, was_created)
         - success: bool indicating if operation succeeded
@@ -1503,11 +1503,11 @@ def create_app():
             "warnings": warnings,
             "repo_was_created": repo_was_created,
         }
-        
+
         # Only include initial_riff in response if we attempted to create one
         if repo_was_created:
             response_data["initial_riff"] = riff_result if 'riff_success' in locals() and riff_success else None
-        
+
         return jsonify(response_data), 201
 
     except Exception as e:

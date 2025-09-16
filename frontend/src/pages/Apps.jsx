@@ -249,10 +249,15 @@ function Apps() {
       console.log('🔄 Refreshing apps list...')
       await fetchApps()
       
-      // Redirect to the new app's rename-to riff page
-      const renameToRiffSlug = `rename-to-${data.app.slug}`
-      console.log('🔄 Redirecting to rename-to riff:', renameToRiffSlug)
-      navigate(`/apps/${data.app.slug}/riffs/${renameToRiffSlug}`)
+      // Only redirect to rename-to riff if it was created (new repo)
+      if (data.repo_was_created && data.initial_riff) {
+        const renameToRiffSlug = `rename-to-${data.app.slug}`
+        console.log('🔄 Redirecting to rename-to riff:', renameToRiffSlug)
+        navigate(`/apps/${data.app.slug}/riffs/${renameToRiffSlug}`)
+      } else {
+        console.log('⏭️ Skipping riff redirect - using existing repository, redirecting to app page')
+        navigate(`/apps/${data.app.slug}`)
+      }
       
       // Clear success message after 5 seconds
       setTimeout(() => setSuccess(''), 5000)
