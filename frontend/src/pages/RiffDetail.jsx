@@ -30,7 +30,7 @@ function RiffDetail() {
   const iframeRef = useRef(null)
   
   // Set page title
-  useDocumentTitle(formatPageTitle('riff', app?.name, riff?.name))
+  useDocumentTitle(formatPageTitle('riff', app?.slug, riff?.slug))
 
   // Fetch app and riff details
   const fetchData = useCallback(async () => {

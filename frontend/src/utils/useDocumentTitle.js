@@ -26,12 +26,12 @@ export function formatPageTitle(pageType, appName = null, riffName = null) {
     case 'apps':
       return `Apps - ${baseTitle}`
     case 'app':
-      return appName ? `App: ${appName} - ${baseTitle}` : `App - ${baseTitle}`
+      return appName ? `${appName} - ${baseTitle}` : `App - ${baseTitle}`
     case 'riff':
       if (appName && riffName) {
-        return `Riff: ${appName}/${riffName} - ${baseTitle}`
+        return `${appName}/${riffName} - ${baseTitle}`
       } else if (appName) {
-        return `App: ${appName} - ${baseTitle}`
+        return `${appName} - ${baseTitle}`
       }
       return `Riff - ${baseTitle}`
     default:
