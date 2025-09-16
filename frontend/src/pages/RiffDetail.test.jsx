@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
-import { MemoryRouter } from 'react-router-dom'
+import { MemoryRouter, Routes, Route } from 'react-router-dom'
 import RiffDetail from './RiffDetail'
 
 // Mock the context
@@ -31,8 +31,12 @@ vi.mock('../components/ChatWindow', () => ({
           ))}
         </div>
       </div>
-      <div className="flex-shrink-0" data-testid="status-bar-mock">Status Bar</div>
-      <div className="flex-shrink-0" data-testid="input-mock">Message Input</div>
+      <div className="flex-shrink-0">
+        <div data-testid="status-bar-mock">Status Bar</div>
+      </div>
+      <div className="flex-shrink-0">
+        <div data-testid="input-mock">Message Input</div>
+      </div>
     </div>
   )
 }))
@@ -83,16 +87,16 @@ describe('RiffDetail Height Constraints Integration', () => {
     
     // Mock successful API responses
     fetch.mockImplementation((url) => {
-      if (url.includes('/api/apps/test-app')) {
-        return Promise.resolve({
-          ok: true,
-          json: async () => mockApp
-        })
-      }
       if (url.includes('/api/apps/test-app/riffs')) {
         return Promise.resolve({
           ok: true,
           json: async () => ({ riffs: [mockRiff] })
+        })
+      }
+      if (url.includes('/api/apps/test-app')) {
+        return Promise.resolve({
+          ok: true,
+          json: async () => mockApp
         })
       }
       if (url.includes('/pr-status')) {
@@ -121,9 +125,13 @@ describe('RiffDetail Height Constraints Integration', () => {
   it('should maintain viewport height constraints for chat window', async () => {
     const { container } = render(
       <MemoryRouter initialEntries={['/apps/test-app/riffs/test-riff']}>
-        <div style={{ height: '100vh' }}>
-          <RiffDetail />
-        </div>
+        <Routes>
+          <Route path="/apps/:appSlug/riffs/:riffSlug" element={
+            <div style={{ height: '100vh' }}>
+              <RiffDetail />
+            </div>
+          } />
+        </Routes>
       </MemoryRouter>
     )
 
@@ -131,10 +139,10 @@ describe('RiffDetail Height Constraints Integration', () => {
       expect(screen.getByTestId('chat-window')).toBeInTheDocument()
     })
 
-    // Check that the main grid has proper height constraint
-    const mainGrid = container.querySelector('.grid.grid-cols-1.lg\\:grid-cols-2')
-    expect(mainGrid).toBeInTheDocument()
-    expect(mainGrid).toHaveClass('h-[calc(100vh-200px)]')
+    // Check that the main container has proper height constraint
+    const mainContainer = container.querySelector('.h-\\[calc\\(100vh-200px\\)\\]')
+    expect(mainContainer).toBeInTheDocument()
+    expect(mainContainer).toHaveClass('flex', 'flex-col', 'lg:flex-row')
 
     // Check that the chat container has proper flex structure
     const chatContainer = screen.getByTestId('chat-window')
@@ -152,9 +160,13 @@ describe('RiffDetail Height Constraints Integration', () => {
   it('should maintain height constraints with many messages in chat', async () => {
     render(
       <MemoryRouter initialEntries={['/apps/test-app/riffs/test-riff']}>
-        <div style={{ height: '800px' }} data-testid="viewport">
-          <RiffDetail />
-        </div>
+        <Routes>
+          <Route path="/apps/:appSlug/riffs/:riffSlug" element={
+            <div style={{ height: '800px' }} data-testid="viewport">
+              <RiffDetail />
+            </div>
+          } />
+        </Routes>
       </MemoryRouter>
     )
 
@@ -192,9 +204,13 @@ describe('RiffDetail Height Constraints Integration', () => {
 
     const { container } = render(
       <MemoryRouter initialEntries={['/apps/test-app/riffs/test-riff']}>
-        <div style={{ height: '100vh' }}>
-          <RiffDetail />
-        </div>
+        <Routes>
+          <Route path="/apps/:appSlug/riffs/:riffSlug" element={
+            <div style={{ height: '100vh' }}>
+              <RiffDetail />
+            </div>
+          } />
+        </Routes>
       </MemoryRouter>
     )
 
@@ -202,12 +218,12 @@ describe('RiffDetail Height Constraints Integration', () => {
       expect(screen.getByTestId('chat-window')).toBeInTheDocument()
     })
 
-    // Should have 2-column layout on large screens
-    const mainGrid = container.querySelector('.grid')
-    expect(mainGrid).toHaveClass('lg:grid-cols-2')
+    // Should have row layout on large screens
+    const mainContainer = container.querySelector('.h-\\[calc\\(100vh-200px\\)\\]')
+    expect(mainContainer).toHaveClass('lg:flex-row')
 
     // Height constraint should still apply
-    expect(mainGrid).toHaveClass('h-[calc(100vh-200px)]')
+    expect(mainContainer).toHaveClass('h-[calc(100vh-200px)]')
 
     // Chat should still maintain proper structure
     const chatWindow = screen.getByTestId('chat-window')
@@ -220,9 +236,13 @@ describe('RiffDetail Height Constraints Integration', () => {
 
     render(
       <MemoryRouter initialEntries={['/apps/test-app/riffs/test-riff']}>
-        <div style={{ height: '100vh' }}>
-          <RiffDetail />
-        </div>
+        <Routes>
+          <Route path="/apps/:appSlug/riffs/:riffSlug" element={
+            <div style={{ height: '100vh' }}>
+              <RiffDetail />
+            </div>
+          } />
+        </Routes>
       </MemoryRouter>
     )
 
@@ -239,9 +259,13 @@ describe('RiffDetail Height Constraints Integration', () => {
 
     render(
       <MemoryRouter initialEntries={['/apps/test-app/riffs/test-riff']}>
-        <div style={{ height: '100vh' }}>
-          <RiffDetail />
-        </div>
+        <Routes>
+          <Route path="/apps/:appSlug/riffs/:riffSlug" element={
+            <div style={{ height: '100vh' }}>
+              <RiffDetail />
+            </div>
+          } />
+        </Routes>
       </MemoryRouter>
     )
 
@@ -257,9 +281,13 @@ describe('RiffDetail Height Constraints Integration', () => {
   it('should maintain height constraints with iframe and chat side by side', async () => {
     const { container } = render(
       <MemoryRouter initialEntries={['/apps/test-app/riffs/test-riff']}>
-        <div style={{ height: '100vh' }}>
-          <RiffDetail />
-        </div>
+        <Routes>
+          <Route path="/apps/:appSlug/riffs/:riffSlug" element={
+            <div style={{ height: '100vh' }}>
+              <RiffDetail />
+            </div>
+          } />
+        </Routes>
       </MemoryRouter>
     )
 
@@ -267,37 +295,44 @@ describe('RiffDetail Height Constraints Integration', () => {
       expect(screen.getByTestId('chat-window')).toBeInTheDocument()
     })
 
-    // Should have 2-column grid layout
-    const mainGrid = container.querySelector('.grid.grid-cols-1.lg\\:grid-cols-2')
-    expect(mainGrid).toBeInTheDocument()
+    // Should have flexbox layout
+    const mainContainer = container.querySelector('.h-\\[calc\\(100vh-200px\\)\\]')
+    expect(mainContainer).toBeInTheDocument()
+    expect(mainContainer).toHaveClass('flex', 'flex-col', 'lg:flex-row')
 
     // Both columns should have proper flex structure
-    const columns = container.querySelectorAll('.flex.flex-col')
-    expect(columns.length).toBeGreaterThanOrEqual(2)
+    const columns = container.querySelectorAll('.flex-1')
+    expect(columns.length).toBeGreaterThanOrEqual(1)
 
     // Chat column should have proper structure
     const chatWindow = screen.getByTestId('chat-window')
-    const chatColumn = chatWindow.closest('.flex.flex-col')
+    const chatColumn = chatWindow.closest('.flex-1')
     expect(chatColumn).toBeInTheDocument()
 
-    // Grid should constrain height
-    expect(mainGrid).toHaveClass('h-[calc(100vh-200px)]')
+    // Container should constrain height
+    expect(mainContainer).toHaveClass('h-[calc(100vh-200px)]')
   })
 
   it('should handle dynamic content changes while maintaining height constraints', async () => {
     let deploymentStatus = { status: 'pending' }
     
     fetch.mockImplementation((url) => {
+      if (url.includes('/api/apps/test-app/riffs')) {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({ riffs: [mockRiff] })
+        })
+      }
       if (url.includes('/api/apps/test-app')) {
         return Promise.resolve({
           ok: true,
           json: async () => mockApp
         })
       }
-      if (url.includes('/api/apps/test-app/riffs')) {
+      if (url.includes('/pr-status')) {
         return Promise.resolve({
           ok: true,
-          json: async () => ({ riffs: [mockRiff] })
+          json: async () => ({ pr_status: null })
         })
       }
       if (url.includes('/deployment')) {
@@ -314,9 +349,13 @@ describe('RiffDetail Height Constraints Integration', () => {
 
     const { container } = render(
       <MemoryRouter initialEntries={['/apps/test-app/riffs/test-riff']}>
-        <div style={{ height: '100vh' }}>
-          <RiffDetail />
-        </div>
+        <Routes>
+          <Route path="/apps/:appSlug/riffs/:riffSlug" element={
+            <div style={{ height: '100vh' }}>
+              <RiffDetail />
+            </div>
+          } />
+        </Routes>
       </MemoryRouter>
     )
 
@@ -325,8 +364,8 @@ describe('RiffDetail Height Constraints Integration', () => {
     })
 
     // Should maintain height constraints regardless of deployment status
-    const mainGrid = container.querySelector('.grid')
-    expect(mainGrid).toHaveClass('h-[calc(100vh-200px)]')
+    const mainContainer = container.querySelector('.h-\\[calc\\(100vh-200px\\)\\]')
+    expect(mainContainer).toHaveClass('h-[calc(100vh-200px)]')
 
     const chatWindow = screen.getByTestId('chat-window')
     expect(chatWindow).toHaveClass('h-full')

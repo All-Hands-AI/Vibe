@@ -81,6 +81,9 @@ function MessageList({ messages, userUuid, scrollContainerRef, onScroll, message
     )
   }
 
+  // Create a global message index for test IDs
+  let globalMessageIndex = 0
+
   return (
     <div 
       ref={scrollContainerRef}
@@ -103,6 +106,7 @@ function MessageList({ messages, userUuid, scrollContainerRef, onScroll, message
             {dateMessages.map((message) => (
               <div
                 key={message.id}
+                data-testid={`message-${globalMessageIndex++}`}
                 className={`flex ${isOwnMessage(message) ? 'justify-end' : 'justify-start'}`}
               >
                 <div
@@ -169,7 +173,7 @@ function MessageList({ messages, userUuid, scrollContainerRef, onScroll, message
       ))}
       
       {/* Scroll anchor - placed at the very end of messages */}
-      <div ref={messagesEndRef} style={{ height: '1px' }} />
+      <div ref={messagesEndRef} data-testid="messages-end" style={{ height: '1px' }} />
     </div>
   )
 }
