@@ -2,10 +2,22 @@
 Event serialization utilities for converting OpenHands agent events into user-friendly messages.
 """
 
+import sys
 import uuid
 from datetime import datetime, timezone
 from typing import Dict, Any, Optional
 from utils.logging import get_logger
+
+# Add the site-packages to the path for openhands imports
+sys.path.insert(0, ".venv/lib/python3.12/site-packages")
+
+from openhands.sdk.event import (
+    MessageEvent,
+    ActionEvent,
+    ObservationEvent,
+    AgentErrorEvent,
+    PauseEvent,
+)
 
 logger = get_logger(__name__)
 
@@ -26,14 +38,6 @@ def serialize_agent_event_to_message(
         Dict containing the serialized message, or None if event should be skipped
     """
     try:
-        from openhands.sdk.event import (
-            MessageEvent,
-            ActionEvent,
-            ObservationEvent,
-            AgentErrorEvent,
-            PauseEvent,
-        )
-
         event_type = type(event).__name__
         message_id = str(uuid.uuid4())
         created_at = datetime.now(timezone.utc).isoformat()

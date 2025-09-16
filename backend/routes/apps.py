@@ -5,8 +5,10 @@ import logging
 import re
 import time
 import uuid
+from base64 import b64encode
 from datetime import datetime, timezone
 from pathlib import Path
+from nacl import encoding, public
 from keys import load_user_keys
 from storage import get_apps_storage, get_riffs_storage
 from agent_loop import agent_loop_manager
@@ -1114,9 +1116,6 @@ def create_github_repo(repo_name, github_token, fly_token):
                 )
 
                 if key_response.status_code == 200:
-                    from base64 import b64encode
-                    from nacl import encoding, public
-
                     public_key_data = key_response.json()
                     public_key = public.PublicKey(
                         public_key_data["key"].encode("utf-8"), encoding.Base64Encoder()
@@ -1192,9 +1191,6 @@ def create_github_repo(repo_name, github_token, fly_token):
             )
 
             if key_response.status_code == 200:
-                from base64 import b64encode
-                from nacl import encoding, public
-
                 public_key_data = key_response.json()
                 public_key = public.PublicKey(
                     public_key_data["key"].encode("utf-8"), encoding.Base64Encoder()
