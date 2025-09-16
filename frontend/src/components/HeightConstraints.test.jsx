@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
-import { createRef } from 'react'
+import PropTypes from 'prop-types'
 
 // Simple test components to verify height constraints
 const TestChatWindow = ({ messages = [] }) => {
@@ -28,6 +28,10 @@ const TestChatWindow = ({ messages = [] }) => {
       </div>
     </div>
   )
+}
+
+TestChatWindow.propTypes = {
+  messages: PropTypes.array
 }
 
 const TestRiffDetailLayout = ({ children }) => {
@@ -66,6 +70,10 @@ const TestRiffDetailLayout = ({ children }) => {
   )
 }
 
+TestRiffDetailLayout.propTypes = {
+  children: PropTypes.node
+}
+
 describe('Height Constraints Tests', () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -73,7 +81,7 @@ describe('Height Constraints Tests', () => {
 
   describe('ChatWindow Height Constraints', () => {
     it('should have proper flex layout structure for height constraints', () => {
-      const { container } = render(
+      render(
         <div style={{ height: '400px' }} data-testid="parent-container">
           <TestChatWindow />
         </div>

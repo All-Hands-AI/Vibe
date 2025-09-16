@@ -84,7 +84,7 @@ function MessageList({ messages, userUuid, scrollContainerRef, onScroll, message
   return (
     <div 
       ref={scrollContainerRef}
-      className="h-full overflow-y-auto p-4 space-y-4"
+      className="h-full max-h-full overflow-y-auto p-4 space-y-4"
       onScroll={onScroll}
     >
       {Object.entries(groupedMessages).map(([date, dateMessages]) => (

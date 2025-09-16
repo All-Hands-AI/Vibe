@@ -460,12 +460,12 @@ function RiffDetail() {
           </div>
         </header>
 
-        {/* Main Content Grid - 2 columns */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-[calc(100vh-200px)]">
+        {/* Main Content - Fixed Height Container */}
+        <div className="h-[calc(100vh-200px)] flex flex-col lg:flex-row gap-6">
           {/* Left Sidebar - Chat */}
-          <div className="flex flex-col">
-            {/* Chat Window */}
-            <div className="flex-1 min-h-0">
+          <div className="flex-1 lg:w-1/2 flex flex-col min-h-0">
+            {/* Chat Window - Fixed Height */}
+            <div className="h-full">
               {userUUID ? (
                 <ChatWindow 
                   app={app} 
@@ -484,7 +484,7 @@ function RiffDetail() {
           </div>
 
           {/* Right Side - Iframe */}
-          <div className="flex flex-col">
+          <div className="flex-1 lg:w-1/2 flex flex-col min-h-0">
             {/* Deployment Status Header */}
             <div className="mb-2">
               {deploymentStatus ? (

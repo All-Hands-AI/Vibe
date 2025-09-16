@@ -218,7 +218,7 @@ describe('RiffDetail Height Constraints Integration', () => {
     // Mock loading state
     fetch.mockImplementation(() => new Promise(() => {})) // Never resolves
 
-    const { container } = render(
+    render(
       <MemoryRouter initialEntries={['/apps/test-app/riffs/test-riff']}>
         <div style={{ height: '100vh' }}>
           <RiffDetail />

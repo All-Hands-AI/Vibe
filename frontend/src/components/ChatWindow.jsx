@@ -28,7 +28,9 @@ function ChatWindow({ app, riff, userUuid }) {
       if (scrollContainerRef.current) {
         console.log('📜 Also trying direct scroll as backup')
         setTimeout(() => {
-          scrollContainerRef.current.scrollTop = scrollContainerRef.current.scrollHeight
+          if (scrollContainerRef.current) {
+            scrollContainerRef.current.scrollTop = scrollContainerRef.current.scrollHeight
+          }
         }, 100)
       }
     } else {
@@ -225,7 +227,7 @@ function ChatWindow({ app, riff, userUuid }) {
   }
 
   return (
-    <div className="flex flex-col h-full bg-black border border-gray-700 rounded-lg">
+    <div className="h-full max-h-full flex flex-col bg-black border border-gray-700 rounded-lg overflow-hidden">
       {/* Error Display */}
       {error && (
         <div className="p-3 bg-red-900/20 border-b border-red-500/30 flex-shrink-0">
@@ -234,7 +236,7 @@ function ChatWindow({ app, riff, userUuid }) {
       )}
 
       {/* Messages Area - This should be the scrollable part */}
-      <div className="flex-1 min-h-0 overflow-hidden">
+      <div className="flex-1 min-h-0">
         <MessageList 
           messages={messages} 
           userUuid={userUuid}
