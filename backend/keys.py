@@ -86,7 +86,7 @@ def validate_anthropic_key(api_key):
             "https://api.anthropic.com/v1/messages",
             headers=headers,
             json={
-                "model": "claude-3-haiku-20240307",
+                "model": "claude-sonnet-4-20250514",
                 "max_tokens": 1,
                 "messages": [{"role": "user", "content": "Hi"}],
             },

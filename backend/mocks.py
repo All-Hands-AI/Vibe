@@ -191,7 +191,7 @@ def mock_anthropic_messages_response():
             "type": "message",
             "role": "assistant",
             "content": [{"type": "text", "text": "Mock response from Claude"}],
-            "model": "claude-3-haiku-20240307",
+            "model": "claude-sonnet-4-20250514",
             "stop_reason": "end_turn",
             "usage": {"input_tokens": 10, "output_tokens": 5},
         },

@@ -41,7 +41,7 @@ class MockLLM:
         return MockResponse()
 
 
-def get_llm_instance(api_key: str, model: str = "claude-3-haiku-20240307"):
+def get_llm_instance(api_key: str, model: str = "claude-sonnet-4-20250514"):
     """Get the appropriate LLM instance based on MOCK_MODE environment variable"""
     if os.environ.get("MOCK_MODE", "false").lower() == "true":
         # In mock mode, create a real LLM instance but with a fake key
@@ -107,7 +107,7 @@ def reconstruct_agent_from_state(user_uuid, app_slug, riff_slug):
         # Create LLM instance
         try:
             llm = get_llm_instance(
-                api_key=anthropic_token, model="claude-3-haiku-20240307"
+                api_key=anthropic_token, model="claude-sonnet-4-20250514"
             )
 
             # Create message callback to store events as messages
@@ -235,7 +235,7 @@ def create_agent_for_user(user_uuid, app_slug, riff_slug, send_initial_message=F
         # Create LLM instance
         try:
             llm = get_llm_instance(
-                api_key=anthropic_token, model="claude-3-haiku-20240307"
+                api_key=anthropic_token, model="claude-sonnet-4-20250514"
             )
 
             # Create message callback to store events as messages
@@ -296,20 +296,19 @@ def create_agent_for_user(user_uuid, app_slug, riff_slug, send_initial_message=F
                 user_uuid, app_slug, riff_slug
             )
             if agent_loop:
-                logger.info(
+                logger.debug(
                     f"✅ AgentLoop verification successful for {user_uuid[:8]}:{app_slug}:{riff_slug}"
                 )
 
-                # Send initial message to run ls in the project directory (only for brand new riffs)
                 if send_initial_message:
                     try:
                         project_path = f"{workspace_path}/project"
-                        initial_message = f"ls {project_path}"
-                        logger.info(
+                        initial_message = f"run `ls {project_path}` and briefly describe what you see. Do nothing else until the user asks."
+                        logger.debug(
                             f"📨 Sending initial message to new riff agent for {user_uuid[:8]}:{app_slug}:{riff_slug}: {initial_message}"
                         )
                         agent_loop.send_message(initial_message)
-                        logger.info(
+                        logger.debug(
                             f"✅ Initial message sent successfully to new riff agent"
                         )
                     except Exception as e:
