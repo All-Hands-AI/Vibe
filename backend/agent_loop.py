@@ -1,13 +1,21 @@
 """
-AgentLoop and AgentLoopManager classes for OpenVibe backend.
-Manages agent conversations using openhands-sdk Agent and Conversation.
+Improved AgentLoop and AgentLoopManager classes for OpenVibe backend.
+Manages agent conversations using openhands-sdk Agent and Conversation with proper
+threading, error handling, and resource management.
+
+Key improvements:
+- Simplified threading model using ThreadPoolExecutor
+- Proper error handling and recovery mechanisms
+- SDK-aligned state management
+- Robust tool configuration with path validation
+- Resource cleanup and lifecycle management
 """
 
 import sys
 import os
-import threading
-from typing import Dict, Optional, Callable
+from typing import Dict, Optional, Callable, Any
 from threading import Lock
+from concurrent.futures import ThreadPoolExecutor, Future
 from utils.logging import get_logger
 
 # Add the site-packages to the path for openhands imports
@@ -21,11 +29,65 @@ from openhands.sdk import (
     TextContent,
     AgentContext,
     LocalFileStore,
+    Event,
 )
 from openhands.sdk.context import render_template
+from openhands.sdk.conversation.state import AgentExecutionStatus
 from openhands.tools import FileEditorTool, TaskTrackerTool, BashTool
 
 logger = get_logger(__name__)
+
+
+def ensure_directory_exists(path: str) -> bool:
+    """Ensure a directory exists, creating it if necessary."""
+    try:
+        os.makedirs(path, exist_ok=True)
+        return True
+    except Exception as e:
+        logger.error(f"❌ Failed to create directory {path}: {e}")
+        return False
+
+
+def create_tools_with_validation(workspace_path: str) -> list:
+    """Create tools with proper path validation and setup."""
+    tools = []
+
+    # Ensure workspace exists
+    if not ensure_directory_exists(workspace_path):
+        raise ValueError(f"Cannot create workspace directory: {workspace_path}")
+
+    # Create project directory if it doesn't exist
+    project_dir = os.path.join(workspace_path, "project")
+    if not ensure_directory_exists(project_dir):
+        logger.warning(f"⚠️ Could not create project directory: {project_dir}")
+        # Fall back to workspace root for bash operations
+        project_dir = workspace_path
+
+    # Create tasks directory for TaskTracker
+    tasks_dir = os.path.join(workspace_path, "tasks")
+    if not ensure_directory_exists(tasks_dir):
+        logger.warning(f"⚠️ Could not create tasks directory: {tasks_dir}")
+        # Fall back to workspace root
+        tasks_dir = workspace_path
+
+    try:
+        # FileEditorTool - no specific directory needed
+        tools.append(FileEditorTool.create())
+        logger.info(f"✅ Created FileEditorTool")
+
+        # TaskTrackerTool - save to tasks directory
+        tools.append(TaskTrackerTool.create(save_dir=tasks_dir))
+        logger.info(f"✅ Created TaskTrackerTool with save_dir: {tasks_dir}")
+
+        # BashTool - work in project directory
+        tools.append(BashTool.create(working_dir=project_dir))
+        logger.info(f"✅ Created BashTool with working_dir: {project_dir}")
+
+    except Exception as e:
+        logger.error(f"❌ Failed to create tools: {e}")
+        raise
+
+    return tools
 
 
 class CustomAgentContext(AgentContext):
@@ -85,78 +147,79 @@ class AgentLoop:
         workspace_path: str,
         message_callback: Optional[Callable] = None,
     ):
-        """
-        Initialize an AgentLoop instance.
-
-        Args:
-            user_uuid: Unique identifier for the user
-            app_slug: Slug identifier for the app
-            riff_slug: Slug identifier for the riff/conversation
-            llm: LLM instance from openhands-sdk
-            workspace_path: Required path to the workspace directory (cloned repository)
-            message_callback: Optional callback function to handle events/messages
-        """
+        """Initialize an AgentLoop instance with improved error handling."""
         self.user_uuid = user_uuid
         self.app_slug = app_slug
         self.riff_slug = riff_slug
         self.llm = llm
         self.message_callback = message_callback
 
-        # Require workspace_path to be explicitly provided
+        # Validate workspace_path
         if not workspace_path:
             raise ValueError("workspace_path is required and cannot be None or empty")
+
+        if not os.path.isabs(workspace_path):
+            raise ValueError("workspace_path must be an absolute path")
+
         self.workspace_path = workspace_path
 
         # Create state directory as sibling of workspace
-        # workspace_path is like: /data/{user_uuid}/apps/{app_slug}/riffs/{riff_slug}/workspace
-        # state_path should be:    /data/{user_uuid}/apps/{app_slug}/riffs/{riff_slug}/state
         workspace_parent = os.path.dirname(workspace_path)
         self.state_path = os.path.join(workspace_parent, "state")
 
-        # Create Agent with development tools
-        # Use workspace path for file operations and task tracking
-        task_dir = os.path.join(self.workspace_path, "tasks")
-        tools: list = [
-            FileEditorTool.create(),
-            TaskTrackerTool.create(
-                save_dir=task_dir
-            ),  # Save task tracking data to workspace/tasks/ directory
-            BashTool.create(
-                working_dir=os.path.join(self.workspace_path, "project")
-            ),  # Enable bash command execution in the project directory
-        ]  # Include FileEditor, TaskTracker, and Bash tools for development capabilities
+        if not ensure_directory_exists(self.state_path):
+            raise ValueError(f"Cannot create state directory: {self.state_path}")
 
-        # Create agent with development tools and workspace configuration
-        self.agent = create_agent(llm, tools, self.workspace_path)
+        # Create tools with validation
+        try:
+            tools = create_tools_with_validation(self.workspace_path)
+        except Exception as e:
+            logger.error(f"❌ Failed to create tools for {self.get_key()}: {e}")
+            raise
 
-        # Create conversation callbacks
-        callbacks = []
-        if message_callback:
-            callbacks.append(self._event_callback)
+        # Create agent
+        try:
+            self.agent = create_agent(llm, tools, self.workspace_path)
+        except Exception as e:
+            logger.error(f"❌ Failed to create agent for {self.get_key()}: {e}")
+            raise
 
-        # Create LocalFileStore for persistence in state directory
-        self.file_store = LocalFileStore(self.state_path)
+        # Create LocalFileStore for persistence
+        try:
+            self.file_store = LocalFileStore(self.state_path)
+        except Exception as e:
+            logger.error(f"❌ Failed to create file store for {self.get_key()}: {e}")
+            raise
 
-        # Generate conversation ID based on user, app, and riff
+        # Generate conversation ID
         conversation_id = f"{user_uuid}:{app_slug}:{riff_slug}"
 
-        # Create Conversation with persistence
-        self.conversation = Conversation(
-            agent=self.agent,
-            callbacks=callbacks,
-            persist_filestore=self.file_store,
-            conversation_id=conversation_id,
-            visualize=False,  # Disable default visualization since we handle events ourselves
-        )
+        # Create conversation with callbacks
+        callbacks = []
+        if message_callback:
+            callbacks.append(self._safe_event_callback)
 
-        # Thread management
-        self.thread = None
-        self.running = False
-        self._thread_lock = threading.Lock()
+        try:
+            self.conversation = Conversation(
+                agent=self.agent,
+                callbacks=callbacks,
+                persist_filestore=self.file_store,
+                conversation_id=conversation_id,
+                visualize=False,
+            )
+        except Exception as e:
+            logger.error(f"❌ Failed to create conversation for {self.get_key()}: {e}")
+            raise
 
-        logger.info(
-            f"🤖 Created AgentLoop for {user_uuid[:8]}/{app_slug}/{riff_slug} with state at {self.state_path}"
+        # Thread management - simplified approach
+        self._executor = ThreadPoolExecutor(
+            max_workers=1, thread_name_prefix=f"Agent-{self.get_key()}"
         )
+        self._current_task: Optional[Future] = None
+        self._lock = Lock()
+        self._is_running = False
+
+        logger.info(f"🤖 Created improved AgentLoop for {self.get_key()}")
 
     @classmethod
     def from_existing_state(
@@ -168,26 +231,11 @@ class AgentLoop:
         workspace_path: str,
         message_callback: Optional[Callable] = None,
     ):
-        """
-        Create an AgentLoop from existing persisted state.
-        This method reconstructs the agent from its serialization instead of creating a new one.
-
-        Args:
-            user_uuid: Unique identifier for the user
-            app_slug: Slug identifier for the app
-            riff_slug: Slug identifier for the riff/conversation
-            llm: LLM instance from openhands-sdk
-            workspace_path: Required path to the workspace directory (cloned repository)
-            message_callback: Optional callback function to handle events/messages
-
-        Returns:
-            AgentLoop instance reconstructed from existing state
-        """
-        # Create state directory path as sibling of workspace
+        """Create an AgentLoop from existing persisted state with improved error handling."""
+        # Check if state exists
         workspace_parent = os.path.dirname(workspace_path)
         state_path = os.path.join(workspace_parent, "state")
 
-        # Check if state exists
         if not os.path.exists(state_path):
             logger.warning(
                 f"⚠️ No existing state found at {state_path}, creating new AgentLoop"
@@ -196,145 +244,99 @@ class AgentLoop:
                 user_uuid, app_slug, riff_slug, llm, workspace_path, message_callback
             )
 
-        # Create instance without calling __init__
-        instance = cls.__new__(cls)
+        try:
+            # Create new instance - the Conversation constructor will automatically load existing state
+            instance = cls(
+                user_uuid, app_slug, riff_slug, llm, workspace_path, message_callback
+            )
+            logger.info(
+                f"🔄 Reconstructed AgentLoop from existing state for {instance.get_key()}"
+            )
+            return instance
+        except Exception as e:
+            logger.error(f"❌ Failed to reconstruct AgentLoop from state: {e}")
+            # Fall back to creating a new instance
+            logger.info("🔄 Falling back to creating new AgentLoop")
+            return cls(
+                user_uuid, app_slug, riff_slug, llm, workspace_path, message_callback
+            )
 
-        # Set basic attributes
-        instance.user_uuid = user_uuid
-        instance.app_slug = app_slug
-        instance.riff_slug = riff_slug
-        instance.llm = llm
-        instance.message_callback = message_callback
-        instance.workspace_path = workspace_path
-        instance.state_path = state_path
-
-        # Create Agent with development tools (same as in __init__)
-        task_dir = os.path.join(workspace_path, "tasks")
-        tools: list = [
-            FileEditorTool.create(),
-            TaskTrackerTool.create(save_dir=task_dir),
-            BashTool.create(working_dir=os.path.join(workspace_path, "project")),
-        ]
-
-        # Create agent with development tools and workspace configuration
-        instance.agent = create_agent(llm, tools, workspace_path)
-
-        # Create conversation callbacks
-        callbacks = []
-        if message_callback:
-            callbacks.append(instance._event_callback)
-
-        # Create LocalFileStore for persistence
-        instance.file_store = LocalFileStore(state_path)
-
-        # Generate conversation ID based on user, app, and riff
-        conversation_id = f"{user_uuid}:{app_slug}:{riff_slug}"
-
-        # Create Conversation with persistence - this will automatically load existing state
-        instance.conversation = Conversation(
-            agent=instance.agent,
-            callbacks=callbacks,
-            persist_filestore=instance.file_store,
-            conversation_id=conversation_id,
-            visualize=False,
-        )
-
-        # Thread management
-        instance.thread = None
-        instance.running = False
-        instance._thread_lock = threading.Lock()
-
-        logger.info(
-            f"🔄 Reconstructed AgentLoop for {user_uuid[:8]}/{app_slug}/{riff_slug} from existing state at {state_path}"
-        )
-        return instance
-
-    def _event_callback(self, event):
-        """Internal callback to handle events from the conversation"""
+    def _safe_event_callback(self, event: Event):
+        """Safe wrapper for event callbacks with proper error handling."""
         try:
             if self.message_callback:
                 self.message_callback(event)
         except Exception as e:
             logger.error(f"❌ Error in event callback for {self.get_key()}: {e}")
+            # Don't re-raise - we don't want callback errors to break the agent
 
     def get_key(self) -> str:
         """Get the unique key for this agent loop"""
         return f"{self.user_uuid}:{self.app_slug}:{self.riff_slug}"
 
-    def start_agent_thread(self):
-        """Start the agent running in a background thread"""
-        with self._thread_lock:
-            if self.thread is not None and self.thread.is_alive():
-                logger.warning(f"⚠️ Agent thread already running for {self.get_key()}")
-                return
-
-            self.running = True
-            self.thread = threading.Thread(
-                target=self._run_agent, name=f"AgentLoop-{self.get_key()}", daemon=True
-            )
-            self.thread.start()
-            logger.info(f"🚀 Started agent thread for {self.get_key()}")
-
-    def _run_agent(self):
-        """Internal method to run the agent in the thread"""
+    def _run_conversation_safely(self):
+        """Run the conversation with proper error handling and cleanup."""
         try:
-            logger.info(f"🔄 Agent thread running for {self.get_key()}")
-            # The conversation will handle the agent loop automatically
-            # We just need to keep the thread alive
-            while self.running:
-                threading.Event().wait(1)  # Sleep for 1 second
+            logger.info(f"🔄 Starting conversation execution for {self.get_key()}")
+            self.conversation.run()
+            logger.info(f"✅ Conversation execution completed for {self.get_key()}")
         except Exception as e:
-            logger.error(f"❌ Error in agent thread for {self.get_key()}: {e}")
-        finally:
-            logger.info(f"🛑 Agent thread stopped for {self.get_key()}")
+            logger.error(
+                f"❌ Error in conversation execution for {self.get_key()}: {e}"
+            )
+            # Log the full traceback for debugging
+            import traceback
 
-    def stop_agent_thread(self):
-        """Stop the agent thread"""
-        with self._thread_lock:
-            self.running = False
-            if self.thread and self.thread.is_alive():
-                self.thread.join(timeout=5)
-                logger.info(f"🛑 Stopped agent thread for {self.get_key()}")
+            logger.error(f"❌ Traceback: {traceback.format_exc()}")
+        finally:
+            with self._lock:
+                self._is_running = False
+            logger.info(f"🏁 Conversation task finished for {self.get_key()}")
 
     def send_message(self, message: str) -> str:
         """
-        Send a message to the agent and trigger conversation processing.
+        Send a message to the agent with improved error handling and threading.
 
         Args:
             message: The user message to send
 
         Returns:
-            A confirmation message (actual response will come through callbacks)
+            A confirmation message
         """
         logger.info(f"💬 Sending message to agent for {self.get_key()}")
+
         try:
-            # Create a Message object for the conversation
+            # Create a Message object
             user_message = Message(role="user", content=[TextContent(text=message)])
 
             # Send message to conversation
             self.conversation.send_message(user_message)
 
-            # Start the conversation processing (this will trigger the agent)
-            # We run this in the background so it doesn't block
-            if not self.thread or not self.thread.is_alive():
-                self.start_agent_thread()
+            # Start conversation processing in background thread
+            with self._lock:
+                # Cancel any existing task
+                if self._current_task and not self._current_task.done():
+                    logger.info(
+                        f"🔄 Cancelling existing conversation task for {self.get_key()}"
+                    )
+                    self._current_task.cancel()
 
-            # Trigger conversation run in a separate thread
-            threading.Thread(target=self._run_conversation, daemon=True).start()
+                # Submit new conversation task
+                self._current_task = self._executor.submit(
+                    self._run_conversation_safely
+                )
+                self._is_running = True
 
-            logger.info(f"✅ Message sent to agent for {self.get_key()}")
+            logger.info(
+                f"✅ Message sent and conversation started for {self.get_key()}"
+            )
             return "Message sent to agent. Response will be processed asynchronously."
 
         except Exception as e:
             logger.error(f"❌ Error sending message to agent for {self.get_key()}: {e}")
+            with self._lock:
+                self._is_running = False
             raise
-
-    def _run_conversation(self):
-        """Run the conversation processing"""
-        try:
-            self.conversation.run()
-        except Exception as e:
-            logger.error(f"❌ Error running conversation for {self.get_key()}: {e}")
 
     def get_all_events(self):
         """
@@ -357,81 +359,75 @@ class AgentLoop:
             logger.error(f"❌ Error retrieving events for {self.get_key()}: {e}")
             return []
 
-    def get_agent_status(self):
-        """
-        Get the current status of the agent.
-
-        Returns:
-            dict: Dictionary containing agent status information
-        """
+    def get_agent_status(self) -> Dict[str, Any]:
+        """Get agent status information as transparent passthrough from SDK."""
         try:
             if not self.conversation or not hasattr(self.conversation, "state"):
                 return {
                     "status": "not_initialized",
-                    "agent_finished": False,
-                    "agent_paused": False,
-                    "agent_waiting_for_confirmation": False,
-                    "thread_alive": False,
-                    "running": False,
+                    "error": "Conversation not initialized",
+                    "is_running": False,
+                    "has_active_task": False,
+                    "event_count": 0,
                 }
 
             state = self.conversation.state
+            agent_status = getattr(state, "agent_status", None)
 
-            # Determine if the agent is actually running based on conversation state
-            agent_finished = getattr(state, "agent_finished", False)
-            agent_paused = getattr(state, "agent_paused", False)
-            agent_waiting = getattr(state, "agent_waiting_for_confirmation", False)
+            with self._lock:
+                has_active_task = (
+                    self._current_task is not None and not self._current_task.done()
+                )
+                is_running = self._is_running
 
-            # Agent is considered "running" if it's not finished, not paused, and not waiting
-            is_running = not agent_finished and not agent_paused and not agent_waiting
-
-            # Check if there are recent events indicating activity
+            # Get event count for activity indication
             events = getattr(state, "events", [])
-            has_recent_activity = len(events) > 0
+
+            # Return SDK agent_status as the primary status field (transparent passthrough)
+            sdk_status = agent_status.value if agent_status else "idle"
 
             return {
-                "status": "initialized",
-                "agent_finished": agent_finished,
-                "agent_paused": agent_paused,
-                "agent_waiting_for_confirmation": agent_waiting,
-                "thread_alive": self.thread is not None and self.thread.is_alive(),
-                "running": is_running,
+                "status": sdk_status,  # Primary status field - direct from SDK
+                "is_running": is_running,
+                "has_active_task": has_active_task,
                 "conversation_id": getattr(state, "id", None),
                 "event_count": len(events),
-                "has_recent_activity": has_recent_activity,
+                "workspace_path": self.workspace_path,
+                "state_path": self.state_path,
+                # Keep agent_status for backward compatibility
+                "agent_status": sdk_status,
             }
+
         except Exception as e:
             logger.error(f"❌ Error getting agent status for {self.get_key()}: {e}")
-            return {"status": "error", "error": str(e), "running": False}
+            return {
+                "status": "error",
+                "error": str(e),
+                "is_running": False,
+                "has_active_task": False,
+                "event_count": 0,
+                "agent_status": "error",
+            }
 
-    def pause_agent(self):
-        """
-        Pause the agent execution.
-
-        Returns:
-            bool: True if pause was successful, False otherwise
-        """
+    def pause_agent(self) -> bool:
+        """Pause the agent execution using SDK methods."""
         try:
-            if self.conversation and hasattr(self.conversation, "pause"):
-                self.conversation.pause()
-                logger.info(f"🔄 Agent paused for {self.get_key()}")
-                return True
-            else:
+            if not self.conversation:
                 logger.warning(
                     f"⚠️ Cannot pause agent for {self.get_key()}: conversation not available"
                 )
                 return False
+
+            self.conversation.pause()
+            logger.info(f"⏸️ Agent paused for {self.get_key()}")
+            return True
+
         except Exception as e:
             logger.error(f"❌ Error pausing agent for {self.get_key()}: {e}")
             return False
 
-    def resume_agent(self):
-        """
-        Resume the agent execution by starting a new conversation run.
-
-        Returns:
-            bool: True if resume was successful, False otherwise
-        """
+    def resume_agent(self) -> bool:
+        """Resume the agent execution."""
         try:
             if not self.conversation:
                 logger.warning(
@@ -439,42 +435,67 @@ class AgentLoop:
                 )
                 return False
 
-            state = self.conversation.state
+            # Check if agent is in a resumable state
+            status = self.get_agent_status()
+            agent_status = status.get("agent_status")
 
-            # Check current agent state
-            agent_finished = getattr(state, "agent_finished", False)
-            agent_paused = getattr(state, "agent_paused", False)
-
-            if agent_finished:
+            if agent_status == AgentExecutionStatus.FINISHED.value:
                 logger.info(f"ℹ️ Agent for {self.get_key()} is finished, cannot resume")
                 return False
 
-            if not agent_paused:
-                # Agent is already running or idle, check if we need to start it
-                events = getattr(state, "events", [])
-                if len(events) <= 1:  # Only initial event, agent hasn't started
-                    logger.info(
-                        f"🔄 Agent for {self.get_key()} is idle, will start on next message"
+            if agent_status == AgentExecutionStatus.PAUSED.value:
+                # Resume by running the conversation
+                with self._lock:
+                    if self._current_task and not self._current_task.done():
+                        logger.info(
+                            f"ℹ️ Agent for {self.get_key()} already has active task"
+                        )
+                        return True
+
+                    self._current_task = self._executor.submit(
+                        self._run_conversation_safely
                     )
-                else:
-                    logger.info(f"ℹ️ Agent for {self.get_key()} is already running")
+                    self._is_running = True
+
+                logger.info(f"▶️ Agent resumed for {self.get_key()}")
+                return True
+            else:
+                logger.info(
+                    f"ℹ️ Agent for {self.get_key()} is not paused (status: {agent_status})"
+                )
                 return True
 
-            # Agent is paused, resume it by running the conversation
-            # The OpenHands SDK will handle the resume automatically when run() is called
-            threading.Thread(target=self._run_conversation, daemon=True).start()
-
-            logger.info(f"🔄 Agent resumed for {self.get_key()}")
-            return True
         except Exception as e:
             logger.error(f"❌ Error resuming agent for {self.get_key()}: {e}")
             return False
 
+    def cleanup(self):
+        """Clean up resources properly."""
+        logger.info(f"🧹 Cleaning up resources for {self.get_key()}")
+
+        try:
+            with self._lock:
+                # Cancel any running task
+                if self._current_task and not self._current_task.done():
+                    logger.info(f"🔄 Cancelling active task for {self.get_key()}")
+                    self._current_task.cancel()
+
+                self._is_running = False
+
+            # Shutdown the executor
+            if self._executor:
+                logger.info(f"🔄 Shutting down executor for {self.get_key()}")
+                self._executor.shutdown(wait=True, timeout=10)
+
+        except Exception as e:
+            logger.error(f"❌ Error during cleanup for {self.get_key()}: {e}")
+
+        logger.info(f"✅ Cleanup completed for {self.get_key()}")
+
 
 class AgentLoopManager:
     """
-    Singleton class that manages AgentLoop instances.
-    Keeps a dictionary of AgentLoops keyed by user_uuid:app_slug:riff_slug.
+    Improved singleton manager for AgentLoop instances with better resource management.
     """
 
     _instance = None
@@ -494,7 +515,7 @@ class AgentLoopManager:
         if not self._initialized:
             self.agent_loops: Dict[str, AgentLoop] = {}
             self._initialized = True
-            logger.info("🏗️ AgentLoopManager initialized")
+            logger.info("🏗️ Improved AgentLoopManager initialized")
 
     def _get_key(self, user_uuid: str, app_slug: str, riff_slug: str) -> str:
         """Generate a unique key for the agent loop"""
@@ -528,22 +549,36 @@ class AgentLoopManager:
         key = self._get_key(user_uuid, app_slug, riff_slug)
 
         with self._lock:
+            # Clean up existing agent loop if it exists
             if key in self.agent_loops:
-                logger.warning(f"⚠️ AgentLoop already exists for {key}, replacing it")
-                # Stop the existing agent thread before replacing
+                logger.warning(
+                    f"⚠️ AgentLoop already exists for {key}, cleaning up old instance"
+                )
                 old_loop = self.agent_loops[key]
-                old_loop.stop_agent_thread()
+                try:
+                    old_loop.cleanup()
+                except Exception as e:
+                    logger.error(f"❌ Error cleaning up old agent loop: {e}")
 
-            agent_loop = AgentLoop(
-                user_uuid, app_slug, riff_slug, llm, workspace_path, message_callback
-            )
-            self.agent_loops[key] = agent_loop
+            try:
+                agent_loop = AgentLoop(
+                    user_uuid,
+                    app_slug,
+                    riff_slug,
+                    llm,
+                    workspace_path,
+                    message_callback,
+                )
+                self.agent_loops[key] = agent_loop
 
-            logger.info(f"✅ Created and stored AgentLoop for {key}")
-            logger.debug(f"📊 Total agent loops: {len(self.agent_loops)}")
-            logger.debug(f"🔑 All stored keys: {list(self.agent_loops.keys())}")
+                logger.info(f"✅ Created and stored improved AgentLoop for {key}")
+                logger.info(f"📊 Total agent loops: {len(self.agent_loops)}")
 
-            return agent_loop
+                return agent_loop
+
+            except Exception as e:
+                logger.error(f"❌ Failed to create AgentLoop for {key}: {e}")
+                raise
 
     def create_agent_loop_from_state(
         self,
@@ -572,22 +607,36 @@ class AgentLoopManager:
         key = self._get_key(user_uuid, app_slug, riff_slug)
 
         with self._lock:
+            # Clean up existing agent loop if it exists
             if key in self.agent_loops:
-                logger.warning(f"⚠️ AgentLoop already exists for {key}, replacing it")
-                # Stop the existing agent thread before replacing
+                logger.warning(
+                    f"⚠️ AgentLoop already exists for {key}, cleaning up old instance"
+                )
                 old_loop = self.agent_loops[key]
-                old_loop.stop_agent_thread()
+                try:
+                    old_loop.cleanup()
+                except Exception as e:
+                    logger.error(f"❌ Error cleaning up old agent loop: {e}")
 
-            agent_loop = AgentLoop.from_existing_state(
-                user_uuid, app_slug, riff_slug, llm, workspace_path, message_callback
-            )
-            self.agent_loops[key] = agent_loop
+            try:
+                agent_loop = AgentLoop.from_existing_state(
+                    user_uuid,
+                    app_slug,
+                    riff_slug,
+                    llm,
+                    workspace_path,
+                    message_callback,
+                )
+                self.agent_loops[key] = agent_loop
 
-            logger.info(f"✅ Reconstructed and stored AgentLoop for {key}")
-            logger.debug(f"📊 Total agent loops: {len(self.agent_loops)}")
-            logger.debug(f"🔑 All stored keys: {list(self.agent_loops.keys())}")
+                logger.info(f"✅ Reconstructed and stored improved AgentLoop for {key}")
+                logger.info(f"📊 Total agent loops: {len(self.agent_loops)}")
 
-            return agent_loop
+                return agent_loop
+
+            except Exception as e:
+                logger.error(f"❌ Failed to reconstruct AgentLoop for {key}: {e}")
+                raise
 
     def get_agent_loop(
         self, user_uuid: str, app_slug: str, riff_slug: str
@@ -639,9 +688,13 @@ class AgentLoopManager:
 
         with self._lock:
             if key in self.agent_loops:
-                # Stop the agent thread before removing
                 agent_loop = self.agent_loops[key]
-                agent_loop.stop_agent_thread()
+
+                try:
+                    # Clean up resources
+                    agent_loop.cleanup()
+                except Exception as e:
+                    logger.error(f"❌ Error during agent loop cleanup: {e}")
 
                 del self.agent_loops[key]
                 logger.info(f"🗑️ Removed AgentLoop for {key}")
@@ -651,10 +704,10 @@ class AgentLoopManager:
                 logger.warning(f"❌ AgentLoop not found for removal: {key}")
                 return False
 
-    def get_stats(self) -> Dict[str, int]:
-        """Get statistics about the agent loops"""
+    def get_stats(self) -> Dict[str, Any]:
+        """Get comprehensive statistics about the agent loops."""
         with self._lock:
-            return {
+            stats = {
                 "total_loops": len(self.agent_loops),
                 "active_users": len(
                     set(loop.user_uuid for loop in self.agent_loops.values())
@@ -662,7 +715,43 @@ class AgentLoopManager:
                 "active_apps": len(
                     set(loop.app_slug for loop in self.agent_loops.values())
                 ),
+                "loop_details": {},
             }
+
+            # Add detailed status for each loop
+            for key, loop in self.agent_loops.items():
+                try:
+                    status = loop.get_agent_status()
+                    loop_details = stats["loop_details"]
+                    if isinstance(loop_details, dict):
+                        loop_details[key] = {
+                            "status": status.get("status"),
+                            "agent_status": status.get("agent_status"),
+                            "is_running": status.get("is_running", False),
+                            "has_active_task": status.get("has_active_task", False),
+                            "event_count": status.get("event_count", 0),
+                        }
+                except Exception as e:
+                    loop_details = stats["loop_details"]
+                    if isinstance(loop_details, dict):
+                        loop_details[key] = {"error": str(e)}
+
+            return stats
+
+    def cleanup_all(self):
+        """Clean up all agent loops - useful for shutdown."""
+        logger.info("🧹 Cleaning up all agent loops")
+
+        with self._lock:
+            for key, agent_loop in list(self.agent_loops.items()):
+                try:
+                    agent_loop.cleanup()
+                except Exception as e:
+                    logger.error(f"❌ Error cleaning up agent loop {key}: {e}")
+
+            self.agent_loops.clear()
+
+        logger.info("✅ All agent loops cleaned up")
 
 
 # Global instance

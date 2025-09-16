@@ -6,7 +6,11 @@ import {
   pauseAgent, 
   resetAgent,
   startAgentStatusPolling, 
-  getStatusColor as getAgentStatusColor 
+  getStatusColor as getAgentStatusColor,
+  canPlayAgent,
+  isAgentRunning,
+  isAgentFinished,
+  isAgentPaused
 } from '../utils/agentService'
 
 function AgentStatusBar({ appSlug, riffSlug }) {
@@ -37,8 +41,7 @@ function AgentStatusBar({ appSlug, riffSlug }) {
     setActionLoading(true)
     
     try {
-      const canPlay = agentStatus.agent_paused || 
-        (!agentStatus.running && !agentStatus.agent_finished && agentStatus.event_count <= 1)
+      const canPlay = canPlayAgent(agentStatus)
       
       if (canPlay) {
         await playAgent(appSlug, riffSlug)
@@ -79,31 +82,28 @@ function AgentStatusBar({ appSlug, riffSlug }) {
       return 'Agent Error'
     }
     
-    if (status.agent_paused) {
+    if (isAgentPaused(status)) {
       return 'Agent Paused'
     }
     
-    if (status.running && status.thread_alive) {
+    if (isAgentRunning(status) && status.has_active_task) {
       return 'Agent Running'
     }
     
     return 'Agent Ready'
   }
 
-  // Determine agent button state
-  const canPlay = agentStatus && (
-    agentStatus.agent_paused || 
-    (!agentStatus.running && !agentStatus.agent_finished && agentStatus.event_count <= 1)
-  )
-  const isRunning = agentStatus && agentStatus.running && !agentStatus.agent_paused && !agentStatus.agent_finished
+  // Determine agent button state using helper functions
+  const canPlay = canPlayAgent(agentStatus)
+  const isRunning = isAgentRunning(agentStatus) && !isAgentFinished(agentStatus)
 
   return (
     <div className="flex items-center justify-between px-4 py-2 bg-gray-800 border-t border-gray-700">
       <div className="flex items-center gap-2">
         <div className={`w-2 h-2 rounded-full ${
-          agentStatus?.running && agentStatus?.thread_alive ? 'bg-neon-green animate-pulse' : 
-          agentStatus?.agent_paused ? 'bg-yellow-400' :
-          agentStatus?.agent_finished ? 'bg-green-400' :
+          isAgentRunning(agentStatus) && agentStatus?.has_active_task ? 'bg-neon-green animate-pulse' : 
+          isAgentPaused(agentStatus) ? 'bg-yellow-400' :
+          isAgentFinished(agentStatus) ? 'bg-green-400' :
           agentStatus?.status === 'error' ? 'bg-red-400' :
           'bg-gray-400'
         }`}></div>
