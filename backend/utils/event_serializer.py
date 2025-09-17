@@ -430,13 +430,14 @@ def _extract_task_list_from_details(details: Dict[str, Any]) -> Optional[str]:
     try:
         # Look for task list in various possible locations in the observation details
         task_list_data = None
-        
+
         # Check common locations where task list might be stored
         if "output" in details:
             output = details["output"]
             # Try to parse JSON output if it looks like task data
             if isinstance(output, str):
                 import json
+
                 try:
                     parsed_output = json.loads(output)
                     if isinstance(parsed_output, dict) and "task_list" in parsed_output:
@@ -450,20 +451,20 @@ def _extract_task_list_from_details(details: Dict[str, Any]) -> Optional[str]:
                         return f"```\n{output}\n```"
             elif isinstance(output, (list, dict)):
                 task_list_data = output
-        
+
         # Check if there's a direct task_list field
         if "task_list" in details:
             task_list_data = details["task_list"]
-        
+
         # Format the task list if we found it
         if task_list_data and isinstance(task_list_data, list):
             return _format_task_list(task_list_data)
         elif task_list_data:
             # If it's not a list, try to format it as is
             return f"```\n{str(task_list_data)}\n```"
-            
+
         return None
-        
+
     except Exception as e:
         logger.error(f"❌ Error extracting task list from details: {e}")
         return None
@@ -474,22 +475,20 @@ def _format_task_list(tasks: list) -> str:
     try:
         if not tasks:
             return "**Current Tasks:** No tasks defined"
-        
+
         formatted_tasks = ["**Current Tasks:**"]
-        
+
         for i, task in enumerate(tasks, 1):
             if isinstance(task, dict):
                 title = task.get("title", f"Task {i}")
                 status = task.get("status", "unknown")
                 notes = task.get("notes", "")
-                
+
                 # Format status with emoji
-                status_emoji = {
-                    "todo": "⏳",
-                    "in_progress": "🔄", 
-                    "done": "✅"
-                }.get(status, "❓")
-                
+                status_emoji = {"todo": "⏳", "in_progress": "🔄", "done": "✅"}.get(
+                    status, "❓"
+                )
+
                 task_line = f"{i}. {status_emoji} **{title}** ({status})"
                 if notes:
                     task_line += f" - {notes}"
@@ -497,9 +496,9 @@ def _format_task_list(tasks: list) -> str:
             else:
                 # Handle simple string tasks
                 formatted_tasks.append(f"{i}. {task}")
-        
+
         return "\n".join(formatted_tasks)
-        
+
     except Exception as e:
         logger.error(f"❌ Error formatting task list: {e}")
         return f"**Current Tasks:** {len(tasks)} tasks (formatting error)"
