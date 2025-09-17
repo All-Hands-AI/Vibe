@@ -337,6 +337,11 @@ def _create_observation_message(tool_name: str, observation_data: Dict, event) -
             elif tool_name == "str_replace_editor":
                 if "content" in details:
                     base_msg += f"\n\nOperation completed"
+            elif tool_name == "task_tracker":
+                # For task tracker, show the current task list
+                task_list = _extract_task_list_from_details(details)
+                if task_list:
+                    base_msg += f"\n\n{task_list}"
 
         return base_msg
 
@@ -418,6 +423,86 @@ def _extract_metrics(event) -> Optional[Dict[str, Any]]:
     except Exception as e:
         logger.error(f"❌ Error extracting metrics: {e}")
         return None
+
+
+def _extract_task_list_from_details(details: Dict[str, Any]) -> Optional[str]:
+    """Extract and format task list from task_tracker observation details."""
+    try:
+        # Look for task list in various possible locations in the observation details
+        task_list_data = None
+        
+        # Check common locations where task list might be stored
+        if "output" in details:
+            output = details["output"]
+            # Try to parse JSON output if it looks like task data
+            if isinstance(output, str):
+                import json
+                try:
+                    parsed_output = json.loads(output)
+                    if isinstance(parsed_output, dict) and "task_list" in parsed_output:
+                        task_list_data = parsed_output["task_list"]
+                    elif isinstance(parsed_output, list):
+                        # Output might be the task list directly
+                        task_list_data = parsed_output
+                except json.JSONDecodeError:
+                    # Not JSON, might be plain text task list
+                    if "task" in output.lower() or "todo" in output.lower():
+                        return f"```\n{output}\n```"
+            elif isinstance(output, (list, dict)):
+                task_list_data = output
+        
+        # Check if there's a direct task_list field
+        if "task_list" in details:
+            task_list_data = details["task_list"]
+        
+        # Format the task list if we found it
+        if task_list_data and isinstance(task_list_data, list):
+            return _format_task_list(task_list_data)
+        elif task_list_data:
+            # If it's not a list, try to format it as is
+            return f"```\n{str(task_list_data)}\n```"
+            
+        return None
+        
+    except Exception as e:
+        logger.error(f"❌ Error extracting task list from details: {e}")
+        return None
+
+
+def _format_task_list(tasks: list) -> str:
+    """Format a task list into a readable markdown format."""
+    try:
+        if not tasks:
+            return "**Current Tasks:** No tasks defined"
+        
+        formatted_tasks = ["**Current Tasks:**"]
+        
+        for i, task in enumerate(tasks, 1):
+            if isinstance(task, dict):
+                title = task.get("title", f"Task {i}")
+                status = task.get("status", "unknown")
+                notes = task.get("notes", "")
+                
+                # Format status with emoji
+                status_emoji = {
+                    "todo": "⏳",
+                    "in_progress": "🔄", 
+                    "done": "✅"
+                }.get(status, "❓")
+                
+                task_line = f"{i}. {status_emoji} **{title}** ({status})"
+                if notes:
+                    task_line += f" - {notes}"
+                formatted_tasks.append(task_line)
+            else:
+                # Handle simple string tasks
+                formatted_tasks.append(f"{i}. {task}")
+        
+        return "\n".join(formatted_tasks)
+        
+    except Exception as e:
+        logger.error(f"❌ Error formatting task list: {e}")
+        return f"**Current Tasks:** {len(tasks)} tasks (formatting error)"
 
 
 def _create_fallback_message(
