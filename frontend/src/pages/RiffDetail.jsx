@@ -580,7 +580,6 @@ function RiffDetail() {
             />
           </div>
         </div>
-        </div>
       </div>
 
       {/* LLM Error Modal */}
