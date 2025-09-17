@@ -1,6 +1,6 @@
 # 🤙 OpenHands Vibe
 
-OpenHands Vibe is an **opinionated vibecoding** framework for **professional developers**.
+OpenHands Vibe is **opinionated vibecoding** for **professional developers**.
 
 ## Stack
 * React for frontend
