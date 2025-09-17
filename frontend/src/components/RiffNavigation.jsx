@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom'
+import PropTypes from 'prop-types'
 
 function RiffNavigation({ appSlug, riffSlug }) {
   return (
@@ -16,6 +17,11 @@ function RiffNavigation({ appSlug, riffSlug }) {
       </div>
     </nav>
   )
+}
+
+RiffNavigation.propTypes = {
+  appSlug: PropTypes.string.isRequired,
+  riffSlug: PropTypes.string.isRequired
 }
 
 export default RiffNavigation

@@ -1,3 +1,5 @@
+import PropTypes from 'prop-types'
+
 function DeploymentStatus({ deploymentStatus, appSlug, riffSlug }) {
   return (
     <div>
@@ -87,6 +89,17 @@ function DeploymentStatus({ deploymentStatus, appSlug, riffSlug }) {
       )}
     </div>
   )
+}
+
+DeploymentStatus.propTypes = {
+  deploymentStatus: PropTypes.shape({
+    status: PropTypes.string,
+    details: PropTypes.shape({
+      workflow_url: PropTypes.string
+    })
+  }),
+  appSlug: PropTypes.string.isRequired,
+  riffSlug: PropTypes.string.isRequired
 }
 
 export default DeploymentStatus

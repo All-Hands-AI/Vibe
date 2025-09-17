@@ -1,3 +1,4 @@
+import PropTypes from 'prop-types'
 import CIStatus from './CIStatus'
 
 function RiffHeader({ riff, prStatus }) {
@@ -43,6 +44,20 @@ function RiffHeader({ riff, prStatus }) {
       </div>
     </header>
   )
+}
+
+RiffHeader.propTypes = {
+  riff: PropTypes.shape({
+    slug: PropTypes.string.isRequired
+  }).isRequired,
+  prStatus: PropTypes.shape({
+    html_url: PropTypes.string,
+    number: PropTypes.number,
+    title: PropTypes.string,
+    draft: PropTypes.bool,
+    commit_hash_short: PropTypes.string,
+    commit_message: PropTypes.string
+  })
 }
 
 export default RiffHeader

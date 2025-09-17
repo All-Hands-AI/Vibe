@@ -1,3 +1,4 @@
+import PropTypes from 'prop-types'
 import ChatWindow from './ChatWindow'
 import RiffNavigation from './RiffNavigation'
 import RiffHeader from './RiffHeader'
@@ -42,6 +43,30 @@ function RiffSidebar({
       </div>
     </div>
   )
+}
+
+RiffSidebar.propTypes = {
+  app: PropTypes.shape({
+    slug: PropTypes.string.isRequired
+  }).isRequired,
+  riff: PropTypes.shape({
+    slug: PropTypes.string.isRequired
+  }).isRequired,
+  prStatus: PropTypes.shape({
+    html_url: PropTypes.string,
+    number: PropTypes.number,
+    title: PropTypes.string,
+    draft: PropTypes.bool,
+    commit_hash_short: PropTypes.string,
+    commit_message: PropTypes.string
+  }),
+  deploymentStatus: PropTypes.shape({
+    status: PropTypes.string,
+    details: PropTypes.shape({
+      workflow_url: PropTypes.string
+    })
+  }),
+  userUUID: PropTypes.string
 }
 
 export default RiffSidebar

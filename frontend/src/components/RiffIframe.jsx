@@ -1,4 +1,5 @@
 import { forwardRef } from 'react'
+import PropTypes from 'prop-types'
 
 const RiffIframe = forwardRef(({ appSlug, riffSlug }, ref) => {
   return (
@@ -17,5 +18,10 @@ const RiffIframe = forwardRef(({ appSlug, riffSlug }, ref) => {
 })
 
 RiffIframe.displayName = 'RiffIframe'
+
+RiffIframe.propTypes = {
+  appSlug: PropTypes.string.isRequired,
+  riffSlug: PropTypes.string.isRequired
+}
 
 export default RiffIframe
