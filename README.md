@@ -6,7 +6,8 @@ OpenHands Vibe is **opinionated vibecoding** for **professional developers**.
 
 OpenHands Vibe is built with
 [OpenHands](https://github.com/All-Hands-AI/OpenHands), a state-of-the-art coding agent,
-using its [agent SDK](https://github.com/All-Hands-AI/agent-sdk/).
+using its [agent SDK](https://github.com/All-Hands-AI/agent-sdk/). And, of course,
+we use OpenHands Vibe to make OpenHands Vibe.
 
 ## Stack
 * React for frontend
