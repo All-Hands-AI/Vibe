@@ -10,13 +10,12 @@ using its [agent SDK](https://github.com/All-Hands-AI/agent-sdk/). And, of cours
 we use OpenHands Vibe to make OpenHands Vibe.
 
 ## Stack
-* React for frontend
-* Python for backend
-* GitHub for source control
-* GitHub Actions for CI/CD
-* Fly.io for deployments
-* Claude for the LLM
-* OpenHands for the agents
+* **GitHub** for source control and CI/CD
+* **Fly.io** for deployments
+* **React** for frontend
+* **Python** for backend
+* **Claude** for inference
+* **OpenHands** for agents
 
 ## Workflow
 When you create a new App, a corresponding GitHub repo will be created as well.
