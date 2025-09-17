@@ -7,22 +7,13 @@ function DeploymentStatus({ deploymentStatus, appSlug, riffSlug }) {
         <div className="flex items-center justify-between mb-1">
           <div className="flex items-center gap-2">
             {deploymentStatus.status === 'pending' && (
-              <>
-                <div className="w-3 h-3 border-2 border-yellow-400 border-t-transparent rounded-full animate-spin"></div>
-                <h3 className="text-sm font-semibold text-yellow-400 font-mono">🚀 Deploying...</h3>
-              </>
+              <h3 className="text-sm font-semibold text-yellow-400 font-mono">🚀 Deploying...</h3>
             )}
             {deploymentStatus.status === 'success' && (
-              <>
-                <div className="w-3 h-3 bg-green-400 rounded-full"></div>
-                <h3 className="text-sm font-semibold text-green-400 font-mono">🚀 Live App</h3>
-              </>
+              <h3 className="text-sm font-semibold text-green-400 font-mono">🚀 Live App</h3>
             )}
             {deploymentStatus.status === 'error' && (
-              <>
-                <div className="w-3 h-3 bg-red-400 rounded-full"></div>
-                <h3 className="text-sm font-semibold text-red-400 font-mono">🚀 Deployment Failed</h3>
-              </>
+              <h3 className="text-sm font-semibold text-red-400 font-mono">🚀 Deployment Failed</h3>
             )}
             <div className="flex items-center gap-3 text-xs">
               {deploymentStatus.details?.workflow_url && (

@@ -118,10 +118,20 @@ const SetupWindow = ({ onSetupComplete }) => {
         <form onSubmit={handleSubmit} className="terminal-content">
           <div className="space-y-6">
             <div>
-              <label htmlFor="anthropic-key" className="flex items-center text-sm font-medium text-cyber-text mb-2 font-mono">
-                <span className="mr-2">🤖</span>
-                Anthropic API Key
-              </label>
+              <div className="flex items-center justify-between mb-2">
+                <label htmlFor="anthropic-key" className="flex items-center text-sm font-medium text-cyber-text font-mono">
+                  <span className="mr-2">🤖</span>
+                  Anthropic API Key
+                </label>
+                <a 
+                  href="https://console.anthropic.com/" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="text-xs text-cyber-muted hover:text-neon-green transition-colors duration-200 font-mono"
+                >
+                  Get API Key
+                </a>
+              </div>
               <div className="relative">
                 <input
                   id="anthropic-key"
@@ -150,10 +160,20 @@ const SetupWindow = ({ onSetupComplete }) => {
             </div>
 
             <div>
-              <label htmlFor="github-key" className="flex items-center text-sm font-medium text-cyber-text mb-2 font-mono">
-                <span className="mr-2">🐙</span>
-                GitHub API Key
-              </label>
+              <div className="flex items-center justify-between mb-2">
+                <label htmlFor="github-key" className="flex items-center text-sm font-medium text-cyber-text font-mono">
+                  <span className="mr-2">🐙</span>
+                  GitHub API Key
+                </label>
+                <a 
+                  href="https://github.com/settings/tokens/new?description=openhands-app&scopes=repo,user,workflow" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="text-xs text-cyber-muted hover:text-neon-green transition-colors duration-200 font-mono"
+                >
+                  Get API Key
+                </a>
+              </div>
               <div className="relative">
                 <input
                   id="github-key"
@@ -182,10 +202,20 @@ const SetupWindow = ({ onSetupComplete }) => {
             </div>
 
             <div>
-              <label htmlFor="fly-key" className="flex items-center text-sm font-medium text-cyber-text mb-2 font-mono">
-                <span className="mr-2">🪰</span>
-                Fly.io API Key
-              </label>
+              <div className="flex items-center justify-between mb-2">
+                <label htmlFor="fly-key" className="flex items-center text-sm font-medium text-cyber-text font-mono">
+                  <span className="mr-2">🪰</span>
+                  Fly.io API Key
+                </label>
+                <a 
+                  href="https://fly.io/user/personal_access_tokens" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="text-xs text-cyber-muted hover:text-neon-green transition-colors duration-200 font-mono"
+                >
+                  Get API Key
+                </a>
+              </div>
               <div className="relative">
                 <input
                   id="fly-key"
@@ -226,42 +256,6 @@ const SetupWindow = ({ onSetupComplete }) => {
             >
               {allKeysValid ? '✨ Continue to OpenVibe' : '🔑 Enter all API keys to continue'}
             </button>
-            
-            <div className="mt-6 text-center">
-              <p className="text-cyber-muted text-sm mb-3 font-mono">Need help getting your API keys?</p>
-              <ul className="space-y-2 text-sm font-mono">
-                <li>
-                  <a 
-                    href="https://console.anthropic.com/" 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="text-cyber-muted hover:text-neon-green transition-colors duration-200"
-                  >
-                    Get Anthropic API Key
-                  </a>
-                </li>
-                <li>
-                  <a 
-                    href="https://github.com/settings/tokens" 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="text-cyber-muted hover:text-neon-green transition-colors duration-200"
-                  >
-                    Get GitHub API Key
-                  </a>
-                </li>
-                <li>
-                  <a 
-                    href="https://fly.io/user/personal_access_tokens" 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="text-cyber-muted hover:text-neon-green transition-colors duration-200"
-                  >
-                    Get Fly.io API Key
-                  </a>
-                </li>
-              </ul>
-            </div>
           </div>
         </form>
       </div>

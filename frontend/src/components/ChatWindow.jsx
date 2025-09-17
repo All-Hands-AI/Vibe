@@ -227,7 +227,7 @@ function ChatWindow({ app, riff, userUuid }) {
   }
 
   return (
-    <div className="h-full max-h-full flex flex-col bg-black border border-gray-700 overflow-hidden">
+    <div className="h-full max-h-full flex flex-col bg-black border-t border-b border-gray-700 overflow-hidden">
       {/* Error Display */}
       {error && (
         <div className="p-3 bg-red-900/20 border-b border-red-500/30 flex-shrink-0">
@@ -259,7 +259,7 @@ function ChatWindow({ app, riff, userUuid }) {
         <MessageInput 
           onSendMessage={sendMessage}
           disabled={sending}
-          placeholder={`Message ${riff.slug}...`}
+          placeholder="What's next?"
         />
       </div>
     </div>
