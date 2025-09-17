@@ -1,6 +1,6 @@
 function DeploymentStatus({ deploymentStatus, appSlug, riffSlug }) {
   return (
-    <div className="mb-4">
+    <div>
       {deploymentStatus ? (
         <div className="flex items-center justify-between mb-1">
           <div className="flex items-center gap-2">
