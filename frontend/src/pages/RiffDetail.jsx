@@ -399,69 +399,69 @@ function RiffDetail() {
     <div className="h-screen bg-black text-cyber-text">
       {/* Main Content - Full Screen Container */}
       <div className="h-full flex flex-col lg:flex-row">
-          {/* Left Sidebar - Navigation, Header, Chat */}
-          <div className="flex-1 lg:w-1/2 flex flex-col min-h-0">
-            {/* Details Section with Padding */}
-            <div className="p-4 flex-shrink-0">
-              {/* Navigation - moved to left column */}
-              <nav className="mb-4">
-                <div className="flex items-center space-x-2 text-sm">
-                  <Link to="/" className="text-cyber-muted hover:text-neon-green transition-colors duration-200">
-                    Apps
-                  </Link>
-                  <span className="text-gray-500">/</span>
-                  <Link to={`/apps/${app.slug}`} className="text-cyber-muted hover:text-neon-green transition-colors duration-200">
-                    {app.slug}
-                  </Link>
-                  <span className="text-gray-500">/</span>
-                  <span className="text-cyber-muted">{riff.slug}</span>
-                </div>
-              </nav>
+        {/* Left Sidebar - Navigation, Header, Chat */}
+        <div className="flex-1 lg:w-1/2 flex flex-col min-h-0">
+          {/* Details Section with Padding */}
+          <div className="p-4 flex-shrink-0">
+            {/* Navigation - moved to left column */}
+            <nav className="mb-4">
+              <div className="flex items-center space-x-2 text-sm">
+                <Link to="/" className="text-cyber-muted hover:text-neon-green transition-colors duration-200">
+                  Apps
+                </Link>
+                <span className="text-gray-500">/</span>
+                <Link to={`/apps/${app.slug}`} className="text-cyber-muted hover:text-neon-green transition-colors duration-200">
+                  {app.slug}
+                </Link>
+                <span className="text-gray-500">/</span>
+                <span className="text-cyber-muted">{riff.slug}</span>
+              </div>
+            </nav>
 
-              {/* Riff Header - moved to left column */}
-              <header className="mb-4">
-                <div className="mb-4">
-                  <h1 className="text-3xl font-bold text-cyber-text font-mono mb-2">{riff.slug}</h1>
-                  {/* PR Status Subheading */}
-                  {prStatus && (
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-3 text-sm font-mono">
-                        <a
-                          href={prStatus.html_url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-blue-400 hover:text-blue-300 transition-colors duration-200"
-                        >
-                          #{prStatus.number} {prStatus.title}
-                        </a>
-                        <span className={`${prStatus.draft ? 'text-gray-400' : 'text-green-400'}`}>
-                          {prStatus.draft ? '📝 Draft' : '🟢 Ready'}
-                        </span>
-                        {/* CI Status */}
-                        <CIStatus prStatus={prStatus} />
-                      </div>
-                      {/* Commit Info */}
-                      {(prStatus.commit_hash_short || prStatus.commit_message) && (
-                        <div className="flex items-center gap-2 text-xs font-mono text-gray-400">
-                          {prStatus.commit_hash_short && (
-                            <span className="bg-gray-800 px-2 py-1 rounded text-gray-300">
-                              {prStatus.commit_hash_short}
-                            </span>
-                          )}
-                          {prStatus.commit_message && (
-                            <span className="truncate max-w-md" title={prStatus.commit_message}>
-                              {prStatus.commit_message}
-                            </span>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-              </header>
-
-              {/* Deployment Status Banner - moved to left column */}
+            {/* Riff Header - moved to left column */}
+            <header className="mb-4">
               <div className="mb-4">
+                <h1 className="text-3xl font-bold text-cyber-text font-mono mb-2">{riff.slug}</h1>
+                {/* PR Status Subheading */}
+                {prStatus && (
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-3 text-sm font-mono">
+                      <a
+                        href={prStatus.html_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-400 hover:text-blue-300 transition-colors duration-200"
+                      >
+                        #{prStatus.number} {prStatus.title}
+                      </a>
+                      <span className={`${prStatus.draft ? 'text-gray-400' : 'text-green-400'}`}>
+                        {prStatus.draft ? '📝 Draft' : '🟢 Ready'}
+                      </span>
+                      {/* CI Status */}
+                      <CIStatus prStatus={prStatus} />
+                    </div>
+                    {/* Commit Info */}
+                    {(prStatus.commit_hash_short || prStatus.commit_message) && (
+                      <div className="flex items-center gap-2 text-xs font-mono text-gray-400">
+                        {prStatus.commit_hash_short && (
+                          <span className="bg-gray-800 px-2 py-1 rounded text-gray-300">
+                            {prStatus.commit_hash_short}
+                          </span>
+                        )}
+                        {prStatus.commit_message && (
+                          <span className="truncate max-w-md" title={prStatus.commit_message}>
+                            {prStatus.commit_message}
+                          </span>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            </header>
+
+            {/* Deployment Status Banner - moved to left column */}
+            <div className="mb-4">
               {deploymentStatus ? (
                 <div className="flex items-center justify-between mb-1">
                   <div className="flex items-center gap-2">
@@ -546,40 +546,40 @@ function RiffDetail() {
                   </a>
                 </div>
               )}
-              </div>
-            </div>
-
-            {/* Chat Window - Flexible Height */}
-            <div className="flex-1 min-h-0">
-              {userUUID ? (
-                <ChatWindow 
-                  app={app} 
-                  riff={riff} 
-                  userUuid={userUUID} 
-                />
-              ) : (
-                <div className="flex items-center justify-center h-full">
-                  <div className="text-center">
-                    <div className="w-8 h-8 border-4 border-gray-600 border-t-cyber-muted rounded-full animate-spin mx-auto mb-4"></div>
-                    <p className="text-cyber-muted">Initializing chat...</p>
-                  </div>
-                </div>
-              )}
             </div>
           </div>
 
-          {/* Right Side - Full Height Iframe */}
-          <div className="flex-1 lg:w-1/2 min-h-0">
-            <div className="h-full overflow-hidden">
-              <iframe
-                ref={iframeRef}
-                src={`https://${app.slug}-${riff.slug}.fly.dev`}
-                className="w-full h-full"
-                title="Live App Preview"
-                sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox"
+          {/* Chat Window - Flexible Height */}
+          <div className="flex-1 min-h-0">
+            {userUUID ? (
+              <ChatWindow 
+                app={app} 
+                riff={riff} 
+                userUuid={userUUID} 
               />
-            </div>
+            ) : (
+              <div className="flex items-center justify-center h-full">
+                <div className="text-center">
+                  <div className="w-8 h-8 border-4 border-gray-600 border-t-cyber-muted rounded-full animate-spin mx-auto mb-4"></div>
+                  <p className="text-cyber-muted">Initializing chat...</p>
+                </div>
+              </div>
+            )}
           </div>
+        </div>
+
+        {/* Right Side - Full Height Iframe */}
+        <div className="flex-1 lg:w-1/2 min-h-0">
+          <div className="h-full overflow-hidden">
+            <iframe
+              ref={iframeRef}
+              src={`https://${app.slug}-${riff.slug}.fly.dev`}
+              className="w-full h-full"
+              title="Live App Preview"
+              sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox"
+            />
+          </div>
+        </div>
         </div>
       </div>
 
