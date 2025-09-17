@@ -2,10 +2,10 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { useParams, Link, useLocation } from 'react-router-dom'
 import { useSetup } from '../context/SetupContext'
 import { getUserUUID } from '../utils/uuid'
-import ChatWindow from '../components/ChatWindow'
 import LLMErrorModal from '../components/LLMErrorModal'
 import FirstRiffModal from '../components/FirstRiffModal'
-import CIStatus from '../components/CIStatus'
+import RiffSidebar from '../components/RiffSidebar'
+import RiffIframe from '../components/RiffIframe'
 import { startLLMPolling, checkLLMReady } from '../utils/llmService'
 import { useDocumentTitle, formatPageTitle } from '../utils/useDocumentTitle'
 
@@ -30,7 +30,7 @@ function RiffDetail() {
   const iframeRef = useRef(null)
   
   // Set page title
-  useDocumentTitle(formatPageTitle('riff', app?.name, riff?.name))
+  useDocumentTitle(formatPageTitle('riff', app?.slug, riff?.slug))
 
   // Fetch app and riff details
   const fetchData = useCallback(async () => {
@@ -358,8 +358,8 @@ function RiffDetail() {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-black text-cyber-text">
-        <div className="max-w-4xl mx-auto px-8 py-16">
+      <div className="h-screen bg-black text-cyber-text">
+        <div className="h-full flex items-center justify-center p-4">
           <div className="text-center">
             <h2 className="text-3xl font-bold text-red-400 mb-4">Error</h2>
             <p className="text-cyber-muted mb-8">{error}</p>
@@ -381,8 +381,8 @@ function RiffDetail() {
 
   if (!app || !riff) {
     return (
-      <div className="min-h-screen bg-black text-cyber-text">
-        <div className="max-w-4xl mx-auto px-8 py-16">
+      <div className="h-screen bg-black text-cyber-text">
+        <div className="h-full flex items-center justify-center p-4">
           <div className="text-center">
             <h2 className="text-3xl font-bold text-red-400 mb-4">Not Found</h2>
             <p className="text-cyber-muted mb-8">The riff could not be found.</p>
@@ -396,194 +396,21 @@ function RiffDetail() {
   }
 
   return (
-    <div className="min-h-screen bg-black text-cyber-text">
-      <div className="max-w-7xl mx-auto px-6 py-6">
-        {/* Navigation */}
-        <nav className="mb-4">
-          <div className="flex items-center space-x-2 text-sm">
-            <Link to="/" className="text-cyber-muted hover:text-neon-green transition-colors duration-200">
-              Apps
-            </Link>
-            <span className="text-gray-500">/</span>
-            <Link to={`/apps/${app.slug}`} className="text-cyber-muted hover:text-neon-green transition-colors duration-200">
-              {app.slug}
-            </Link>
-            <span className="text-gray-500">/</span>
-            <span className="text-cyber-muted">{riff.slug}</span>
-          </div>
-        </nav>
-
-        {/* Riff Header */}
-        <header className="mb-4">
-          <div className="flex flex-wrap items-baseline justify-between gap-4 mb-4">
-            <div>
-              <h1 className="text-3xl font-bold text-cyber-text font-mono mb-2">{riff.slug}</h1>
-              {/* PR Status Subheading */}
-              {prStatus && (
-                <div className="space-y-1">
-                  <div className="flex items-center gap-3 text-sm font-mono">
-                    <a
-                      href={prStatus.html_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-blue-400 hover:text-blue-300 transition-colors duration-200"
-                    >
-                      #{prStatus.number} {prStatus.title}
-                    </a>
-                    <span className={`${prStatus.draft ? 'text-gray-400' : 'text-green-400'}`}>
-                      {prStatus.draft ? '📝 Draft' : '🟢 Ready'}
-                    </span>
-                    {/* CI Status */}
-                    <CIStatus prStatus={prStatus} />
-                  </div>
-                  {/* Commit Info */}
-                  {(prStatus.commit_hash_short || prStatus.commit_message) && (
-                    <div className="flex items-center gap-2 text-xs font-mono text-gray-400">
-                      {prStatus.commit_hash_short && (
-                        <span className="bg-gray-800 px-2 py-1 rounded text-gray-300">
-                          {prStatus.commit_hash_short}
-                        </span>
-                      )}
-                      {prStatus.commit_message && (
-                        <span className="truncate max-w-md" title={prStatus.commit_message}>
-                          {prStatus.commit_message}
-                        </span>
-                      )}
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-            <p className="text-cyber-muted font-mono text-sm">
-              Created {new Date(riff.created_at).toLocaleDateString()}
-            </p>
-          </div>
-        </header>
-
-        {/* Main Content - Fixed Height Container */}
-        <div className="h-[calc(100vh-200px)] flex flex-col lg:flex-row gap-6">
-          {/* Left Sidebar - Chat */}
-          <div className="flex-1 lg:w-1/2 flex flex-col min-h-0">
-            {/* Chat Window - Fixed Height */}
-            <div className="h-full">
-              {userUUID ? (
-                <ChatWindow 
-                  app={app} 
-                  riff={riff} 
-                  userUuid={userUUID} 
-                />
-              ) : (
-                <div className="flex items-center justify-center h-full border border-gray-700 rounded-lg">
-                  <div className="text-center">
-                    <div className="w-8 h-8 border-4 border-gray-600 border-t-cyber-muted rounded-full animate-spin mx-auto mb-4"></div>
-                    <p className="text-cyber-muted">Initializing chat...</p>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Right Side - Iframe */}
-          <div className="flex-1 lg:w-1/2 flex flex-col min-h-0">
-            {/* Deployment Status Header */}
-            <div className="mb-2">
-              {deploymentStatus ? (
-                <div className="flex items-center justify-between mb-1">
-                  <div className="flex items-center gap-2">
-                    {deploymentStatus.status === 'pending' && (
-                      <>
-                        <div className="w-3 h-3 border-2 border-yellow-400 border-t-transparent rounded-full animate-spin"></div>
-                        <h3 className="text-sm font-semibold text-yellow-400 font-mono">🚀 Deploying...</h3>
-                      </>
-                    )}
-                    {deploymentStatus.status === 'success' && (
-                      <>
-                        <div className="w-3 h-3 bg-green-400 rounded-full"></div>
-                        <h3 className="text-sm font-semibold text-green-400 font-mono">🚀 Live App</h3>
-                      </>
-                    )}
-                    {deploymentStatus.status === 'error' && (
-                      <>
-                        <div className="w-3 h-3 bg-red-400 rounded-full"></div>
-                        <h3 className="text-sm font-semibold text-red-400 font-mono">🚀 Deployment Failed</h3>
-                      </>
-                    )}
-                    <div className="flex items-center gap-3 text-xs">
-                      {deploymentStatus.details?.workflow_url && (
-                        <a
-                          href={deploymentStatus.details.workflow_url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-cyber-muted hover:text-blue-400 font-mono transition-colors duration-200 underline"
-                        >
-                          GitHub
-                        </a>
-                      )}
-                      <a
-                        href={`https://fly.io/apps/${app.slug}-${riff.slug}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-cyber-muted hover:text-blue-400 font-mono transition-colors duration-200 underline"
-                      >
-                        Fly.io
-                      </a>
-                    </div>
-                  </div>
-                  <a
-                    href={`https://${app.slug}-${riff.slug}.fly.dev`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-cyber-muted hover:text-blue-400 font-mono text-xs transition-colors duration-200 underline"
-                  >
-                    {app.slug}-{riff.slug}.fly.dev
-                  </a>
-                </div>
-              ) : (
-                <div className="flex items-center justify-between mb-1">
-                  <div className="flex items-center gap-2">
-                    <h3 className="text-sm font-semibold text-cyber-text font-mono">🚀 Live App</h3>
-                    <div className="flex items-center gap-3 text-xs">
-                      <a
-                        href="https://github.com/rbren/OpenVibe/actions"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-cyber-muted hover:text-blue-400 font-mono transition-colors duration-200 underline"
-                      >
-                        GitHub
-                      </a>
-                      <a
-                        href={`https://fly.io/apps/${app.slug}-${riff.slug}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-cyber-muted hover:text-blue-400 font-mono transition-colors duration-200 underline"
-                      >
-                        Fly.io
-                      </a>
-                    </div>
-                  </div>
-                  <a
-                    href={`https://${app.slug}-${riff.slug}.fly.dev`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-cyber-muted hover:text-blue-400 font-mono text-xs transition-colors duration-200 underline"
-                  >
-                    {app.slug}-{riff.slug}.fly.dev
-                  </a>
-                </div>
-              )}
-            </div>
-            
-            <div className="flex-1 border border-gray-700 rounded-lg overflow-hidden">
-              <iframe
-                ref={iframeRef}
-                src={`https://${app.slug}-${riff.slug}.fly.dev`}
-                className="w-full h-full"
-                title="Live App Preview"
-                sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox"
-              />
-            </div>
-          </div>
-        </div>
+    <div className="h-screen bg-black text-cyber-text">
+      {/* Main Content - Full Screen Container */}
+      <div className="h-full flex flex-col lg:flex-row">
+        <RiffSidebar 
+          app={app}
+          riff={riff}
+          prStatus={prStatus}
+          deploymentStatus={deploymentStatus}
+          userUUID={userUUID}
+        />
+        <RiffIframe 
+          ref={iframeRef}
+          appSlug={app.slug}
+          riffSlug={riff.slug}
+        />
       </div>
 
       {/* LLM Error Modal */}

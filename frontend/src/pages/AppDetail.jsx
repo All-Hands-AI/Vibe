@@ -26,7 +26,7 @@ function AppDetail() {
   })
   
   // Set page title
-  useDocumentTitle(formatPageTitle('app', app?.name))
+  useDocumentTitle(formatPageTitle('app', app?.slug))
 
   // Format relative time (e.g., "5m ago", "2h ago", "3d ago")
   const formatRelativeTime = (dateString) => {
