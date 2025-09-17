@@ -2,6 +2,8 @@
 
 OpenHands Vibe is **opinionated vibecoding** for **professional developers**.
 
+![screenshot](screenshot.png)
+
 ## Stack
 * React for frontend
 * Python for backend
