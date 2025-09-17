@@ -1,6 +1,6 @@
 # 🤙 OpenHands Vibe
 
-OpenHands Vibe is an extremely opinionated vibecoding framework, oriented towards professional developers.
+OpenHands Vibe is an **opinionated vibecoding** framework for **professional developers**.
 
 ## Stack
 * React for frontend
@@ -12,11 +12,13 @@ OpenHands Vibe is an extremely opinionated vibecoding framework, oriented toward
 * OpenHands for the agents
 
 ## Workflow
-When you create a new App, a corresponding GitHub repo will be created as well. It will start from the [template repo](https://github.com/rbren/openvibe-template)
+When you create a new App, a corresponding GitHub repo will be created as well.
+It will start from the [template repo](https://github.com/rbren/openvibe-template), which contains a hello world React + Python app,
+plus a standardized dev setup.
 
-Your first Riff (a change to the app) will be created automatically. It will do some renaming and bootstrapping from the default template.
-Once the agent has finished and pushed its work, you should be able to see a hello world app running inside the Riff! You can go ahead and merge
-that PR.
+Your first Riff (a change to the app) will be created automatically. It will make some required edits to the default template.
+Once the agent has finished and pushed its work, you should be able to see a hello world app running inside the Riff!
+You can go ahead and merge that PR.
 
 Create a new Riff for every change you want to make. Preview the change on fly.io, and examine the code changes on GitHub.
 Once you're happy, merge and start a new Riff!
