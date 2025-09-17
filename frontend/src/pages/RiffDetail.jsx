@@ -358,8 +358,8 @@ function RiffDetail() {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-black text-cyber-text">
-        <div className="max-w-4xl mx-auto px-8 py-16">
+      <div className="h-screen bg-black text-cyber-text">
+        <div className="h-full flex items-center justify-center p-4">
           <div className="text-center">
             <h2 className="text-3xl font-bold text-red-400 mb-4">Error</h2>
             <p className="text-cyber-muted mb-8">{error}</p>
@@ -381,8 +381,8 @@ function RiffDetail() {
 
   if (!app || !riff) {
     return (
-      <div className="min-h-screen bg-black text-cyber-text">
-        <div className="max-w-4xl mx-auto px-8 py-16">
+      <div className="h-screen bg-black text-cyber-text">
+        <div className="h-full flex items-center justify-center p-4">
           <div className="text-center">
             <h2 className="text-3xl font-bold text-red-400 mb-4">Not Found</h2>
             <p className="text-cyber-muted mb-8">The riff could not be found.</p>
