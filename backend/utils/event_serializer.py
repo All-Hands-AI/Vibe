@@ -373,11 +373,11 @@ def _safe_extract_observation_details(observation) -> Dict[str, Any]:
     try:
         details = {}
         # Common observation attributes to extract
-        for attr in ["output", "exit_code", "content", "error", "success"]:
+        for attr in ["output", "exit_code", "content", "error", "success", "task_list"]:
             if hasattr(observation, attr):
                 value = getattr(observation, attr)
-                # Truncate very long strings
-                if isinstance(value, str) and len(value) > 1000:
+                # Truncate very long strings (but not task_list)
+                if isinstance(value, str) and len(value) > 1000 and attr != "task_list":
                     value = value[:1000] + "... (truncated)"
                 details[attr] = value
 
@@ -431,8 +431,13 @@ def _extract_task_list_from_details(details: Dict[str, Any]) -> Optional[str]:
         # Look for task list in various possible locations in the observation details
         task_list_data = None
 
-        # Check common locations where task list might be stored
-        if "output" in details:
+        # First priority: Check if there's a direct task_list field (from TaskTrackerObservation)
+        if "task_list" in details:
+            task_list_data = details["task_list"]
+            logger.info(f"📋 Found task_list in observation details: {task_list_data}")
+
+        # Second priority: Check common locations where task list might be stored
+        elif "output" in details:
             output = details["output"]
             # Try to parse JSON output if it looks like task data
             if isinstance(output, str):
@@ -452,12 +457,8 @@ def _extract_task_list_from_details(details: Dict[str, Any]) -> Optional[str]:
             elif isinstance(output, (list, dict)):
                 task_list_data = output
 
-        # Check if there's a direct task_list field
-        if "task_list" in details:
-            task_list_data = details["task_list"]
-
         # Format the task list if we found it
-        if task_list_data and isinstance(task_list_data, list):
+        if task_list_data is not None and isinstance(task_list_data, list):
             return _format_task_list(task_list_data)
         elif task_list_data:
             # If it's not a list, try to format it as is
@@ -483,19 +484,31 @@ def _format_task_list(tasks: list) -> str:
                 title = task.get("title", f"Task {i}")
                 status = task.get("status", "unknown")
                 notes = task.get("notes", "")
-
-                # Format status with emoji
-                status_emoji = {"todo": "⏳", "in_progress": "🔄", "done": "✅"}.get(
-                    status, "❓"
-                )
-
-                task_line = f"{i}. {status_emoji} **{title}** ({status})"
-                if notes:
-                    task_line += f" - {notes}"
-                formatted_tasks.append(task_line)
+            elif hasattr(task, "model_dump"):
+                # Handle TaskItem objects from openhands.tools.task_tracker
+                task_dict = task.model_dump()
+                title = task_dict.get("title", f"Task {i}")
+                status = task_dict.get("status", "unknown")
+                notes = task_dict.get("notes", "")
+            elif hasattr(task, "title"):
+                # Handle objects with direct attributes
+                title = getattr(task, "title", f"Task {i}")
+                status = getattr(task, "status", "unknown")
+                notes = getattr(task, "notes", "")
             else:
-                # Handle simple string tasks
+                # Handle simple string tasks or unknown objects
                 formatted_tasks.append(f"{i}. {task}")
+                continue
+
+            # Format status with emoji
+            status_emoji = {"todo": "⏳", "in_progress": "🔄", "done": "✅"}.get(
+                status, "❓"
+            )
+
+            task_line = f"{i}. {status_emoji} **{title}** ({status})"
+            if notes:
+                task_line += f" - {notes}"
+            formatted_tasks.append(task_line)
 
         return "\n".join(formatted_tasks)
 
