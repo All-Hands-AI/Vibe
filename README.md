@@ -43,7 +43,7 @@ OpenHands Vibe uses a hybrid approach for running agents:
 
 #### Environment Variables
 
-- `AGENT_SERVER_IMAGE`: Docker image for agent containers (default: `ghcr.io/all-hands-ai/agent-server:v1.0.0_nikolaik_s_python-nodejs_tag_python3.12-nodejs22`)
+- `AGENT_SERVER_IMAGE`: Docker image for agent containers (default: `ghcr.io/all-hands-ai/agent-server:ea72d20@sha256:39c72c4796bb30f8d08d4cefbe3aa48b49f96c26eae6e7d79c4a8190fd10865f`)
 - `AGENT_SERVER_URL`: URL for remote agent server (default: `https://agent-server.all-hands.dev`)
 - `FORCE_REMOTE_AGENT`: Set to `true` to force remote mode even when Docker is available
 - `DOCKER_HOST`: Docker daemon socket (default: `unix:///var/run/docker.sock`)

@@ -30,7 +30,7 @@ logger = get_logger(__name__)
 # Docker image to use for agent server - configurable via environment variable
 AGENT_SERVER_IMAGE = os.getenv(
     "AGENT_SERVER_IMAGE", 
-    "ghcr.io/all-hands-ai/agent-server:v1.0.0_nikolaik_s_python-nodejs_tag_python3.12-nodejs22"
+    "ghcr.io/all-hands-ai/agent-server:ea72d20@sha256:39c72c4796bb30f8d08d4cefbe3aa48b49f96c26eae6e7d79c4a8190fd10865f"
 )
 CONTAINER_PORT = 8000
 CONTAINER_TIMEOUT = 300  # 5 minutes timeout for container operations
