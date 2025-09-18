@@ -32,6 +32,10 @@ AGENT_SERVER_IMAGE = os.getenv(
     "AGENT_SERVER_IMAGE", 
     "ghcr.io/all-hands-ai/agent-server:ea72d20@sha256:39c72c4796bb30f8d08d4cefbe3aa48b49f96c26eae6e7d79c4a8190fd10865f"
 )
+
+# Debug logging to see what image is being used
+logger.info(f"🔧 Docker agent loop initialized with image: {AGENT_SERVER_IMAGE}")
+logger.info(f"🔧 AGENT_SERVER_IMAGE env var: {os.getenv('AGENT_SERVER_IMAGE', 'NOT SET')}")
 CONTAINER_PORT = 8000
 CONTAINER_TIMEOUT = 300  # 5 minutes timeout for container operations
 
