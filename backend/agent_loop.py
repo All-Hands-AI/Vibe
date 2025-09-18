@@ -82,6 +82,47 @@ def create_env_provider(user_uuid: str) -> Callable[[str], Dict[str, str]]:
     return env_provider
 
 
+def create_env_masker(user_uuid: str) -> Callable[[str], str]:
+    """Create an environment masker that hides sensitive credentials in logs and outputs."""
+
+    def env_masker(text: str) -> str:
+        """Mask sensitive environment variables in text output."""
+        if not text:
+            return text
+
+        masked_text = text
+
+        try:
+            # Get user storage and retrieve secrets to know what to mask
+            keys_storage = get_keys_storage(user_uuid)
+            user_keys = keys_storage.load_keys()
+
+            # Mask GitHub token if it exists
+            if user_keys.get("github"):
+                github_token = user_keys["github"]
+                if github_token and len(github_token) > 8:
+                    # Show first 4 and last 4 characters, mask the middle
+                    masked_token = f"{github_token[:4]}{'*' * (len(github_token) - 8)}{github_token[-4:]}"
+                    masked_text = masked_text.replace(github_token, masked_token)
+
+            # Mask Fly token if it exists
+            if user_keys.get("fly"):
+                fly_token = user_keys["fly"]
+                if fly_token and len(fly_token) > 8:
+                    # Show first 4 and last 4 characters, mask the middle
+                    masked_token = (
+                        f"{fly_token[:4]}{'*' * (len(fly_token) - 8)}{fly_token[-4:]}"
+                    )
+                    masked_text = masked_text.replace(fly_token, masked_token)
+
+        except Exception as e:
+            logger.debug(f"⚠️ Failed to mask credentials for user {user_uuid}: {e}")
+
+        return masked_text
+
+    return env_masker
+
+
 def create_tools_with_validation(workspace_path: str, user_uuid: str) -> list:
     """Create tools with proper path validation and setup, including user secrets."""
     tools = []
@@ -115,11 +156,16 @@ def create_tools_with_validation(workspace_path: str, user_uuid: str) -> list:
 
         # BashTool - work in project directory with user secrets as environment variables
         env_provider = create_env_provider(user_uuid)
+        env_masker = create_env_masker(user_uuid)
         tools.append(
-            BashTool.create(working_dir=project_dir, env_provider=env_provider)
+            BashTool.create(
+                working_dir=project_dir,
+                env_provider=env_provider,
+                env_masker=env_masker,
+            )
         )
         logger.info(
-            f"✅ Created BashTool with working_dir: {project_dir} and secrets environment"
+            f"✅ Created BashTool with working_dir: {project_dir}, secrets environment, and credential masking"
         )
 
     except Exception as e:

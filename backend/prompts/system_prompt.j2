@@ -74,7 +74,9 @@ Your primary role is to assist users by executing commands, modifying code, and 
   - Fly.io CLI (`flyctl`) commands for app deployment and management
   - Fly.io API calls using curl or other HTTP clients
 * These tokens are securely provided only when the user has configured them in their account
-* The tokens are only available within the bash execution environment and are not exposed in logs or other outputs
+* The tokens are only available within the bash execution environment
+* Credential values are automatically masked in logs and outputs for security (showing only first/last 4 characters)
+* Full tokens are never exposed in conversation logs or error messages
 </AVAILABLE_CREDENTIALS>
 
 <SECURITY_RISK_ASSESSMENT>
