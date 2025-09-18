@@ -10,6 +10,8 @@ app = 'openvibe'
 primary_region = 'ewr'
 
 [build]
+  [build.args]
+    AGENT_SERVER_IMAGE = "ghcr.io/all-hands-ai/agent-server:ea72d20@sha256:39c72c4796bb30f8d08d4cefbe3aa48b49f96c26eae6e7d79c4a8190fd10865f"
 
 [http_service]
   internal_port = 80

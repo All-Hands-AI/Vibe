@@ -136,6 +136,28 @@ RUN echo "=== Verifying Development Tools ===" && \
 # Create data directory for persistent storage
 RUN mkdir -p /data && chown -R www-data:www-data /data
 
+# Pre-pull the agent server image during build to avoid runtime delays
+# This requires starting Docker daemon temporarily during build
+ARG AGENT_SERVER_IMAGE=ghcr.io/all-hands-ai/agent-server:ea72d20@sha256:39c72c4796bb30f8d08d4cefbe3aa48b49f96c26eae6e7d79c4a8190fd10865f
+RUN echo "📥 Pre-pulling agent server image during build: ${AGENT_SERVER_IMAGE}" && \
+    # Start Docker daemon in background
+    dockerd --host=unix:///var/run/docker.sock --storage-driver=vfs --iptables=false --bridge=none > /tmp/dockerd-build.log 2>&1 & \
+    # Wait for Docker to be ready
+    timeout=30; while [ $timeout -gt 0 ] && ! docker info >/dev/null 2>&1; do sleep 1; timeout=$((timeout-1)); done && \
+    # Pull the image
+    if docker info >/dev/null 2>&1; then \
+        echo "✅ Docker daemon ready, pulling image..." && \
+        docker pull ${AGENT_SERVER_IMAGE} && \
+        echo "✅ Successfully pre-pulled ${AGENT_SERVER_IMAGE}" || \
+        echo "⚠️ Failed to pull image, will pull at runtime"; \
+    else \
+        echo "⚠️ Docker daemon not ready, will pull at runtime"; \
+    fi && \
+    # Stop Docker daemon
+    pkill -f dockerd || true && \
+    # Clean up
+    rm -f /tmp/dockerd-build.log
+
 # Copy nginx configuration
 COPY nginx.conf /etc/nginx/sites-available/default
 
