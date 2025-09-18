@@ -140,7 +140,7 @@ describe('RiffDetail Height Constraints Integration', () => {
     })
 
     // Check that the main container has proper height constraint
-    const mainContainer = container.querySelector('.h-\\[calc\\(100vh-200px\\)\\]')
+    const mainContainer = container.querySelector('.h-full.flex.flex-col.lg\\:flex-row')
     expect(mainContainer).toBeInTheDocument()
     expect(mainContainer).toHaveClass('flex', 'flex-col', 'lg:flex-row')
 
@@ -219,11 +219,11 @@ describe('RiffDetail Height Constraints Integration', () => {
     })
 
     // Should have row layout on large screens
-    const mainContainer = container.querySelector('.h-\\[calc\\(100vh-200px\\)\\]')
+    const mainContainer = container.querySelector('.h-full.flex.flex-col.lg\\:flex-row')
     expect(mainContainer).toHaveClass('lg:flex-row')
 
     // Height constraint should still apply
-    expect(mainContainer).toHaveClass('h-[calc(100vh-200px)]')
+    expect(mainContainer).toHaveClass('h-full')
 
     // Chat should still maintain proper structure
     const chatWindow = screen.getByTestId('chat-window')
@@ -274,7 +274,7 @@ describe('RiffDetail Height Constraints Integration', () => {
     })
 
     // Error container should have proper height
-    const errorContainer = screen.getByText('Error').closest('.min-h-screen')
+    const errorContainer = screen.getByText('Error').closest('.h-screen')
     expect(errorContainer).toBeInTheDocument()
   })
 
@@ -296,7 +296,7 @@ describe('RiffDetail Height Constraints Integration', () => {
     })
 
     // Should have flexbox layout
-    const mainContainer = container.querySelector('.h-\\[calc\\(100vh-200px\\)\\]')
+    const mainContainer = container.querySelector('.h-full.flex.flex-col.lg\\:flex-row')
     expect(mainContainer).toBeInTheDocument()
     expect(mainContainer).toHaveClass('flex', 'flex-col', 'lg:flex-row')
 
@@ -310,7 +310,7 @@ describe('RiffDetail Height Constraints Integration', () => {
     expect(chatColumn).toBeInTheDocument()
 
     // Container should constrain height
-    expect(mainContainer).toHaveClass('h-[calc(100vh-200px)]')
+    expect(mainContainer).toHaveClass('h-full')
   })
 
   it('should handle dynamic content changes while maintaining height constraints', async () => {
@@ -364,8 +364,8 @@ describe('RiffDetail Height Constraints Integration', () => {
     })
 
     // Should maintain height constraints regardless of deployment status
-    const mainContainer = container.querySelector('.h-\\[calc\\(100vh-200px\\)\\]')
-    expect(mainContainer).toHaveClass('h-[calc(100vh-200px)]')
+    const mainContainer = container.querySelector('.h-full.flex.flex-col.lg\\:flex-row')
+    expect(mainContainer).toHaveClass('h-full')
 
     const chatWindow = screen.getByTestId('chat-window')
     expect(chatWindow).toHaveClass('h-full')

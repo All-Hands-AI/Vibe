@@ -98,7 +98,7 @@ function AgentStatusBar({ appSlug, riffSlug }) {
   const isRunning = isAgentRunning(agentStatus) && !isAgentFinished(agentStatus)
 
   return (
-    <div className="flex items-center justify-between px-4 py-2 bg-gray-800 border-t border-gray-700">
+    <div className="flex items-center justify-between px-4 py-2 bg-gray-800">
       <div className="flex items-center gap-2">
         <div className={`w-2 h-2 rounded-full ${
           isAgentRunning(agentStatus) && agentStatus?.has_active_task ? 'bg-neon-green animate-pulse' : 

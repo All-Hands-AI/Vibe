@@ -25,7 +25,7 @@ function AppDetail() {
   })
   
   // Set page title
-  useDocumentTitle(formatPageTitle('app', app?.name))
+  useDocumentTitle(formatPageTitle('app', app?.slug))
 
 
 
