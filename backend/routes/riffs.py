@@ -5,7 +5,7 @@ import sys
 import traceback
 from datetime import datetime, timezone
 from storage import get_riffs_storage, get_apps_storage
-from docker_agent_loop import docker_agent_loop_manager
+from hybrid_agent_loop import hybrid_agent_loop_manager
 from keys import get_user_key, load_user_keys
 from utils.repository import setup_riff_workspace
 from utils.event_serializer import serialize_agent_event_to_message
@@ -154,7 +154,7 @@ def reconstruct_agent_from_state(user_uuid, app_slug, riff_slug):
             logger.info(
                 f"🔧 Creating DockerAgentLoop with key: {user_uuid[:8]}:{app_slug}:{riff_slug}"
             )
-            agent_loop = docker_agent_loop_manager.create_agent_loop(
+            agent_loop = hybrid_agent_loop_manager.create_agent_loop(
                 user_uuid, app_slug, riff_slug, api_key, model, workspace_path, message_callback
             )
             logger.info(f"🤖 Created DockerAgentLoop for riff: {riff_slug}")
@@ -279,7 +279,7 @@ def create_agent_for_user(user_uuid, app_slug, riff_slug, send_initial_message=F
             logger.info(
                 f"🔧 Creating DockerAgentLoop with key: {user_uuid[:8]}:{app_slug}:{riff_slug}"
             )
-            agent_loop = docker_agent_loop_manager.create_agent_loop(
+            agent_loop = hybrid_agent_loop_manager.create_agent_loop(
                 user_uuid, app_slug, riff_slug, api_key, model, workspace_path, message_callback
             )
             logger.info(f"🤖 Created DockerAgentLoop for riff: {riff_slug}")
@@ -725,10 +725,10 @@ def create_message(slug):
             )
 
             # Debug: Show all available agent loops
-            stats = docker_agent_loop_manager.get_stats()
+            stats = hybrid_agent_loop_manager.get_stats()
             logger.debug(f"📊 Current DockerAgentLoop stats: {stats}")
 
-            agent_loop = docker_docker_agent_loop_manager.get_agent_loop(user_uuid, slug, riff_slug)
+            agent_loop = docker_hybrid_agent_loop_manager.get_agent_loop(user_uuid, slug, riff_slug)
             if agent_loop:
                 logger.info(
                     f"✅ Found AgentLoop for {user_uuid[:8]}:{slug}:{riff_slug}"
@@ -738,8 +738,8 @@ def create_message(slug):
                     f"❌ AgentLoop not found for {user_uuid[:8]}:{slug}:{riff_slug}"
                 )
                 # Debug: Show what keys are actually stored
-                with docker_agent_loop_manager._lock:
-                    stored_keys = list(docker_agent_loop_manager.agent_loops.keys())
+                with hybrid_agent_loop_manager._lock:
+                    stored_keys = list(hybrid_agent_loop_manager.agent_loops.keys())
                     logger.info(f"🔑 Available AgentLoop keys: {stored_keys}")
 
             if agent_loop:
@@ -820,12 +820,12 @@ def check_riff_ready(slug, riff_slug):
             return jsonify({"error": "Riff not found"}), 404
 
         # Check if DockerAgentLoop exists for this riff
-        agent_loop = docker_docker_agent_loop_manager.get_agent_loop(user_uuid, slug, riff_slug)
+        agent_loop = docker_hybrid_agent_loop_manager.get_agent_loop(user_uuid, slug, riff_slug)
         is_ready = agent_loop is not None
 
         # Additional debugging for flakiness
         if not is_ready:
-            stats = docker_agent_loop_manager.get_stats()
+            stats = hybrid_agent_loop_manager.get_stats()
             logger.warning(
                 f"🔍 LLM not ready for {user_uuid[:8]}:{slug}:{riff_slug}. "
                 f"Total loops: {stats.get('total_loops', 0)}"
@@ -874,7 +874,7 @@ def reset_riff_llm(slug, riff_slug):
             return jsonify({"error": "Riff not found"}), 404
 
         # Remove existing AgentLoop if it exists
-        existing_removed = docker_docker_agent_loop_manager.remove_agent_loop(
+        existing_removed = docker_hybrid_agent_loop_manager.remove_agent_loop(
             user_uuid, slug, riff_slug
         )
         if existing_removed:
@@ -898,7 +898,7 @@ def reset_riff_llm(slug, riff_slug):
         logger.info(
             f"🔍 Verifying LLM readiness after reset for {user_uuid[:8]}:{slug}:{riff_slug}"
         )
-        agent_loop = docker_agent_loop_manager.get_agent_loop(user_uuid, slug, riff_slug)
+        agent_loop = hybrid_agent_loop_manager.get_agent_loop(user_uuid, slug, riff_slug)
         if not agent_loop:
             logger.error(
                 f"❌ LLM reset appeared successful but AgentLoop not found for {user_uuid[:8]}:{slug}:{riff_slug}"
@@ -981,7 +981,7 @@ def get_agent_status(slug, riff_slug):
             return jsonify({"error": "Riff not found"}), 404
 
         # Get the agent loop
-        agent_loop = docker_agent_loop_manager.get_agent_loop(user_uuid, slug, riff_slug)
+        agent_loop = hybrid_agent_loop_manager.get_agent_loop(user_uuid, slug, riff_slug)
         if not agent_loop:
             logger.warning(
                 f"❌ Agent loop not found for {user_uuid[:8]}:{slug}:{riff_slug}"
@@ -1043,7 +1043,7 @@ def play_agent(slug, riff_slug):
             return jsonify({"error": "Riff not found"}), 404
 
         # Get the agent loop
-        agent_loop = docker_agent_loop_manager.get_agent_loop(user_uuid, slug, riff_slug)
+        agent_loop = hybrid_agent_loop_manager.get_agent_loop(user_uuid, slug, riff_slug)
         if not agent_loop:
             logger.warning(
                 f"❌ Agent loop not found for {user_uuid[:8]}:{slug}:{riff_slug}"
@@ -1114,7 +1114,7 @@ def pause_agent(slug, riff_slug):
             return jsonify({"error": "Riff not found"}), 404
 
         # Get the agent loop
-        agent_loop = docker_agent_loop_manager.get_agent_loop(user_uuid, slug, riff_slug)
+        agent_loop = hybrid_agent_loop_manager.get_agent_loop(user_uuid, slug, riff_slug)
         if not agent_loop:
             logger.warning(
                 f"❌ Agent loop not found for {user_uuid[:8]}:{slug}:{riff_slug}"
@@ -1356,10 +1356,10 @@ def delete_riff(slug, riff_slug):
 
         # Stop and remove agent loop if it exists
         try:
-            agent_loop = docker_agent_loop_manager.get_agent_loop(user_uuid, slug, riff_slug)
+            agent_loop = hybrid_agent_loop_manager.get_agent_loop(user_uuid, slug, riff_slug)
             if agent_loop:
                 logger.info(f"🤖 Stopping agent loop for riff: {riff_slug}")
-                docker_agent_loop_manager.remove_agent_loop(user_uuid, slug, riff_slug)
+                hybrid_agent_loop_manager.remove_agent_loop(user_uuid, slug, riff_slug)
                 logger.info(f"✅ Agent loop stopped and removed")
         except Exception as e:
             logger.warning(f"⚠️ Error stopping agent loop: {e}")

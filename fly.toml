@@ -24,6 +24,20 @@ primary_region = 'ewr'
   cpus = 2
   memory_mb = 4096
 
+[experimental]
+  enable_consul = false
+  enable_etcd = false
+
+[processes]
+  app = "supervisord -c /etc/supervisor/conf.d/supervisord.conf"
+
+# Enable Docker-in-Docker capabilities
+[deploy]
+  strategy = "immediate"
+
+[env]
+  DOCKER_HOST = "unix:///var/run/docker.sock"
+
 [mounts]
   source = "data_volume"
   destination = "/data"

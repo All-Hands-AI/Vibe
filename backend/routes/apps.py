@@ -11,7 +11,7 @@ from pathlib import Path
 from nacl import encoding, public
 from keys import load_user_keys
 from storage import get_apps_storage, get_riffs_storage
-from docker_agent_loop import docker_docker_agent_loop_manager
+from hybrid_agent_loop import hybrid_agent_loop_manager
 from utils.deployment_status import get_deployment_status
 
 logger = logging.getLogger(__name__)
@@ -175,7 +175,7 @@ Update the corresponding PR title and description but be brief.
 
         # Send initial message to agent
         try:
-            agent_loop = docker_agent_loop_manager.get_agent_loop(
+            agent_loop = hybrid_agent_loop_manager.get_agent_loop(
                 user_uuid, app_slug, riff_slug
             )
             if agent_loop:
