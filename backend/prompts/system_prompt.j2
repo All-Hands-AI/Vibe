@@ -65,6 +65,18 @@ Your primary role is to assist users by executing commands, modifying code, and 
 * Use APIs to work with GitHub or other platforms, unless the user asks otherwise or your task requires browsing.
 </SECURITY>
 
+<AVAILABLE_CREDENTIALS>
+* GITHUB_TOKEN: The user's GitHub personal access token is automatically available as an environment variable when using bash commands. This token can be used with:
+  - GitHub CLI (`gh`) commands for repository operations, PR management, etc.
+  - Git operations requiring authentication (automatically handled in cloned repositories)
+  - GitHub API calls using curl or other HTTP clients
+* FLY_TOKEN: The user's Fly.io API token is automatically available as an environment variable when using bash commands. This token can be used with:
+  - Fly.io CLI (`flyctl`) commands for app deployment and management
+  - Fly.io API calls using curl or other HTTP clients
+* These tokens are securely provided only when the user has configured them in their account
+* The tokens are only available within the bash execution environment and are not exposed in logs or other outputs
+</AVAILABLE_CREDENTIALS>
+
 <SECURITY_RISK_ASSESSMENT>
 # 🔐 Security Risk Policy
 When using tools that support the security_risk parameter, assess the safety risk of your actions:

@@ -36,6 +36,7 @@ from openhands.sdk import (
 from openhands.sdk.context import render_template
 from openhands.sdk.conversation.state import AgentExecutionStatus
 from openhands.tools import FileEditorTool, TaskTrackerTool, BashTool
+from storage import get_keys_storage
 
 logger = get_logger(__name__)
 
@@ -50,8 +51,36 @@ def ensure_directory_exists(path: str) -> bool:
         return False
 
 
-def create_tools_with_validation(workspace_path: str) -> list:
-    """Create tools with proper path validation and setup."""
+def create_env_provider(user_uuid: str) -> Callable[[str], Dict[str, str]]:
+    """Create an environment provider that includes user secrets as environment variables."""
+    def env_provider(command: str) -> Dict[str, str]:
+        """Provide environment variables including user secrets."""
+        env = {}
+        
+        try:
+            # Get user storage and retrieve secrets
+            keys_storage = get_keys_storage(user_uuid)
+            user_keys = keys_storage.load_keys()
+            
+            # Map user keys to environment variables
+            if user_keys.get("github"):
+                env["GITHUB_TOKEN"] = user_keys["github"]
+                logger.debug(f"✅ Added GITHUB_TOKEN to environment for user {user_uuid}")
+            
+            if user_keys.get("fly"):
+                env["FLY_TOKEN"] = user_keys["fly"]
+                logger.debug(f"✅ Added FLY_TOKEN to environment for user {user_uuid}")
+                
+        except Exception as e:
+            logger.warning(f"⚠️ Failed to retrieve user secrets for {user_uuid}: {e}")
+        
+        return env
+    
+    return env_provider
+
+
+def create_tools_with_validation(workspace_path: str, user_uuid: str) -> list:
+    """Create tools with proper path validation and setup, including user secrets."""
     tools = []
 
     # Ensure workspace exists
@@ -81,9 +110,10 @@ def create_tools_with_validation(workspace_path: str) -> list:
         tools.append(TaskTrackerTool.create(save_dir=tasks_dir))
         logger.info(f"✅ Created TaskTrackerTool with save_dir: {tasks_dir}")
 
-        # BashTool - work in project directory
-        tools.append(BashTool.create(working_dir=project_dir))
-        logger.info(f"✅ Created BashTool with working_dir: {project_dir}")
+        # BashTool - work in project directory with user secrets as environment variables
+        env_provider = create_env_provider(user_uuid)
+        tools.append(BashTool.create(working_dir=project_dir, env_provider=env_provider))
+        logger.info(f"✅ Created BashTool with working_dir: {project_dir} and secrets environment")
 
     except Exception as e:
         logger.error(f"❌ Failed to create tools: {e}")
@@ -181,7 +211,7 @@ class AgentLoop:
 
         # Create tools with validation
         try:
-            tools = create_tools_with_validation(self.workspace_path)
+            tools = create_tools_with_validation(self.workspace_path, self.user_uuid)
         except Exception as e:
             logger.error(f"❌ Failed to create tools for {self.get_key()}: {e}")
             raise

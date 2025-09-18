@@ -75,6 +75,18 @@ RUN curl -fsSL https://deb.nodesource.com/setup_lts.x | bash - && \
 # Install Python package managers: uv and poetry
 RUN pip3 install --break-system-packages uv poetry
 
+# Install GitHub CLI (gh)
+RUN curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg \
+    && chmod go+r /usr/share/keyrings/githubcli-archive-keyring.gpg \
+    && echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | tee /etc/apt/sources.list.d/github-cli.list > /dev/null \
+    && apt-get update \
+    && apt-get install -y gh
+
+# Install Fly.io CLI (flyctl)
+RUN curl -L https://fly.io/install.sh | sh \
+    && mv /root/.fly/bin/flyctl /usr/local/bin/flyctl \
+    && chmod +x /usr/local/bin/flyctl
+
 # Verify installations and set up global npm packages for development
 RUN npm install -g \
     # Development and build tools
@@ -119,6 +131,8 @@ RUN echo "=== Verifying Development Tools ===" && \
     echo "uv version:" && uv --version && \
     echo "poetry version:" && poetry --version && \
     echo "git version:" && git --version && \
+    echo "GitHub CLI version:" && gh --version && \
+    echo "Fly.io CLI version:" && flyctl version && \
     echo "=== All tools verified successfully ==="
 
 # Create data directory for persistent storage
