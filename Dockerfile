@@ -136,9 +136,9 @@ RUN echo "=== Verifying Development Tools ===" && \
 # Create data directory for persistent storage
 RUN mkdir -p /data && chown -R www-data:www-data /data
 
-# Pre-pull the agent server image during build to avoid runtime delays
+# Pre-pull and save the agent server image during build to avoid runtime delays
 ARG AGENT_SERVER_IMAGE=ghcr.io/all-hands-ai/agent-server:ea72d20@sha256:39c72c4796bb30f8d08d4cefbe3aa48b49f96c26eae6e7d79c4a8190fd10865f
-RUN echo "📥 Pre-pulling agent server image during build: ${AGENT_SERVER_IMAGE}" && \
+RUN echo "📥 Pre-pulling and saving agent server image during build: ${AGENT_SERVER_IMAGE}" && \
     # Clean up any existing Docker state
     rm -f /var/run/docker.pid /var/run/docker.sock && \
     # Start Docker daemon in background
@@ -146,12 +146,14 @@ RUN echo "📥 Pre-pulling agent server image during build: ${AGENT_SERVER_IMAGE
     DOCKER_PID=$! && \
     # Wait for Docker to be ready
     timeout=30; while [ $timeout -gt 0 ] && ! docker info >/dev/null 2>&1; do sleep 1; timeout=$((timeout-1)); done && \
-    # Pull the image
+    # Pull and save the image
     if docker info >/dev/null 2>&1; then \
         echo "✅ Docker daemon ready, pulling image..." && \
         docker pull ${AGENT_SERVER_IMAGE} && \
-        echo "✅ Successfully pre-pulled ${AGENT_SERVER_IMAGE}" || \
-        echo "⚠️ Failed to pull image, will pull at runtime"; \
+        echo "💾 Saving image to tar file..." && \
+        docker save ${AGENT_SERVER_IMAGE} -o /data/agent-server-image.tar && \
+        echo "✅ Successfully saved ${AGENT_SERVER_IMAGE} to /data/agent-server-image.tar" || \
+        echo "⚠️ Failed to pull/save image, will pull at runtime"; \
     else \
         echo "⚠️ Docker daemon not ready, will pull at runtime"; \
     fi && \
@@ -172,6 +174,10 @@ COPY .htpasswd /etc/nginx/.htpasswd
 
 # Copy supervisor configuration
 COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+
+# Copy image loading script
+COPY load-agent-image.sh /usr/local/bin/load-agent-image.sh
+RUN chmod +x /usr/local/bin/load-agent-image.sh
 
 # Create necessary directories
 RUN mkdir -p /var/log/supervisor
