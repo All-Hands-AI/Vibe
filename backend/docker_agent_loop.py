@@ -595,28 +595,15 @@ class DockerAgentLoopManager:
         
         def async_pre_pull():
             try:
-                logger.info("🔄 Checking if Docker image is available...")
-                
-                # Quick check if image is already available (should be from build-time pull)
-                try:
-                    docker_client = docker.from_env()
-                    docker_client.images.get(AGENT_SERVER_IMAGE)
-                    logger.info(f"✅ Agent server image {AGENT_SERVER_IMAGE} already available (likely from build-time pull)")
-                    return
-                except docker.errors.ImageNotFound:
-                    logger.info("📥 Image not found locally, starting background pull...")
-                    self._pre_pull_image()
-                except Exception as e:
-                    logger.warning(f"⚠️ Error checking image availability: {e}")
-                    self._pre_pull_image()
-                    
+                logger.info("🔄 Starting async Docker image pre-pull...")
+                self._pre_pull_image()
             except Exception as e:
                 logger.warning(f"⚠️ Async pre-pull failed: {e}")
         
         # Start pre-pull in background thread
         thread = threading.Thread(target=async_pre_pull, daemon=True)
         thread.start()
-        logger.info("📋 Scheduled async Docker image check/pre-pull")
+        logger.info("📋 Scheduled async Docker image pre-pull")
 
     def _pre_pull_image(self):
         """Pre-pull the agent server image to avoid delays during container creation."""
