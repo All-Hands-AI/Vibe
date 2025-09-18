@@ -37,7 +37,7 @@ RUN npm prune --omit=dev
 # Final stage for app image - using Ubuntu to support both nginx and python
 FROM ubuntu:24.04
 
-# Install Node.js, npm, nginx, python, development tools, and supervisor
+# Install Node.js, npm, nginx, python, development tools, Docker, and supervisor
 RUN apt-get update -qq && \
     apt-get install --no-install-recommends -y \
     # Core system tools
@@ -54,6 +54,7 @@ RUN apt-get update -qq && \
     # Node.js (using NodeSource repository for latest LTS)
     ca-certificates \
     gnupg \
+    lsb-release \
     # Build tools for native dependencies
     build-essential \
     gcc \
@@ -66,7 +67,17 @@ RUN apt-get update -qq && \
     tree \
     jq \
     unzip \
+    # Docker dependencies
+    apt-transport-https \
+    software-properties-common \
     && rm -rf /var/lib/apt/lists/*
+
+# Install Docker
+RUN curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg && \
+    echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null && \
+    apt-get update -qq && \
+    apt-get install --no-install-recommends -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin && \
+    rm -rf /var/lib/apt/lists/*
 
 # Install Node.js 20.x LTS
 RUN curl -fsSL https://deb.nodesource.com/setup_lts.x | bash - && \
@@ -119,6 +130,7 @@ RUN echo "=== Verifying Development Tools ===" && \
     echo "uv version:" && uv --version && \
     echo "poetry version:" && poetry --version && \
     echo "git version:" && git --version && \
+    echo "Docker version:" && docker --version && \
     echo "=== All tools verified successfully ==="
 
 # Create data directory for persistent storage

@@ -5,7 +5,7 @@ import sys
 import traceback
 from datetime import datetime, timezone
 from storage import get_riffs_storage, get_apps_storage
-from agent_loop import agent_loop_manager
+from docker_agent_loop import docker_agent_loop_manager
 from keys import get_user_key, load_user_keys
 from utils.repository import setup_riff_workspace
 from utils.event_serializer import serialize_agent_event_to_message
@@ -13,10 +13,7 @@ from utils.deployment_status import get_deployment_status
 
 import os
 
-# Add the site-packages to the path for openhands imports
-sys.path.insert(0, ".venv/lib/python3.12/site-packages")
-
-from openhands.sdk import LLM
+# No longer need openhands SDK imports - using Docker containers instead
 
 
 # Mock LLM class for testing
@@ -41,15 +38,14 @@ class MockLLM:
         return MockResponse()
 
 
-def get_llm_instance(api_key: str, model: str = "claude-sonnet-4-20250514"):
-    """Get the appropriate LLM instance based on MOCK_MODE environment variable"""
+def get_model_config(api_key: str, model: str = "claude-sonnet-4-20250514"):
+    """Get model configuration for Docker agent server"""
     if os.environ.get("MOCK_MODE", "false").lower() == "true":
-        # In mock mode, create a real LLM instance but with a fake key
-        # The actual API calls will be mocked by the mocks.py module
-        return LLM(api_key="mock-key", model=model)
+        # In mock mode, use a fake key
+        return "mock-key", model
     else:
         # Use the real API key
-        return LLM(api_key=api_key, model=model)
+        return api_key, model
 
 
 from utils.logging import get_logger, log_api_request, log_api_response
@@ -104,9 +100,9 @@ def reconstruct_agent_from_state(user_uuid, app_slug, riff_slug):
 
         logger.info(f"🔄 Reconstructing agent from state for riff {riff_slug}")
 
-        # Create LLM instance
+        # Get model configuration
         try:
-            llm = get_llm_instance(
+            api_key, model = get_model_config(
                 api_key=anthropic_token, model="claude-sonnet-4-20250514"
             )
 
@@ -114,7 +110,7 @@ def reconstruct_agent_from_state(user_uuid, app_slug, riff_slug):
             def message_callback(event):
                 """Callback to handle events from the agent conversation"""
                 try:
-                    logger.info(f"📨 Received event from agent: {type(event).__name__}")
+                    logger.info(f"📨 Received event from agent: {event.get('kind', 'Unknown')}")
 
                     # Serialize the event to a message format
                     serialized_message = serialize_agent_event_to_message(
@@ -127,7 +123,7 @@ def reconstruct_agent_from_state(user_uuid, app_slug, riff_slug):
                             user_uuid, app_slug, riff_slug, serialized_message
                         ):
                             logger.info(
-                                f"✅ Agent event ({type(event).__name__}) saved as message for riff: {riff_slug}"
+                                f"✅ Agent event ({event.get('kind', 'Unknown')}) saved as message for riff: {riff_slug}"
                             )
 
                             # Update riff message stats
@@ -143,44 +139,41 @@ def reconstruct_agent_from_state(user_uuid, app_slug, riff_slug):
                             )
                         else:
                             logger.error(
-                                f"❌ Failed to save agent event ({type(event).__name__}) for riff: {riff_slug}"
+                                f"❌ Failed to save agent event ({event.get('kind', 'Unknown')}) for riff: {riff_slug}"
                             )
                     else:
                         logger.debug(
-                            f"🔇 Event {type(event).__name__} was not serialized (likely filtered out)"
+                            f"🔇 Event {event.get('kind', 'Unknown')} was not serialized (likely filtered out)"
                         )
 
                 except Exception as e:
                     logger.error(f"❌ Error in message callback: {e}")
                     logger.error(f"❌ Traceback: {traceback.format_exc()}")
 
-            # Create and store the agent loop from existing state
+            # Create and store the Docker agent loop
             logger.info(
-                f"🔧 Reconstructing AgentLoop from state with key: {user_uuid[:8]}:{app_slug}:{riff_slug}"
+                f"🔧 Creating DockerAgentLoop with key: {user_uuid[:8]}:{app_slug}:{riff_slug}"
             )
-            agent_loop_manager.create_agent_loop_from_state(
-                user_uuid, app_slug, riff_slug, llm, workspace_path, message_callback
+            agent_loop = docker_agent_loop_manager.create_agent_loop(
+                user_uuid, app_slug, riff_slug, api_key, model, workspace_path, message_callback
             )
-            logger.info(f"🤖 Reconstructed AgentLoop for riff: {riff_slug}")
+            logger.info(f"🤖 Created DockerAgentLoop for riff: {riff_slug}")
 
             # Verify it was stored correctly
-            agent_loop = agent_loop_manager.get_agent_loop(
-                user_uuid, app_slug, riff_slug
-            )
             if agent_loop:
                 logger.info(
-                    f"✅ AgentLoop reconstruction verification successful for {user_uuid[:8]}:{app_slug}:{riff_slug}"
+                    f"✅ DockerAgentLoop creation verification successful for {user_uuid[:8]}:{app_slug}:{riff_slug}"
                 )
                 return True, None
             else:
                 logger.error(
-                    f"❌ AgentLoop reconstruction verification failed for {user_uuid[:8]}:{app_slug}:{riff_slug}"
+                    f"❌ DockerAgentLoop creation verification failed for {user_uuid[:8]}:{app_slug}:{riff_slug}"
                 )
-                return False, "Failed to verify Agent reconstruction"
+                return False, "Failed to verify Agent creation"
 
         except Exception as e:
-            logger.error(f"❌ Failed to create LLM instance: {e}")
-            return False, f"Failed to initialize LLM: {str(e)}"
+            logger.error(f"❌ Failed to create DockerAgentLoop: {e}")
+            return False, f"Failed to initialize DockerAgentLoop: {str(e)}"
 
     except Exception as e:
         logger.error(f"❌ Failed to reconstruct AgentLoop: {e}")
@@ -232,9 +225,9 @@ def create_agent_for_user(user_uuid, app_slug, riff_slug, send_initial_message=F
 
         logger.info(f"✅ Workspace ready at: {workspace_path}")
 
-        # Create LLM instance
+        # Get model configuration
         try:
-            llm = get_llm_instance(
+            api_key, model = get_model_config(
                 api_key=anthropic_token, model="claude-sonnet-4-20250514"
             )
 
@@ -242,7 +235,7 @@ def create_agent_for_user(user_uuid, app_slug, riff_slug, send_initial_message=F
             def message_callback(event):
                 """Callback to handle events from the agent conversation"""
                 try:
-                    logger.info(f"📨 Received event from agent: {type(event).__name__}")
+                    logger.info(f"📨 Received event from agent: {event.get('kind', 'Unknown')}")
 
                     # Serialize the event to a message format
                     serialized_message = serialize_agent_event_to_message(
@@ -255,7 +248,7 @@ def create_agent_for_user(user_uuid, app_slug, riff_slug, send_initial_message=F
                             user_uuid, app_slug, riff_slug, serialized_message
                         ):
                             logger.info(
-                                f"✅ Agent event ({type(event).__name__}) saved as message for riff: {riff_slug}"
+                                f"✅ Agent event ({event.get('kind', 'Unknown')}) saved as message for riff: {riff_slug}"
                             )
 
                             # Update riff message stats
@@ -271,33 +264,30 @@ def create_agent_for_user(user_uuid, app_slug, riff_slug, send_initial_message=F
                             )
                         else:
                             logger.error(
-                                f"❌ Failed to save agent event ({type(event).__name__}) for riff: {riff_slug}"
+                                f"❌ Failed to save agent event ({event.get('kind', 'Unknown')}) for riff: {riff_slug}"
                             )
                     else:
                         logger.debug(
-                            f"🔇 Event {type(event).__name__} was not serialized (likely filtered out)"
+                            f"🔇 Event {event.get('kind', 'Unknown')} was not serialized (likely filtered out)"
                         )
 
                 except Exception as e:
                     logger.error(f"❌ Error in message callback: {e}")
                     logger.error(f"❌ Traceback: {traceback.format_exc()}")
 
-            # Create and store the agent loop
+            # Create and store the Docker agent loop
             logger.info(
-                f"🔧 Creating AgentLoop with key: {user_uuid[:8]}:{app_slug}:{riff_slug}"
+                f"🔧 Creating DockerAgentLoop with key: {user_uuid[:8]}:{app_slug}:{riff_slug}"
             )
-            agent_loop_manager.create_agent_loop(
-                user_uuid, app_slug, riff_slug, llm, workspace_path, message_callback
+            agent_loop = docker_agent_loop_manager.create_agent_loop(
+                user_uuid, app_slug, riff_slug, api_key, model, workspace_path, message_callback
             )
-            logger.info(f"🤖 Created AgentLoop for riff: {riff_slug}")
+            logger.info(f"🤖 Created DockerAgentLoop for riff: {riff_slug}")
 
             # Verify it was stored correctly
-            agent_loop = agent_loop_manager.get_agent_loop(
-                user_uuid, app_slug, riff_slug
-            )
             if agent_loop:
                 logger.debug(
-                    f"✅ AgentLoop verification successful for {user_uuid[:8]}:{app_slug}:{riff_slug}"
+                    f"✅ DockerAgentLoop verification successful for {user_uuid[:8]}:{app_slug}:{riff_slug}"
                 )
 
                 if send_initial_message:
@@ -320,13 +310,13 @@ def create_agent_for_user(user_uuid, app_slug, riff_slug, send_initial_message=F
                 return True, None
             else:
                 logger.error(
-                    f"❌ AgentLoop verification failed for {user_uuid[:8]}:{app_slug}:{riff_slug}"
+                    f"❌ DockerAgentLoop verification failed for {user_uuid[:8]}:{app_slug}:{riff_slug}"
                 )
                 return False, "Failed to verify Agent creation"
 
         except Exception as e:
-            logger.error(f"❌ Failed to create LLM instance: {e}")
-            return False, f"Failed to initialize LLM: {str(e)}"
+            logger.error(f"❌ Failed to create DockerAgentLoop: {e}")
+            return False, f"Failed to initialize DockerAgentLoop: {str(e)}"
 
     except Exception as e:
         logger.error(f"❌ Failed to create AgentLoop: {e}")
@@ -735,10 +725,10 @@ def create_message(slug):
             )
 
             # Debug: Show all available agent loops
-            stats = agent_loop_manager.get_stats()
-            logger.debug(f"📊 Current AgentLoop stats: {stats}")
+            stats = docker_agent_loop_manager.get_stats()
+            logger.debug(f"📊 Current DockerAgentLoop stats: {stats}")
 
-            agent_loop = agent_loop_manager.get_agent_loop(user_uuid, slug, riff_slug)
+            agent_loop = docker_docker_agent_loop_manager.get_agent_loop(user_uuid, slug, riff_slug)
             if agent_loop:
                 logger.info(
                     f"✅ Found AgentLoop for {user_uuid[:8]}:{slug}:{riff_slug}"
@@ -748,8 +738,8 @@ def create_message(slug):
                     f"❌ AgentLoop not found for {user_uuid[:8]}:{slug}:{riff_slug}"
                 )
                 # Debug: Show what keys are actually stored
-                with agent_loop_manager._lock:
-                    stored_keys = list(agent_loop_manager.agent_loops.keys())
+                with docker_agent_loop_manager._lock:
+                    stored_keys = list(docker_agent_loop_manager.agent_loops.keys())
                     logger.info(f"🔑 Available AgentLoop keys: {stored_keys}")
 
             if agent_loop:
@@ -829,13 +819,13 @@ def check_riff_ready(slug, riff_slug):
             logger.warning(f"❌ Riff not found: {riff_slug}")
             return jsonify({"error": "Riff not found"}), 404
 
-        # Check if AgentLoop exists for this riff
-        agent_loop = agent_loop_manager.get_agent_loop(user_uuid, slug, riff_slug)
+        # Check if DockerAgentLoop exists for this riff
+        agent_loop = docker_docker_agent_loop_manager.get_agent_loop(user_uuid, slug, riff_slug)
         is_ready = agent_loop is not None
 
         # Additional debugging for flakiness
         if not is_ready:
-            stats = agent_loop_manager.get_stats()
+            stats = docker_agent_loop_manager.get_stats()
             logger.warning(
                 f"🔍 LLM not ready for {user_uuid[:8]}:{slug}:{riff_slug}. "
                 f"Total loops: {stats.get('total_loops', 0)}"
@@ -884,7 +874,7 @@ def reset_riff_llm(slug, riff_slug):
             return jsonify({"error": "Riff not found"}), 404
 
         # Remove existing AgentLoop if it exists
-        existing_removed = agent_loop_manager.remove_agent_loop(
+        existing_removed = docker_docker_agent_loop_manager.remove_agent_loop(
             user_uuid, slug, riff_slug
         )
         if existing_removed:
@@ -908,7 +898,7 @@ def reset_riff_llm(slug, riff_slug):
         logger.info(
             f"🔍 Verifying LLM readiness after reset for {user_uuid[:8]}:{slug}:{riff_slug}"
         )
-        agent_loop = agent_loop_manager.get_agent_loop(user_uuid, slug, riff_slug)
+        agent_loop = docker_agent_loop_manager.get_agent_loop(user_uuid, slug, riff_slug)
         if not agent_loop:
             logger.error(
                 f"❌ LLM reset appeared successful but AgentLoop not found for {user_uuid[:8]}:{slug}:{riff_slug}"
@@ -991,7 +981,7 @@ def get_agent_status(slug, riff_slug):
             return jsonify({"error": "Riff not found"}), 404
 
         # Get the agent loop
-        agent_loop = agent_loop_manager.get_agent_loop(user_uuid, slug, riff_slug)
+        agent_loop = docker_agent_loop_manager.get_agent_loop(user_uuid, slug, riff_slug)
         if not agent_loop:
             logger.warning(
                 f"❌ Agent loop not found for {user_uuid[:8]}:{slug}:{riff_slug}"
@@ -1053,7 +1043,7 @@ def play_agent(slug, riff_slug):
             return jsonify({"error": "Riff not found"}), 404
 
         # Get the agent loop
-        agent_loop = agent_loop_manager.get_agent_loop(user_uuid, slug, riff_slug)
+        agent_loop = docker_agent_loop_manager.get_agent_loop(user_uuid, slug, riff_slug)
         if not agent_loop:
             logger.warning(
                 f"❌ Agent loop not found for {user_uuid[:8]}:{slug}:{riff_slug}"
@@ -1124,7 +1114,7 @@ def pause_agent(slug, riff_slug):
             return jsonify({"error": "Riff not found"}), 404
 
         # Get the agent loop
-        agent_loop = agent_loop_manager.get_agent_loop(user_uuid, slug, riff_slug)
+        agent_loop = docker_agent_loop_manager.get_agent_loop(user_uuid, slug, riff_slug)
         if not agent_loop:
             logger.warning(
                 f"❌ Agent loop not found for {user_uuid[:8]}:{slug}:{riff_slug}"
@@ -1366,10 +1356,10 @@ def delete_riff(slug, riff_slug):
 
         # Stop and remove agent loop if it exists
         try:
-            agent_loop = agent_loop_manager.get_agent_loop(user_uuid, slug, riff_slug)
+            agent_loop = docker_agent_loop_manager.get_agent_loop(user_uuid, slug, riff_slug)
             if agent_loop:
                 logger.info(f"🤖 Stopping agent loop for riff: {riff_slug}")
-                agent_loop_manager.remove_agent_loop(user_uuid, slug, riff_slug)
+                docker_agent_loop_manager.remove_agent_loop(user_uuid, slug, riff_slug)
                 logger.info(f"✅ Agent loop stopped and removed")
         except Exception as e:
             logger.warning(f"⚠️ Error stopping agent loop: {e}")
