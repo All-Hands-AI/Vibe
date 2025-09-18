@@ -27,8 +27,11 @@ from docker.errors import DockerException, APIError
 
 logger = get_logger(__name__)
 
-# Docker image to use for agent server
-AGENT_SERVER_IMAGE = "local-agent-server:latest-dev"
+# Docker image to use for agent server - configurable via environment variable
+AGENT_SERVER_IMAGE = os.getenv(
+    "AGENT_SERVER_IMAGE", 
+    "ghcr.io/all-hands-ai/agent-server:v1.0.0_nikolaik_s_python-nodejs_tag_python3.12-nodejs22"
+)
 CONTAINER_PORT = 8000
 CONTAINER_TIMEOUT = 300  # 5 minutes timeout for container operations
 
@@ -149,6 +152,7 @@ class DockerAgentLoop:
             }
 
             logger.info(f"🚀 Starting container {container_name} on port {self.container_port}")
+            logger.info(f"🐳 Using Docker image: {AGENT_SERVER_IMAGE}")
 
             # Start container
             self.container = self.docker_client.containers.run(
@@ -550,7 +554,7 @@ class DockerAgentLoopManager:
         if not self._initialized:
             self.agent_loops: Dict[str, DockerAgentLoop] = {}
             self._initialized = True
-            logger.info("🏗️ DockerAgentLoopManager initialized")
+            logger.info(f"🏗️ DockerAgentLoopManager initialized with image: {AGENT_SERVER_IMAGE}")
 
     def _get_key(self, user_uuid: str, app_slug: str, riff_slug: str) -> str:
         """Generate a unique key for the agent loop"""
