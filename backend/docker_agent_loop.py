@@ -123,6 +123,26 @@ class DockerAgentLoop:
             "workspace_path": "/agent-server/workspace/project",
         }
 
+    def _ensure_image_available(self) -> bool:
+        """Ensure the Docker image is available locally, pull if necessary."""
+        try:
+            # Check if image exists locally
+            try:
+                self.docker_client.images.get(AGENT_SERVER_IMAGE)
+                logger.info(f"✅ Docker image {AGENT_SERVER_IMAGE} found locally")
+                return True
+            except docker.errors.ImageNotFound:
+                logger.info(f"📥 Docker image {AGENT_SERVER_IMAGE} not found locally, pulling...")
+                
+                # Pull the image
+                self.docker_client.images.pull(AGENT_SERVER_IMAGE)
+                logger.info(f"✅ Successfully pulled Docker image {AGENT_SERVER_IMAGE}")
+                return True
+                
+        except Exception as e:
+            logger.error(f"❌ Failed to ensure image availability: {e}")
+            return False
+
     def _start_container(self) -> bool:
         """Start the Docker container with agent server."""
         try:
@@ -153,6 +173,11 @@ class DockerAgentLoop:
 
             logger.info(f"🚀 Starting container {container_name} on port {self.container_port}")
             logger.info(f"🐳 Using Docker image: {AGENT_SERVER_IMAGE}")
+
+            # Pull the image if it doesn't exist locally
+            if not self._ensure_image_available():
+                logger.error(f"❌ Failed to ensure image {AGENT_SERVER_IMAGE} is available")
+                return False
 
             # Start container
             self.container = self.docker_client.containers.run(
@@ -555,6 +580,27 @@ class DockerAgentLoopManager:
             self.agent_loops: Dict[str, DockerAgentLoop] = {}
             self._initialized = True
             logger.info(f"🏗️ DockerAgentLoopManager initialized with image: {AGENT_SERVER_IMAGE}")
+            
+            # Pre-pull the agent server image to avoid delays later
+            self._pre_pull_image()
+
+    def _pre_pull_image(self):
+        """Pre-pull the agent server image to avoid delays during container creation."""
+        try:
+            docker_client = docker.from_env()
+            
+            # Check if image exists locally
+            try:
+                docker_client.images.get(AGENT_SERVER_IMAGE)
+                logger.info(f"✅ Agent server image {AGENT_SERVER_IMAGE} already available locally")
+            except docker.errors.ImageNotFound:
+                logger.info(f"📥 Pre-pulling agent server image {AGENT_SERVER_IMAGE}...")
+                docker_client.images.pull(AGENT_SERVER_IMAGE)
+                logger.info(f"✅ Successfully pre-pulled agent server image {AGENT_SERVER_IMAGE}")
+                
+        except Exception as e:
+            logger.warning(f"⚠️ Failed to pre-pull agent server image: {e}")
+            logger.info("🔄 Image will be pulled when needed during container creation")
 
     def _get_key(self, user_uuid: str, app_slug: str, riff_slug: str) -> str:
         """Generate a unique key for the agent loop"""
