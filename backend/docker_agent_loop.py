@@ -138,7 +138,8 @@ class DockerAgentLoop:
             except docker.errors.ImageNotFound:
                 logger.info(f"📥 Docker image {AGENT_SERVER_IMAGE} not found locally, pulling...")
                 
-                # Pull the image
+                # Pull the image with timeout
+                logger.info(f"📥 Pulling Docker image {AGENT_SERVER_IMAGE} (this may take a while)...")
                 self.docker_client.images.pull(AGENT_SERVER_IMAGE)
                 logger.info(f"✅ Successfully pulled Docker image {AGENT_SERVER_IMAGE}")
                 return True
@@ -585,8 +586,24 @@ class DockerAgentLoopManager:
             self._initialized = True
             logger.info(f"🏗️ DockerAgentLoopManager initialized with image: {AGENT_SERVER_IMAGE}")
             
-            # Pre-pull the agent server image to avoid delays later
-            self._pre_pull_image()
+            # Schedule async pre-pull to avoid blocking worker startup
+            self._schedule_async_pre_pull()
+
+    def _schedule_async_pre_pull(self):
+        """Schedule asynchronous pre-pull to avoid blocking worker startup."""
+        import threading
+        
+        def async_pre_pull():
+            try:
+                logger.info("🔄 Starting async Docker image pre-pull...")
+                self._pre_pull_image()
+            except Exception as e:
+                logger.warning(f"⚠️ Async pre-pull failed: {e}")
+        
+        # Start pre-pull in background thread
+        thread = threading.Thread(target=async_pre_pull, daemon=True)
+        thread.start()
+        logger.info("📋 Scheduled async Docker image pre-pull")
 
     def _pre_pull_image(self):
         """Pre-pull the agent server image to avoid delays during container creation."""
@@ -598,9 +615,25 @@ class DockerAgentLoopManager:
                 docker_client.images.get(AGENT_SERVER_IMAGE)
                 logger.info(f"✅ Agent server image {AGENT_SERVER_IMAGE} already available locally")
             except docker.errors.ImageNotFound:
-                logger.info(f"📥 Pre-pulling agent server image {AGENT_SERVER_IMAGE}...")
-                docker_client.images.pull(AGENT_SERVER_IMAGE)
-                logger.info(f"✅ Successfully pre-pulled agent server image {AGENT_SERVER_IMAGE}")
+                logger.info(f"📥 Pre-pulling agent server image {AGENT_SERVER_IMAGE} (background task)...")
+                
+                # Set a reasonable timeout for the pull operation
+                import signal
+                
+                def timeout_handler(signum, frame):
+                    raise TimeoutError("Pre-pull timed out")
+                
+                try:
+                    signal.signal(signal.SIGALRM, timeout_handler)
+                    signal.alarm(300)  # 5 minute timeout for pre-pull
+                    
+                    docker_client.images.pull(AGENT_SERVER_IMAGE)
+                    logger.info(f"✅ Successfully pre-pulled agent server image {AGENT_SERVER_IMAGE}")
+                    
+                except TimeoutError:
+                    logger.warning(f"⚠️ Pre-pull timed out after 5 minutes for {AGENT_SERVER_IMAGE}")
+                finally:
+                    signal.alarm(0)  # Cancel alarm
                 
         except Exception as e:
             logger.warning(f"⚠️ Failed to pre-pull agent server image: {e}")
