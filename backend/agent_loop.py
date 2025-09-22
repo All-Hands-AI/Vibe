@@ -1,9 +1,10 @@
 """
 Improved AgentLoop and AgentLoopManager classes for OpenVibe backend.
-Manages agent conversations using openhands-sdk Agent and Conversation with proper
+Manages agent conversations using both local and remote OpenHands runtimes with proper
 threading, error handling, and resource management.
 
 Key improvements:
+- Support for both local and remote runtimes
 - Simplified threading model using ThreadPoolExecutor
 - Proper error handling and recovery mechanisms
 - SDK-aligned state management
@@ -15,10 +16,11 @@ import sys
 import os
 import uuid
 import traceback
-from typing import Dict, Optional, Callable, Any
+from typing import Dict, Optional, Callable, Any, Union
 from threading import Lock
 from concurrent.futures import ThreadPoolExecutor, Future
 from utils.logging import get_logger
+from remote_runtime_client import RemoteRuntimeClient, RemoteConversationInfo
 
 # Add the site-packages to the path for openhands imports
 sys.path.insert(0, ".venv/lib/python3.12/site-packages")
@@ -144,7 +146,7 @@ def create_agent(llm, tools, workspace_path):
 class AgentLoop:
     """
     Represents an agent conversation loop for a specific user, app, and riff.
-    Contains an Agent and Conversation instance from openhands-sdk, running in a thread.
+    Supports both local and remote runtime execution modes.
     """
 
     def __init__(
@@ -155,13 +157,17 @@ class AgentLoop:
         llm: LLM,
         workspace_path: str,
         message_callback: Optional[Callable] = None,
+        use_remote_runtime: bool = False,
+        remote_runtime_client: Optional[RemoteRuntimeClient] = None,
     ):
-        """Initialize an AgentLoop instance with improved error handling."""
+        """Initialize an AgentLoop instance with support for local and remote runtimes."""
         self.user_uuid = user_uuid
         self.app_slug = app_slug
         self.riff_slug = riff_slug
         self.llm = llm
         self.message_callback = message_callback
+        self.use_remote_runtime = use_remote_runtime
+        self.remote_runtime_client = remote_runtime_client
 
         # Validate workspace_path
         if not workspace_path:
@@ -172,8 +178,26 @@ class AgentLoop:
 
         self.workspace_path = workspace_path
 
+        # Initialize runtime-specific components
+        if self.use_remote_runtime:
+            self._init_remote_runtime()
+        else:
+            self._init_local_runtime()
+
+        # Thread management - simplified approach
+        self._executor = ThreadPoolExecutor(
+            max_workers=1, thread_name_prefix=f"Agent-{self.get_key()}"
+        )
+        self._current_task: Optional[Future] = None
+        self._lock = Lock()
+        self._is_running = False
+
+        logger.info(f"🤖 Created AgentLoop ({'remote' if use_remote_runtime else 'local'}) for {self.get_key()}")
+
+    def _init_local_runtime(self):
+        """Initialize local runtime components."""
         # Create state directory as sibling of workspace
-        workspace_parent = os.path.dirname(workspace_path)
+        workspace_parent = os.path.dirname(self.workspace_path)
         self.state_path = os.path.join(workspace_parent, "state")
 
         if not ensure_directory_exists(self.state_path):
@@ -188,7 +212,7 @@ class AgentLoop:
 
         # Create agent
         try:
-            self.agent = create_agent(llm, tools, self.workspace_path)
+            self.agent = create_agent(self.llm, tools, self.workspace_path)
         except Exception as e:
             logger.error(f"❌ Failed to create agent for {self.get_key()}: {e}")
             raise
@@ -202,12 +226,12 @@ class AgentLoop:
 
         # Generate conversation ID as a proper UUID object
         # Use uuid5 to create a deterministic UUID from the user/app/riff combination
-        conversation_key = f"{user_uuid}:{app_slug}:{riff_slug}"
+        conversation_key = f"{self.user_uuid}:{self.app_slug}:{self.riff_slug}"
         conversation_id = uuid.uuid5(uuid.NAMESPACE_DNS, conversation_key)
 
         # Create conversation with callbacks
         callbacks = []
-        if message_callback:
+        if self.message_callback:
             callbacks.append(self._safe_event_callback)
 
         try:
@@ -222,15 +246,49 @@ class AgentLoop:
             logger.error(f"❌ Failed to create conversation for {self.get_key()}: {e}")
             raise
 
-        # Thread management - simplified approach
-        self._executor = ThreadPoolExecutor(
-            max_workers=1, thread_name_prefix=f"Agent-{self.get_key()}"
-        )
-        self._current_task: Optional[Future] = None
-        self._lock = Lock()
-        self._is_running = False
+        # Set runtime-specific attributes
+        self.remote_conversation_info = None
 
-        logger.info(f"🤖 Created improved AgentLoop for {self.get_key()}")
+    def _init_remote_runtime(self):
+        """Initialize remote runtime components."""
+        if not self.remote_runtime_client:
+            raise ValueError("remote_runtime_client is required when use_remote_runtime=True")
+
+        # Set local attributes to None for remote runtime
+        self.agent = None
+        self.conversation = None
+        self.file_store = None
+        self.state_path = None
+
+        # Start remote runtime
+        try:
+            runtime_info = self.remote_runtime_client.start_remote_runtime(
+                working_dir=self.workspace_path,
+                environment={"DEBUG": "true"},
+            )
+            logger.info(f"✅ Started remote runtime: {runtime_info.runtime_id}")
+        except Exception as e:
+            logger.error(f"❌ Failed to start remote runtime for {self.get_key()}: {e}")
+            raise
+
+        # Prepare LLM configuration for remote agent
+        llm_config = {
+            "model": self.llm.model,
+            "api_key": self.llm.api_key.get_secret_value() if self.llm.api_key else None,
+            "base_url": self.llm.base_url,
+        }
+
+        # Create remote conversation
+        try:
+            self.remote_conversation_info = self.remote_runtime_client.create_conversation(
+                runtime_info=runtime_info,
+                llm_config=llm_config,
+                workspace_path=self.workspace_path,
+            )
+            logger.info(f"✅ Created remote conversation: {self.remote_conversation_info.conversation_id}")
+        except Exception as e:
+            logger.error(f"❌ Failed to create remote conversation for {self.get_key()}: {e}")
+            raise
 
     @classmethod
     def from_existing_state(
@@ -241,9 +299,19 @@ class AgentLoop:
         llm: LLM,
         workspace_path: str,
         message_callback: Optional[Callable] = None,
+        use_remote_runtime: bool = False,
+        remote_runtime_client: Optional[RemoteRuntimeClient] = None,
     ):
         """Create an AgentLoop from existing persisted state with improved error handling."""
-        # Check if state exists
+        # For remote runtimes, we don't have local state to restore from
+        if use_remote_runtime:
+            logger.info("🔄 Remote runtime mode - creating new AgentLoop (no local state)")
+            return cls(
+                user_uuid, app_slug, riff_slug, llm, workspace_path, message_callback,
+                use_remote_runtime, remote_runtime_client
+            )
+
+        # Check if local state exists
         workspace_parent = os.path.dirname(workspace_path)
         state_path = os.path.join(workspace_parent, "state")
 
@@ -252,13 +320,15 @@ class AgentLoop:
                 f"⚠️ No existing state found at {state_path}, creating new AgentLoop"
             )
             return cls(
-                user_uuid, app_slug, riff_slug, llm, workspace_path, message_callback
+                user_uuid, app_slug, riff_slug, llm, workspace_path, message_callback,
+                use_remote_runtime, remote_runtime_client
             )
 
         try:
             # Create new instance - the Conversation constructor will automatically load existing state
             instance = cls(
-                user_uuid, app_slug, riff_slug, llm, workspace_path, message_callback
+                user_uuid, app_slug, riff_slug, llm, workspace_path, message_callback,
+                use_remote_runtime, remote_runtime_client
             )
             logger.info(
                 f"🔄 Reconstructed AgentLoop from existing state for {instance.get_key()}"
@@ -269,7 +339,8 @@ class AgentLoop:
             # Fall back to creating a new instance
             logger.info("🔄 Falling back to creating new AgentLoop")
             return cls(
-                user_uuid, app_slug, riff_slug, llm, workspace_path, message_callback
+                user_uuid, app_slug, riff_slug, llm, workspace_path, message_callback,
+                use_remote_runtime, remote_runtime_client
             )
 
     def _safe_event_callback(self, event: Event):
@@ -315,31 +386,43 @@ class AgentLoop:
         logger.info(f"💬 Sending message to agent for {self.get_key()}")
 
         try:
-            # Create a Message object
-            user_message = Message(role="user", content=[TextContent(text=message)])
-
-            # Send message to conversation
-            self.conversation.send_message(user_message)
-
-            # Start conversation processing in background thread
-            with self._lock:
-                # Cancel any existing task
-                if self._current_task and not self._current_task.done():
-                    logger.info(
-                        f"🔄 Cancelling existing conversation task for {self.get_key()}"
-                    )
-                    self._current_task.cancel()
-
-                # Submit new conversation task
-                self._current_task = self._executor.submit(
-                    self._run_conversation_safely
+            if self.use_remote_runtime:
+                # Send message to remote runtime
+                success = self.remote_runtime_client.send_message(
+                    self.remote_conversation_info, message, run=True
                 )
-                self._is_running = True
+                if success:
+                    logger.info(f"✅ Message sent to remote agent for {self.get_key()}")
+                    return "Message sent to remote agent. Response will be processed asynchronously."
+                else:
+                    raise Exception("Failed to send message to remote agent")
+            else:
+                # Local runtime - existing logic
+                # Create a Message object
+                user_message = Message(role="user", content=[TextContent(text=message)])
 
-            logger.info(
-                f"✅ Message sent and conversation started for {self.get_key()}"
-            )
-            return "Message sent to agent. Response will be processed asynchronously."
+                # Send message to conversation
+                self.conversation.send_message(user_message)
+
+                # Start conversation processing in background thread
+                with self._lock:
+                    # Cancel any existing task
+                    if self._current_task and not self._current_task.done():
+                        logger.info(
+                            f"🔄 Cancelling existing conversation task for {self.get_key()}"
+                        )
+                        self._current_task.cancel()
+
+                    # Submit new conversation task
+                    self._current_task = self._executor.submit(
+                        self._run_conversation_safely
+                    )
+                    self._is_running = True
+
+                logger.info(
+                    f"✅ Message sent and conversation started for {self.get_key()}"
+                )
+                return "Message sent to agent. Response will be processed asynchronously."
 
         except Exception as e:
             logger.error(f"❌ Error sending message to agent for {self.get_key()}: {e}")
@@ -355,15 +438,23 @@ class AgentLoop:
             list: List of all events from the conversation
         """
         try:
-            if (
-                self.conversation
-                and hasattr(self.conversation, "state")
-                and hasattr(self.conversation.state, "events")
-            ):
-                return self.conversation.state.events
+            if self.use_remote_runtime:
+                # Get events from remote runtime
+                events = self.remote_runtime_client.get_conversation_events(
+                    self.remote_conversation_info, limit=1000
+                )
+                return events
             else:
-                logger.warning(f"⚠️ No events available for {self.get_key()}")
-                return []
+                # Local runtime - existing logic
+                if (
+                    self.conversation
+                    and hasattr(self.conversation, "state")
+                    and hasattr(self.conversation.state, "events")
+                ):
+                    return self.conversation.state.events
+                else:
+                    logger.warning(f"⚠️ No events available for {self.get_key()}")
+                    return []
         except Exception as e:
             logger.error(f"❌ Error retrieving events for {self.get_key()}: {e}")
             return []
@@ -371,45 +462,79 @@ class AgentLoop:
     def get_agent_status(self) -> Dict[str, Any]:
         """Get agent status information as transparent passthrough from SDK."""
         try:
-            if not self.conversation or not hasattr(self.conversation, "state"):
+            if self.use_remote_runtime:
+                # Get status from remote runtime
+                try:
+                    remote_status = self.remote_runtime_client.get_conversation_status(
+                        self.remote_conversation_info
+                    )
+                    
+                    return {
+                        "status": remote_status.get("status", "idle"),
+                        "is_running": False,  # Remote runtime manages its own execution
+                        "has_active_task": False,  # Remote runtime manages its own tasks
+                        "conversation_id": self.remote_conversation_info.conversation_id,
+                        "event_count": 0,  # Would need separate call to get event count
+                        "workspace_path": self.workspace_path,
+                        "state_path": None,  # No local state path for remote runtime
+                        "agent_status": remote_status.get("status", "idle"),
+                        "runtime_type": "remote",
+                        "runtime_id": self.remote_conversation_info.runtime_info.runtime_id,
+                    }
+                except Exception as e:
+                    logger.error(f"❌ Error getting remote status for {self.get_key()}: {e}")
+                    return {
+                        "status": "error",
+                        "error": f"Remote status error: {str(e)}",
+                        "is_running": False,
+                        "has_active_task": False,
+                        "event_count": 0,
+                        "agent_status": "error",
+                        "runtime_type": "remote",
+                    }
+            else:
+                # Local runtime - existing logic
+                if not self.conversation or not hasattr(self.conversation, "state"):
+                    return {
+                        "status": "not_initialized",
+                        "error": "Conversation not initialized",
+                        "is_running": False,
+                        "has_active_task": False,
+                        "event_count": 0,
+                        "runtime_type": "local",
+                    }
+
+                state = self.conversation.state
+                agent_status = getattr(state, "agent_status", None)
+
+                with self._lock:
+                    has_active_task = (
+                        self._current_task is not None and not self._current_task.done()
+                    )
+                    is_running = self._is_running
+
+                # Get event count for activity indication
+                events = getattr(state, "events", [])
+
+                # Return SDK agent_status as the primary status field (transparent passthrough)
+                sdk_status = agent_status.value if agent_status else "idle"
+
+                # Convert UUID to string for JSON serialization
+                conversation_id = getattr(state, "id", None)
+                conversation_id_str = str(conversation_id) if conversation_id else None
+
                 return {
-                    "status": "not_initialized",
-                    "error": "Conversation not initialized",
-                    "is_running": False,
-                    "has_active_task": False,
-                    "event_count": 0,
+                    "status": sdk_status,  # Primary status field - direct from SDK
+                    "is_running": is_running,
+                    "has_active_task": has_active_task,
+                    "conversation_id": conversation_id_str,
+                    "event_count": len(events),
+                    "workspace_path": self.workspace_path,
+                    "state_path": self.state_path,
+                    # Keep agent_status for backward compatibility
+                    "agent_status": sdk_status,
+                    "runtime_type": "local",
                 }
-
-            state = self.conversation.state
-            agent_status = getattr(state, "agent_status", None)
-
-            with self._lock:
-                has_active_task = (
-                    self._current_task is not None and not self._current_task.done()
-                )
-                is_running = self._is_running
-
-            # Get event count for activity indication
-            events = getattr(state, "events", [])
-
-            # Return SDK agent_status as the primary status field (transparent passthrough)
-            sdk_status = agent_status.value if agent_status else "idle"
-
-            # Convert UUID to string for JSON serialization
-            conversation_id = getattr(state, "id", None)
-            conversation_id_str = str(conversation_id) if conversation_id else None
-
-            return {
-                "status": sdk_status,  # Primary status field - direct from SDK
-                "is_running": is_running,
-                "has_active_task": has_active_task,
-                "conversation_id": conversation_id_str,
-                "event_count": len(events),
-                "workspace_path": self.workspace_path,
-                "state_path": self.state_path,
-                # Keep agent_status for backward compatibility
-                "agent_status": sdk_status,
-            }
 
         except Exception as e:
             logger.error(f"❌ Error getting agent status for {self.get_key()}: {e}")
@@ -420,20 +545,31 @@ class AgentLoop:
                 "has_active_task": False,
                 "event_count": 0,
                 "agent_status": "error",
+                "runtime_type": "local" if not self.use_remote_runtime else "remote",
             }
 
     def pause_agent(self) -> bool:
         """Pause the agent execution using SDK methods."""
         try:
-            if not self.conversation:
-                logger.warning(
-                    f"⚠️ Cannot pause agent for {self.get_key()}: conversation not available"
+            if self.use_remote_runtime:
+                # Pause remote conversation
+                success = self.remote_runtime_client.pause_conversation(
+                    self.remote_conversation_info
                 )
-                return False
+                if success:
+                    logger.info(f"⏸️ Remote agent paused for {self.get_key()}")
+                return success
+            else:
+                # Local runtime - existing logic
+                if not self.conversation:
+                    logger.warning(
+                        f"⚠️ Cannot pause agent for {self.get_key()}: conversation not available"
+                    )
+                    return False
 
-            self.conversation.pause()
-            logger.info(f"⏸️ Agent paused for {self.get_key()}")
-            return True
+                self.conversation.pause()
+                logger.info(f"⏸️ Agent paused for {self.get_key()}")
+                return True
 
         except Exception as e:
             logger.error(f"❌ Error pausing agent for {self.get_key()}: {e}")
@@ -442,41 +578,51 @@ class AgentLoop:
     def resume_agent(self) -> bool:
         """Resume the agent execution."""
         try:
-            if not self.conversation:
-                logger.warning(
-                    f"⚠️ Cannot resume agent for {self.get_key()}: conversation not available"
+            if self.use_remote_runtime:
+                # Resume remote conversation
+                success = self.remote_runtime_client.resume_conversation(
+                    self.remote_conversation_info
                 )
-                return False
-
-            # Check if agent is in a resumable state
-            status = self.get_agent_status()
-            agent_status = status.get("agent_status")
-
-            if agent_status == AgentExecutionStatus.FINISHED.value:
-                logger.info(f"ℹ️ Agent for {self.get_key()} is finished, cannot resume")
-                return False
-
-            if agent_status == AgentExecutionStatus.PAUSED.value:
-                # Resume by running the conversation
-                with self._lock:
-                    if self._current_task and not self._current_task.done():
-                        logger.info(
-                            f"ℹ️ Agent for {self.get_key()} already has active task"
-                        )
-                        return True
-
-                    self._current_task = self._executor.submit(
-                        self._run_conversation_safely
-                    )
-                    self._is_running = True
-
-                logger.info(f"▶️ Agent resumed for {self.get_key()}")
-                return True
+                if success:
+                    logger.info(f"▶️ Remote agent resumed for {self.get_key()}")
+                return success
             else:
-                logger.info(
-                    f"ℹ️ Agent for {self.get_key()} is not paused (status: {agent_status})"
-                )
-                return True
+                # Local runtime - existing logic
+                if not self.conversation:
+                    logger.warning(
+                        f"⚠️ Cannot resume agent for {self.get_key()}: conversation not available"
+                    )
+                    return False
+
+                # Check if agent is in a resumable state
+                status = self.get_agent_status()
+                agent_status = status.get("agent_status")
+
+                if agent_status == AgentExecutionStatus.FINISHED.value:
+                    logger.info(f"ℹ️ Agent for {self.get_key()} is finished, cannot resume")
+                    return False
+
+                if agent_status == AgentExecutionStatus.PAUSED.value:
+                    # Resume by running the conversation
+                    with self._lock:
+                        if self._current_task and not self._current_task.done():
+                            logger.info(
+                                f"ℹ️ Agent for {self.get_key()} already has active task"
+                            )
+                            return True
+
+                        self._current_task = self._executor.submit(
+                            self._run_conversation_safely
+                        )
+                        self._is_running = True
+
+                    logger.info(f"▶️ Agent resumed for {self.get_key()}")
+                    return True
+                else:
+                    logger.info(
+                        f"ℹ️ Agent for {self.get_key()} is not paused (status: {agent_status})"
+                    )
+                    return True
 
         except Exception as e:
             logger.error(f"❌ Error resuming agent for {self.get_key()}: {e}")
@@ -487,15 +633,27 @@ class AgentLoop:
         logger.info(f"🧹 Cleaning up resources for {self.get_key()}")
 
         try:
-            with self._lock:
-                # Cancel any running task
-                if self._current_task and not self._current_task.done():
-                    logger.info(f"🔄 Cancelling active task for {self.get_key()}")
-                    self._current_task.cancel()
+            if self.use_remote_runtime:
+                # Clean up remote runtime resources
+                if self.remote_conversation_info and self.remote_runtime_client:
+                    self.remote_runtime_client.cleanup_conversation(
+                        self.remote_conversation_info.conversation_id
+                    )
+                    # Also cleanup the runtime if needed
+                    self.remote_runtime_client.cleanup_runtime(
+                        self.remote_conversation_info.runtime_info.runtime_id
+                    )
+            else:
+                # Local runtime cleanup
+                with self._lock:
+                    # Cancel any running task
+                    if self._current_task and not self._current_task.done():
+                        logger.info(f"🔄 Cancelling active task for {self.get_key()}")
+                        self._current_task.cancel()
 
-                self._is_running = False
+                    self._is_running = False
 
-            # Shutdown the executor
+            # Shutdown the executor (common for both local and remote)
             if self._executor:
                 logger.info(f"🔄 Shutting down executor for {self.get_key()}")
                 self._executor.shutdown(wait=True, timeout=10)
@@ -544,6 +702,8 @@ class AgentLoopManager:
         llm: LLM,
         workspace_path: str,
         message_callback: Optional[Callable] = None,
+        use_remote_runtime: bool = False,
+        remote_runtime_client: Optional[RemoteRuntimeClient] = None,
     ) -> AgentLoop:
         """
         Create a new AgentLoop and store it in the dictionary.
@@ -555,6 +715,8 @@ class AgentLoopManager:
             llm: LLM instance from openhands-sdk
             workspace_path: Required path to the workspace directory (cloned repository)
             message_callback: Optional callback function to handle events/messages
+            use_remote_runtime: Whether to use remote runtime instead of local
+            remote_runtime_client: Client for remote runtime communication
 
         Returns:
             The created AgentLoop instance
@@ -581,10 +743,13 @@ class AgentLoopManager:
                     llm,
                     workspace_path,
                     message_callback,
+                    use_remote_runtime,
+                    remote_runtime_client,
                 )
                 self.agent_loops[key] = agent_loop
 
-                logger.info(f"✅ Created and stored improved AgentLoop for {key}")
+                runtime_type = "remote" if use_remote_runtime else "local"
+                logger.info(f"✅ Created and stored {runtime_type} AgentLoop for {key}")
                 logger.info(f"📊 Total agent loops: {len(self.agent_loops)}")
 
                 return agent_loop
@@ -601,6 +766,8 @@ class AgentLoopManager:
         llm: LLM,
         workspace_path: str,
         message_callback: Optional[Callable] = None,
+        use_remote_runtime: bool = False,
+        remote_runtime_client: Optional[RemoteRuntimeClient] = None,
     ) -> AgentLoop:
         """
         Create an AgentLoop from existing persisted state and store it in the dictionary.
@@ -613,6 +780,8 @@ class AgentLoopManager:
             llm: LLM instance from openhands-sdk
             workspace_path: Required path to the workspace directory (cloned repository)
             message_callback: Optional callback function to handle events/messages
+            use_remote_runtime: Whether to use remote runtime instead of local
+            remote_runtime_client: Client for remote runtime communication
 
         Returns:
             The reconstructed AgentLoop instance
@@ -639,10 +808,13 @@ class AgentLoopManager:
                     llm,
                     workspace_path,
                     message_callback,
+                    use_remote_runtime,
+                    remote_runtime_client,
                 )
                 self.agent_loops[key] = agent_loop
 
-                logger.info(f"✅ Reconstructed and stored improved AgentLoop for {key}")
+                runtime_type = "remote" if use_remote_runtime else "local"
+                logger.info(f"✅ Reconstructed and stored {runtime_type} AgentLoop for {key}")
                 logger.info(f"📊 Total agent loops: {len(self.agent_loops)}")
 
                 return agent_loop
