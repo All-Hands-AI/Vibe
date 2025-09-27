@@ -172,19 +172,21 @@ class RuntimeService:
         """
         session_id = f"{user_uuid}.{app_slug}.{riff_slug}"
         start_time = time.time()
-        
-        logger.info(f"⏳ Waiting for runtime to be ready: {session_id} (timeout: {timeout}s)")
-        
+
+        logger.info(
+            f"⏳ Waiting for runtime to be ready: {session_id} (timeout: {timeout}s)"
+        )
+
         while time.time() - start_time < timeout:
             success, response = self.get_runtime_status(user_uuid, app_slug, riff_slug)
-            
+
             if not success:
                 logger.warning(f"⚠️ Failed to get runtime status, retrying in 5s...")
                 time.sleep(5)
                 continue
-                
+
             status = response.get("status", "unknown")
-            
+
             if status == "running":
                 logger.info(f"✅ Runtime is ready: {session_id}")
                 return True, response
@@ -199,7 +201,7 @@ class RuntimeService:
                 logger.warning(f"⚠️ Unknown runtime status: {status}, waiting...")
                 time.sleep(5)
                 continue
-        
+
         logger.error(f"⏰ Timeout waiting for runtime to be ready: {session_id}")
         return False, {"error": "Timeout waiting for runtime to be ready"}
 

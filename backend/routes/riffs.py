@@ -157,12 +157,31 @@ def reconstruct_agent_from_state(user_uuid, app_slug, riff_slug):
                     logger.error(f"❌ Error in message callback: {e}")
                     logger.error(f"❌ Traceback: {traceback.format_exc()}")
 
+            # Load riff data to get runtime information
+            riff_data = load_user_riff(user_uuid, app_slug, riff_slug)
+            runtime_url = riff_data.get("runtime_url") if riff_data else None
+            session_api_key = riff_data.get("session_api_key") if riff_data else None
+
+            if runtime_url and session_api_key:
+                logger.info(f"🌐 Found runtime info for {riff_slug}: {runtime_url}")
+            else:
+                logger.info(
+                    f"🏠 No runtime info found for {riff_slug}, using local agent"
+                )
+
             # Create and store the agent loop from existing state
             logger.info(
                 f"🔧 Reconstructing AgentLoop from state with key: {user_uuid[:8]}:{app_slug}:{riff_slug}"
             )
             agent_loop_manager.create_agent_loop_from_state(
-                user_uuid, app_slug, riff_slug, llm, workspace_path, message_callback
+                user_uuid,
+                app_slug,
+                riff_slug,
+                llm,
+                workspace_path,
+                message_callback,
+                runtime_url,
+                session_api_key,
             )
             logger.info(f"🤖 Reconstructed AgentLoop for riff: {riff_slug}")
 
@@ -285,12 +304,31 @@ def create_agent_for_user(user_uuid, app_slug, riff_slug, send_initial_message=F
                     logger.error(f"❌ Error in message callback: {e}")
                     logger.error(f"❌ Traceback: {traceback.format_exc()}")
 
+            # Load riff data to get runtime information
+            riff_data = load_user_riff(user_uuid, app_slug, riff_slug)
+            runtime_url = riff_data.get("runtime_url") if riff_data else None
+            session_api_key = riff_data.get("session_api_key") if riff_data else None
+
+            if runtime_url and session_api_key:
+                logger.info(f"🌐 Found runtime info for {riff_slug}: {runtime_url}")
+            else:
+                logger.info(
+                    f"🏠 No runtime info found for {riff_slug}, using local agent"
+                )
+
             # Create and store the agent loop
             logger.info(
                 f"🔧 Creating AgentLoop with key: {user_uuid[:8]}:{app_slug}:{riff_slug}"
             )
             agent_loop_manager.create_agent_loop(
-                user_uuid, app_slug, riff_slug, llm, workspace_path, message_callback
+                user_uuid,
+                app_slug,
+                riff_slug,
+                llm,
+                workspace_path,
+                message_callback,
+                runtime_url,
+                session_api_key,
             )
             logger.info(f"🤖 Created AgentLoop for riff: {riff_slug}")
 

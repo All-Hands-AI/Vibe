@@ -182,6 +182,8 @@ class AgentLoop:
         llm: LLM,
         workspace_path: str,
         message_callback: Optional[Callable] = None,
+        runtime_url: Optional[str] = None,
+        session_api_key: Optional[str] = None,
     ):
         """Initialize an AgentLoop instance with improved error handling."""
         self.user_uuid = user_uuid
@@ -189,6 +191,8 @@ class AgentLoop:
         self.riff_slug = riff_slug
         self.llm = llm
         self.message_callback = message_callback
+        self.runtime_url = runtime_url
+        self.session_api_key = session_api_key
 
         # Validate workspace_path
         if not workspace_path:
@@ -238,13 +242,27 @@ class AgentLoop:
             callbacks.append(self._safe_event_callback)
 
         try:
-            self.conversation = Conversation(
-                agent=self.agent,
-                callbacks=callbacks,
-                persist_filestore=self.file_store,
-                conversation_id=conversation_id,
-                visualize=False,
-            )
+            if self.runtime_url and self.session_api_key:
+                logger.info(
+                    f"🌐 Creating RemoteConversation for {self.get_key()} using runtime: {self.runtime_url}"
+                )
+                self.conversation = Conversation(
+                    agent=self.agent,
+                    host=self.runtime_url,
+                    api_key=self.session_api_key,
+                    callbacks=callbacks,
+                    conversation_id=conversation_id,
+                    visualize=False,
+                )
+            else:
+                logger.info(f"🏠 Creating local Conversation for {self.get_key()}")
+                self.conversation = Conversation(
+                    agent=self.agent,
+                    callbacks=callbacks,
+                    persist_filestore=self.file_store,
+                    conversation_id=conversation_id,
+                    visualize=False,
+                )
         except ValueError as e:
             error_msg = str(e)
             # Handle tool name migration - clear persisted state if tool names have changed
@@ -273,13 +291,29 @@ class AgentLoop:
                 self.file_store = LocalFileStore(self.state_path)
 
                 # Retry conversation creation
-                self.conversation = Conversation(
-                    agent=self.agent,
-                    callbacks=callbacks,
-                    persist_filestore=self.file_store,
-                    conversation_id=conversation_id,
-                    visualize=False,
-                )
+                if self.runtime_url and self.session_api_key:
+                    logger.info(
+                        f"🌐 Retrying RemoteConversation creation for {self.get_key()}"
+                    )
+                    self.conversation = Conversation(
+                        agent=self.agent,
+                        host=self.runtime_url,
+                        api_key=self.session_api_key,
+                        callbacks=callbacks,
+                        conversation_id=conversation_id,
+                        visualize=False,
+                    )
+                else:
+                    logger.info(
+                        f"🏠 Retrying local Conversation creation for {self.get_key()}"
+                    )
+                    self.conversation = Conversation(
+                        agent=self.agent,
+                        callbacks=callbacks,
+                        persist_filestore=self.file_store,
+                        conversation_id=conversation_id,
+                        visualize=False,
+                    )
                 logger.info(
                     f"✅ Successfully recreated conversation after state migration"
                 )
@@ -308,6 +342,8 @@ class AgentLoop:
         llm: LLM,
         workspace_path: str,
         message_callback: Optional[Callable] = None,
+        runtime_url: Optional[str] = None,
+        session_api_key: Optional[str] = None,
     ):
         """Create an AgentLoop from existing persisted state with improved error handling."""
         # Check if state exists
@@ -319,13 +355,27 @@ class AgentLoop:
                 f"⚠️ No existing state found at {state_path}, creating new AgentLoop"
             )
             return cls(
-                user_uuid, app_slug, riff_slug, llm, workspace_path, message_callback
+                user_uuid,
+                app_slug,
+                riff_slug,
+                llm,
+                workspace_path,
+                message_callback,
+                runtime_url,
+                session_api_key,
             )
 
         try:
             # Create new instance - the Conversation constructor will automatically load existing state
             instance = cls(
-                user_uuid, app_slug, riff_slug, llm, workspace_path, message_callback
+                user_uuid,
+                app_slug,
+                riff_slug,
+                llm,
+                workspace_path,
+                message_callback,
+                runtime_url,
+                session_api_key,
             )
             logger.info(
                 f"🔄 Reconstructed AgentLoop from existing state for {instance.get_key()}"
@@ -336,7 +386,14 @@ class AgentLoop:
             # Fall back to creating a new instance
             logger.info("🔄 Falling back to creating new AgentLoop")
             return cls(
-                user_uuid, app_slug, riff_slug, llm, workspace_path, message_callback
+                user_uuid,
+                app_slug,
+                riff_slug,
+                llm,
+                workspace_path,
+                message_callback,
+                runtime_url,
+                session_api_key,
             )
 
     def _safe_event_callback(self, event: EventBase):
@@ -611,6 +668,8 @@ class AgentLoopManager:
         llm: LLM,
         workspace_path: str,
         message_callback: Optional[Callable] = None,
+        runtime_url: Optional[str] = None,
+        session_api_key: Optional[str] = None,
     ) -> AgentLoop:
         """
         Create a new AgentLoop and store it in the dictionary.
@@ -622,6 +681,8 @@ class AgentLoopManager:
             llm: LLM instance from openhands-sdk
             workspace_path: Required path to the workspace directory (cloned repository)
             message_callback: Optional callback function to handle events/messages
+            runtime_url: Optional URL for remote runtime server
+            session_api_key: Optional API key for remote runtime session
 
         Returns:
             The created AgentLoop instance
@@ -648,6 +709,8 @@ class AgentLoopManager:
                     llm,
                     workspace_path,
                     message_callback,
+                    runtime_url,
+                    session_api_key,
                 )
                 self.agent_loops[key] = agent_loop
 
@@ -668,6 +731,8 @@ class AgentLoopManager:
         llm: LLM,
         workspace_path: str,
         message_callback: Optional[Callable] = None,
+        runtime_url: Optional[str] = None,
+        session_api_key: Optional[str] = None,
     ) -> AgentLoop:
         """
         Create an AgentLoop from existing persisted state and store it in the dictionary.
@@ -706,6 +771,8 @@ class AgentLoopManager:
                     llm,
                     workspace_path,
                     message_callback,
+                    runtime_url,
+                    session_api_key,
                 )
                 self.agent_loops[key] = agent_loop
 
