@@ -109,11 +109,10 @@ class RuntimeService:
         runtime_config = {
             "session_id": session_id,
             "image": self.default_image,
-            "command": "/usr/local/bin/openhands-agent-server",
+            "command": "/usr/local/bin/openhands-agent-server --port 60000 --no-reload",
             "working_dir": "/workspace",
             "environment": {
                 "SESSION_API_KEY": user_uuid,  # Set user's UUID as session API key
-                "PORT": "60000",  # Set port for OpenHands agent server
             },
         }
 
