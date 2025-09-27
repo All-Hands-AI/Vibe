@@ -198,6 +198,43 @@ def mock_anthropic_messages_response():
     )
 
 
+def mock_runtime_api_start_response():
+    """Mock runtime API start response"""
+    return MockResponse(
+        200,
+        {
+            "runtime_id": "mock-runtime-12345",
+            "session_id": "mock-session.test-app.test-riff",
+            "status": "starting",
+            "url": "https://mock-runtime-12345.runtime.staging.all-hands.dev",
+            "session_api_key": "mock-session-api-key-67890",
+        },
+    )
+
+
+def mock_runtime_api_status_response():
+    """Mock runtime API status response"""
+    return MockResponse(
+        200,
+        {
+            "runtime_id": "mock-runtime-12345",
+            "session_id": "mock-session.test-app.test-riff",
+            "status": "running",
+            "url": "https://mock-runtime-12345.runtime.staging.all-hands.dev",
+        },
+    )
+
+
+def mock_runtime_api_health_response():
+    """Mock runtime API health response"""
+    return MockResponse(200, {"status": "healthy", "version": "1.0.0"})
+
+
+def mock_runtime_alive_response():
+    """Mock runtime /alive endpoint response"""
+    return MockResponse(200, {"status": "alive", "timestamp": "2024-01-01T00:00:00Z"})
+
+
 def get_mock_response(method: str, url: str, **kwargs) -> MockResponse:
     """
     Get appropriate mock response based on the request method and URL.
@@ -277,6 +314,19 @@ def get_mock_response(method: str, url: str, **kwargs) -> MockResponse:
             return mock_anthropic_messages_response()
         else:
             return MockResponse(404, {"error": "Not Found"})
+
+    # Runtime API mocks
+    elif "runtime.staging.all-hands.dev" in url or "sec-ctx.runtime.staging.all-hands.dev" in url:
+        if "/start" in url and method == "POST":
+            return mock_runtime_api_start_response()
+        elif "/sessions/" in url and method == "GET":
+            return mock_runtime_api_status_response()
+        elif "/health" in url and method == "GET":
+            return mock_runtime_api_health_response()
+        elif "/alive" in url and method == "GET":
+            return mock_runtime_alive_response()
+        else:
+            return MockResponse(404, {"error": "Runtime API endpoint not found"})
 
     # Default mock response for unknown URLs
     else:

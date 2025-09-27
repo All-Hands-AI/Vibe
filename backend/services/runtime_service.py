@@ -276,6 +276,85 @@ class RuntimeService:
             logger.error(f"❌ Runtime API health check failed: {e}")
             return False, {"error": f"Health check failed: {str(e)}"}
 
+    def check_runtime_alive(self, runtime_url: str) -> Tuple[bool, Dict]:
+        """
+        Check if a runtime is alive by calling its /alive endpoint.
+
+        Args:
+            runtime_url: The runtime URL to check
+
+        Returns:
+            Tuple of (success: bool, response_data: Dict)
+        """
+        if not runtime_url:
+            return False, {"error": "Runtime URL not provided"}
+
+        try:
+            url = f"{runtime_url.rstrip('/')}/alive"
+            logger.info(f"🔍 Checking runtime alive status: {url}")
+            
+            response = requests.get(url, timeout=10)
+
+            if response.status_code == 200:
+                logger.info(f"✅ Runtime is alive: {runtime_url}")
+                return True, {"status": "alive", "url": runtime_url}
+            else:
+                logger.warning(
+                    f"⚠️ Runtime alive check failed: {response.status_code} for {runtime_url}"
+                )
+                return False, {"error": f"Runtime alive check failed: {response.status_code}"}
+
+        except requests.exceptions.Timeout:
+            logger.warning(f"⏰ Runtime alive check timed out: {runtime_url}")
+            return False, {"error": "Runtime alive check timed out"}
+        except requests.exceptions.ConnectionError:
+            logger.warning(f"🔌 Failed to connect to runtime: {runtime_url}")
+            return False, {"error": "Failed to connect to runtime"}
+        except Exception as e:
+            logger.warning(f"❌ Runtime alive check failed: {e} for {runtime_url}")
+            return False, {"error": f"Runtime alive check failed: {str(e)}"}
+
+    def wait_for_runtime_alive(
+        self, runtime_url: str, timeout: int = 300, check_interval: int = 5
+    ) -> Tuple[bool, Dict]:
+        """
+        Wait for a runtime to be alive by repeatedly checking its /alive endpoint.
+
+        Args:
+            runtime_url: The runtime URL to check
+            timeout: Maximum time to wait in seconds (default: 300 = 5 minutes)
+            check_interval: Time between checks in seconds (default: 5)
+
+        Returns:
+            Tuple of (success: bool, response_data: Dict)
+        """
+        if not runtime_url:
+            return False, {"error": "Runtime URL not provided"}
+
+        start_time = time.time()
+        logger.info(
+            f"⏳ Waiting for runtime to be alive: {runtime_url} (timeout: {timeout}s, interval: {check_interval}s)"
+        )
+
+        while time.time() - start_time < timeout:
+            success, response = self.check_runtime_alive(runtime_url)
+
+            if success:
+                elapsed_time = int(time.time() - start_time)
+                logger.info(f"✅ Runtime is alive after {elapsed_time}s: {runtime_url}")
+                return True, response
+            
+            # Log progress every 30 seconds to avoid spam
+            elapsed_time = int(time.time() - start_time)
+            if elapsed_time > 0 and elapsed_time % 30 == 0:
+                logger.info(f"🔄 Still waiting for runtime to be alive ({elapsed_time}s elapsed): {runtime_url}")
+
+            time.sleep(check_interval)
+
+        elapsed_time = int(time.time() - start_time)
+        logger.error(f"⏰ Timeout waiting for runtime to be alive after {elapsed_time}s: {runtime_url}")
+        return False, {"error": f"Timeout waiting for runtime to be alive after {elapsed_time}s"}
+
     def handle_agent_reset(
         self, user_uuid: str, app_slug: str, riff_slug: str
     ) -> Tuple[bool, Dict]:
