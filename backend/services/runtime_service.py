@@ -109,7 +109,7 @@ class RuntimeService:
         runtime_config = {
             "session_id": session_id,
             "image": self.default_image,
-            "command": "bash",
+            "command": "/usr/local/bin/openhands-agent-server",
             "working_dir": "/workspace",
             "environment": {
                 "SESSION_API_KEY": user_uuid  # Set user's UUID as session API key
