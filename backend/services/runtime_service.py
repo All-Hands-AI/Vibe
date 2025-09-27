@@ -22,7 +22,7 @@ class RuntimeService:
     def __init__(self):
         # Get configuration from environment variables
         self.runtime_api_url = os.environ.get(
-            "RUNTIME_API_URL", "https://runtime.staging.all-hands.dev/"
+            "RUNTIME_API_URL", "https://sec-ctx.runtime.staging.all-hands.dev/"
         )
         self.admin_api_key = os.environ.get("RUNTIME_API_STAGING_SECRET")
         self.default_image = "ghcr.io/all-hands-ai/agent-server:8daf576-python"
@@ -111,6 +111,7 @@ class RuntimeService:
             "image": self.default_image,
             "command": "/usr/local/bin/openhands-agent-server --port 60000",
             "working_dir": "/",
+            "run_as_user": 0,
         }
 
         logger.info(f"🚀 Starting runtime for session: {session_id}")
