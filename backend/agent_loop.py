@@ -351,7 +351,6 @@ class AgentLoop:
                         host=self.runtime_url,
                         api_key=self.session_api_key,
                         callbacks=callbacks,
-                        conversation_id=conversation_id,
                         visualize=False,
                     )
                 else:
