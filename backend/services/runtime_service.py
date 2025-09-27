@@ -111,9 +111,6 @@ class RuntimeService:
             "image": self.default_image,
             "command": "/usr/local/bin/openhands-agent-server --port 60000 --no-reload",
             "working_dir": "/workspace",
-            "environment": {
-                "SESSION_API_KEY": user_uuid,  # Set user's UUID as session API key
-            },
         }
 
         logger.info(f"🚀 Starting runtime for session: {session_id}")
