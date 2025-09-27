@@ -15,6 +15,7 @@ from pathlib import Path
 from typing import Optional, Tuple
 from utils.logging import get_logger
 from keys import load_user_keys
+from storage.base_storage import DATA_DIR
 
 logger = get_logger(__name__)
 
@@ -240,13 +241,15 @@ def create_workspace_directory(user_uuid: str, app_slug: str, riff_slug: str) ->
     Returns:
         str: Path to the workspace directory
     """
-    workspace_path = f"/data/{user_uuid}/apps/{app_slug}/riffs/{riff_slug}/workspace"
+    workspace_path = (
+        DATA_DIR / user_uuid / "apps" / app_slug / "riffs" / riff_slug / "workspace"
+    )
 
     try:
         # Create the directory structure
-        Path(workspace_path).mkdir(parents=True, exist_ok=True)
+        workspace_path.mkdir(parents=True, exist_ok=True)
         logger.info(f"📁 Created workspace directory: {workspace_path}")
-        return workspace_path
+        return str(workspace_path)
     except Exception as e:
         logger.error(f"❌ Failed to create workspace directory {workspace_path}: {e}")
         raise

@@ -130,18 +130,24 @@ def mock_repository_setup(monkeypatch, temp_data_dir):
     ):
         """Mock implementation that creates directory structure without cloning"""
         workspace_path = (
-            f"{temp_data_dir}/{user_uuid}/apps/{app_slug}/riffs/{riff_slug}/workspace"
+            Path(temp_data_dir)
+            / user_uuid
+            / "apps"
+            / app_slug
+            / "riffs"
+            / riff_slug
+            / "workspace"
         )
 
         # Create the workspace directory structure
-        Path(workspace_path).mkdir(parents=True, exist_ok=True)
+        workspace_path.mkdir(parents=True, exist_ok=True)
 
         # Create project subdirectory with some mock files
-        project_path = os.path.join(workspace_path, "project")
-        Path(project_path).mkdir(parents=True, exist_ok=True)
+        project_path = workspace_path / "project"
+        project_path.mkdir(parents=True, exist_ok=True)
 
         # Create a mock README.md file
-        readme_path = os.path.join(project_path, "README.md")
+        readme_path = project_path / "README.md"
         with open(readme_path, "w") as f:
             f.write(
                 f"# Mock Repository\n\nThis is a mock repository for testing.\nGitHub URL: {github_url}\n"

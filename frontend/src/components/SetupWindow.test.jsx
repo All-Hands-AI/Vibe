@@ -85,7 +85,7 @@ describe('SetupWindow', () => {
     
     await waitFor(() => {
       expect(fetch).toHaveBeenCalledWith(
-        'http://localhost:8000/api/integrations/anthropic',
+        '/api/integrations/anthropic',
         expect.objectContaining({
           method: 'POST',
           headers: { 

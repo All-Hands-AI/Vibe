@@ -5,6 +5,7 @@ import sys
 import traceback
 from datetime import datetime, timezone
 from storage import get_riffs_storage, get_apps_storage
+from storage.base_storage import DATA_DIR
 from agent_loop import agent_loop_manager
 from keys import get_user_key, load_user_keys
 from utils.repository import setup_riff_workspace
@@ -91,8 +92,8 @@ def reconstruct_agent_from_state(user_uuid, app_slug, riff_slug):
             return False, "Anthropic API key required"
 
         # Get workspace path (should already exist from previous setup)
-        workspace_path = (
-            f"/data/{user_uuid}/apps/{app_slug}/riffs/{riff_slug}/workspace"
+        workspace_path = str(
+            DATA_DIR / user_uuid / "apps" / app_slug / "riffs" / riff_slug / "workspace"
         )
 
         # Check if workspace exists - if not, fall back to creating new agent

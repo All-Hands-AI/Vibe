@@ -19,11 +19,6 @@ const SetupWindow = ({ onSetupComplete }) => {
   // Check if all keys are valid
   const allKeysValid = Object.values(validationStatus).every(status => status.valid)
 
-  // Backend URL - in production, backend runs on same domain
-  const BACKEND_URL = import.meta.env.MODE === 'production' 
-    ? '' 
-    : 'http://localhost:8000'
-
   const validateApiKey = async (provider, apiKey) => {
     if (!apiKey.trim() || !userUUID) {
       setValidationStatus(prev => ({
@@ -39,7 +34,7 @@ const SetupWindow = ({ onSetupComplete }) => {
     }))
 
     try {
-      const response = await fetch(`${BACKEND_URL}/api/integrations/${provider}`, {
+      const response = await fetch(`/api/integrations/${provider}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
