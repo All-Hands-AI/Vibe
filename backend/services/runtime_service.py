@@ -109,7 +109,7 @@ class RuntimeService:
         runtime_config = {
             "session_id": session_id,
             "image": self.default_image,
-            "command": "/usr/local/bin/openhands-agent-server --port 60000 --no-reload",
+            "command": "/usr/local/bin/openhands-agent-server --port 60000",
             "working_dir": "/workspace",
         }
 
