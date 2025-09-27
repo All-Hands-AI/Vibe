@@ -272,7 +272,9 @@ class TestAppsEndpoints:
         for headers in [user1_headers, user2_headers]:
             for provider, key in mock_api_keys.items():
                 client.post(
-                    f"/api/integrations/{provider}", headers=headers, json={"api_key": key}
+                    f"/api/integrations/{provider}",
+                    headers=headers,
+                    json={"api_key": key},
                 )
 
         # Create app for user1
