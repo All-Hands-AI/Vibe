@@ -9,6 +9,7 @@ This service handles:
 """
 
 import os
+import time
 import requests
 from typing import Dict, Optional, Tuple
 from utils.logging import get_logger
@@ -153,6 +154,54 @@ class RuntimeService:
             logger.warning(f"⚠️ Failed to get runtime status: {response.get('error')}")
 
         return success, response
+
+    def wait_for_runtime_ready(
+        self, user_uuid: str, app_slug: str, riff_slug: str, timeout: int = 300
+    ) -> Tuple[bool, Dict]:
+        """
+        Wait for a runtime to be ready (status = "running").
+
+        Args:
+            user_uuid: User's UUID
+            app_slug: App slug identifier
+            riff_slug: Riff slug identifier
+            timeout: Maximum time to wait in seconds (default: 300 = 5 minutes)
+
+        Returns:
+            Tuple of (success: bool, response_data: Dict)
+        """
+        session_id = f"{user_uuid}.{app_slug}.{riff_slug}"
+        start_time = time.time()
+        
+        logger.info(f"⏳ Waiting for runtime to be ready: {session_id} (timeout: {timeout}s)")
+        
+        while time.time() - start_time < timeout:
+            success, response = self.get_runtime_status(user_uuid, app_slug, riff_slug)
+            
+            if not success:
+                logger.warning(f"⚠️ Failed to get runtime status, retrying in 5s...")
+                time.sleep(5)
+                continue
+                
+            status = response.get("status", "unknown")
+            
+            if status == "running":
+                logger.info(f"✅ Runtime is ready: {session_id}")
+                return True, response
+            elif status == "error":
+                logger.error(f"❌ Runtime failed to start: {session_id}")
+                return False, {"error": "Runtime failed to start", "status": status}
+            elif status in ["starting", "paused"]:
+                logger.info(f"🔄 Runtime status: {status}, waiting...")
+                time.sleep(5)
+                continue
+            else:
+                logger.warning(f"⚠️ Unknown runtime status: {status}, waiting...")
+                time.sleep(5)
+                continue
+        
+        logger.error(f"⏰ Timeout waiting for runtime to be ready: {session_id}")
+        return False, {"error": "Timeout waiting for runtime to be ready"}
 
     def pause_runtime(self, runtime_id: str) -> Tuple[bool, Dict]:
         """
