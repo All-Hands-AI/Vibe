@@ -32,12 +32,11 @@ from openhands.sdk import (
     AgentContext,
     LocalFileStore,
     EventBase,
+    ToolSpec,
 )
 from openhands.sdk.context import render_template
 from openhands.sdk.conversation.state import AgentExecutionStatus
-from openhands.tools.str_replace_editor import FileEditorTool
-from openhands.tools.task_tracker import TaskTrackerTool
-from openhands.tools.execute_bash import BashTool
+# Tool imports no longer needed - using ToolSpec format
 
 logger = get_logger(__name__)
 
@@ -76,15 +75,15 @@ def create_tools_with_validation(workspace_path: str) -> list:
 
     try:
         # FileEditorTool - no specific directory needed
-        tools.append(FileEditorTool.create())
+        tools.append(ToolSpec(name="FileEditorTool", params={}))
         logger.info(f"✅ Created FileEditorTool")
 
         # TaskTrackerTool - save to tasks directory
-        tools.append(TaskTrackerTool.create(save_dir=tasks_dir))
+        tools.append(ToolSpec(name="TaskTrackerTool", params={"save_dir": tasks_dir}))
         logger.info(f"✅ Created TaskTrackerTool with save_dir: {tasks_dir}")
 
         # BashTool - work in project directory
-        tools.append(BashTool.create(working_dir=project_dir))
+        tools.append(ToolSpec(name="BashTool", params={"working_dir": project_dir}))
         logger.info(f"✅ Created BashTool with working_dir: {project_dir}")
 
     except Exception as e:
