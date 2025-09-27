@@ -20,7 +20,7 @@ class TestIntegrationsEndpoints:
         api_key = mock_api_keys[provider]
 
         response = client.post(
-            f"/integrations/{provider}",
+            f"/api/integrations/{provider}",
             headers=sample_headers,
             json={"api_key": api_key},
         )
@@ -35,7 +35,9 @@ class TestIntegrationsEndpoints:
     def test_set_empty_api_key(self, client, sample_headers, provider):
         """Test setting empty API keys returns error"""
         response = client.post(
-            f"/integrations/{provider}", headers=sample_headers, json={"api_key": ""}
+            f"/api/integrations/{provider}",
+            headers=sample_headers,
+            json={"api_key": ""},
         )
 
         assert response.status_code == 400
@@ -47,7 +49,9 @@ class TestIntegrationsEndpoints:
     def test_set_whitespace_api_key(self, client, sample_headers, provider):
         """Test setting whitespace-only API keys returns error"""
         response = client.post(
-            f"/integrations/{provider}", headers=sample_headers, json={"api_key": "   "}
+            f"/api/integrations/{provider}",
+            headers=sample_headers,
+            json={"api_key": "   "},
         )
 
         assert response.status_code == 400
@@ -58,7 +62,7 @@ class TestIntegrationsEndpoints:
     def test_set_api_key_invalid_provider(self, client, sample_headers):
         """Test setting API key for invalid provider"""
         response = client.post(
-            "/integrations/invalid_provider",
+            "/api/integrations/invalid_provider",
             headers=sample_headers,
             json={"api_key": "test-key"},
         )
@@ -70,7 +74,9 @@ class TestIntegrationsEndpoints:
 
     def test_set_api_key_missing_uuid_header(self, client):
         """Test setting API key without UUID header"""
-        response = client.post("/integrations/anthropic", json={"api_key": "test-key"})
+        response = client.post(
+            "/api/integrations/anthropic", json={"api_key": "test-key"}
+        )
 
         assert response.status_code == 400
         data = response.get_json()
@@ -80,7 +86,7 @@ class TestIntegrationsEndpoints:
     def test_set_api_key_empty_uuid_header(self, client):
         """Test setting API key with empty UUID header"""
         response = client.post(
-            "/integrations/anthropic",
+            "/api/integrations/anthropic",
             headers={"X-User-UUID": ""},
             json={"api_key": "test-key"},
         )
@@ -93,7 +99,7 @@ class TestIntegrationsEndpoints:
     def test_set_api_key_missing_body(self, client, sample_headers):
         """Test setting API key without request body"""
         response = client.post(
-            "/integrations/anthropic",
+            "/api/integrations/anthropic",
             headers=sample_headers,
             json={},  # Empty JSON object
         )
@@ -106,7 +112,7 @@ class TestIntegrationsEndpoints:
     def test_set_api_key_missing_api_key_field(self, client, sample_headers):
         """Test setting API key without api_key field in body"""
         response = client.post(
-            "/integrations/anthropic",
+            "/api/integrations/anthropic",
             headers=sample_headers,
             json={"other_field": "value"},
         )
@@ -125,7 +131,7 @@ class TestIntegrationsEndpoints:
             "Content-Type": "application/json",
         }
 
-        response = client.get(f"/integrations/{provider}", headers=unique_headers)
+        response = client.get(f"/api/integrations/{provider}", headers=unique_headers)
 
         assert response.status_code == 200
         data = response.get_json()
@@ -142,7 +148,7 @@ class TestIntegrationsEndpoints:
 
         # First set the API key
         set_response = client.post(
-            f"/integrations/{provider}",
+            f"/api/integrations/{provider}",
             headers=sample_headers,
             json={"api_key": api_key},
         )
@@ -150,7 +156,9 @@ class TestIntegrationsEndpoints:
         assert set_response.status_code == 200
 
         # Then check the API key status
-        check_response = client.get(f"/integrations/{provider}", headers=sample_headers)
+        check_response = client.get(
+            f"/api/integrations/{provider}", headers=sample_headers
+        )
 
         assert check_response.status_code == 200
         data = check_response.get_json()
@@ -160,7 +168,9 @@ class TestIntegrationsEndpoints:
 
     def test_check_api_key_invalid_provider(self, client, sample_headers):
         """Test checking API key for invalid provider"""
-        response = client.get("/integrations/invalid_provider", headers=sample_headers)
+        response = client.get(
+            "/api/integrations/invalid_provider", headers=sample_headers
+        )
 
         assert response.status_code == 400
         data = response.get_json()
@@ -169,7 +179,7 @@ class TestIntegrationsEndpoints:
 
     def test_check_api_key_missing_uuid_header(self, client):
         """Test checking API key without UUID header"""
-        response = client.get("/integrations/anthropic")
+        response = client.get("/api/integrations/anthropic")
 
         assert response.status_code == 400
         data = response.get_json()
@@ -178,7 +188,9 @@ class TestIntegrationsEndpoints:
 
     def test_check_api_key_empty_uuid_header(self, client):
         """Test checking API key with empty UUID header"""
-        response = client.get("/integrations/anthropic", headers={"X-User-UUID": ""})
+        response = client.get(
+            "/api/integrations/anthropic", headers={"X-User-UUID": ""}
+        )
 
         assert response.status_code == 400
         data = response.get_json()
@@ -192,7 +204,7 @@ class TestIntegrationsEndpoints:
         # Set API keys for all providers
         for provider in providers:
             response = client.post(
-                f"/integrations/{provider}",
+                f"/api/integrations/{provider}",
                 headers=sample_headers,
                 json={"api_key": mock_api_keys[provider]},
             )
@@ -200,7 +212,9 @@ class TestIntegrationsEndpoints:
 
         # Check all API keys are set
         for provider in providers:
-            response = client.get(f"/integrations/{provider}", headers=sample_headers)
+            response = client.get(
+                f"/api/integrations/{provider}", headers=sample_headers
+            )
             assert response.status_code == 200
             data = response.get_json()
             assert data["valid"] is True
@@ -218,21 +232,21 @@ class TestIntegrationsEndpoints:
 
         # Set API key for user1
         response = client.post(
-            "/integrations/anthropic",
+            "/api/integrations/anthropic",
             headers=user1_headers,
             json={"api_key": mock_api_keys["anthropic"]},
         )
         assert response.status_code == 200
 
         # Check that user2 doesn't have the key
-        response = client.get("/integrations/anthropic", headers=user2_headers)
+        response = client.get("/api/integrations/anthropic", headers=user2_headers)
         assert response.status_code == 200
         data = response.get_json()
         assert data["valid"] is False
         assert data["message"] == "Anthropic API key not set"
 
         # Check that user1 still has the key
-        response = client.get("/integrations/anthropic", headers=user1_headers)
+        response = client.get("/api/integrations/anthropic", headers=user1_headers)
         assert response.status_code == 200
         data = response.get_json()
         assert data["valid"] is True
