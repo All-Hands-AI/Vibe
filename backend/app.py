@@ -39,7 +39,7 @@ log_system_info(logger)
 logger.info(f"📦 Flask app name: {app.name}")
 
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 8000))
+    port = int(os.environ.get("PORT", 3001))
     logger.info(f"🚀 Starting Flask server on port {port}")
     logger.info(f"🌐 Server will be accessible at http://0.0.0.0:{port}")
     app.run(host="0.0.0.0", port=port, debug=False)
