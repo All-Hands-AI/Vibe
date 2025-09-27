@@ -110,7 +110,7 @@ class RuntimeService:
             "session_id": session_id,
             "image": self.default_image,
             "command": "/usr/local/bin/openhands-agent-server --port 60000",
-            "working_dir": "/workspace",
+            "working_dir": "/",
         }
 
         logger.info(f"🚀 Starting runtime for session: {session_id}")
