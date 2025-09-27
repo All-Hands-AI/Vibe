@@ -316,7 +316,10 @@ def get_mock_response(method: str, url: str, **kwargs) -> MockResponse:
             return MockResponse(404, {"error": "Not Found"})
 
     # Runtime API mocks
-    elif "runtime.staging.all-hands.dev" in url or "sec-ctx.runtime.staging.all-hands.dev" in url:
+    elif (
+        "runtime.staging.all-hands.dev" in url
+        or "sec-ctx.runtime.staging.all-hands.dev" in url
+    ):
         if "/start" in url and method == "POST":
             return mock_runtime_api_start_response()
         elif "/sessions/" in url and method == "GET":

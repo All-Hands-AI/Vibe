@@ -158,7 +158,14 @@ def mock_repository_setup(monkeypatch, temp_data_dir):
 
     # Mock AgentLoop creation to avoid tool initialization issues in tests
     def mock_create_agent_loop(
-        user_uuid, app_slug, riff_slug, llm, workspace_path, message_callback=None
+        user_uuid,
+        app_slug,
+        riff_slug,
+        llm,
+        workspace_path,
+        message_callback=None,
+        runtime_url=None,
+        session_api_key=None,
     ):
         """Mock AgentLoop creation that doesn't actually create tools"""
 
@@ -171,6 +178,8 @@ def mock_repository_setup(monkeypatch, temp_data_dir):
                 llm,
                 workspace_path,
                 message_callback=None,
+                runtime_url=None,
+                session_api_key=None,
             ):
                 self.user_uuid = user_uuid
                 self.app_slug = app_slug
@@ -178,18 +187,33 @@ def mock_repository_setup(monkeypatch, temp_data_dir):
                 self.llm = llm
                 self.workspace_path = workspace_path
                 self.message_callback = message_callback
+                self.runtime_url = runtime_url
+                self.session_api_key = session_api_key
 
             def send_message(self, message):
                 """Mock send_message method for testing"""
                 return "Mock response: Message received"
 
         return MockAgentLoop(
-            user_uuid, app_slug, riff_slug, llm, workspace_path, message_callback
+            user_uuid,
+            app_slug,
+            riff_slug,
+            llm,
+            workspace_path,
+            message_callback,
+            runtime_url,
+            session_api_key,
         )
 
     # Mock the agent_loop_manager.create_agent_loop method
     monkeypatch.setattr(
         "routes.riffs.agent_loop_manager.create_agent_loop", mock_create_agent_loop
+    )
+
+    # Mock the agent_loop_manager.create_agent_loop_from_state method
+    monkeypatch.setattr(
+        "routes.riffs.agent_loop_manager.create_agent_loop_from_state",
+        mock_create_agent_loop,
     )
 
     # Mock the agent_loop_manager.get_agent_loop method

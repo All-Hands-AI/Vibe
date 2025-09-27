@@ -249,19 +249,30 @@ class AgentLoop:
                 logger.info(
                     f"🌐 Creating RemoteConversation for {self.get_key()} using runtime: {self.runtime_url}"
                 )
-                
-                # Wait for the runtime to be alive before creating the conversation
-                logger.info(f"⏳ Waiting for runtime to be alive before creating conversation: {self.runtime_url}")
-                alive_success, alive_response = runtime_service.wait_for_runtime_alive(
-                    self.runtime_url, timeout=300, check_interval=5
+
+                # Wait for the runtime to be ready and alive before creating the conversation
+                logger.info(
+                    f"⏳ Waiting for runtime to be ready and alive before creating conversation: {self.runtime_url}"
                 )
-                
-                if not alive_success:
-                    error_msg = f"Runtime is not alive: {alive_response.get('error', 'Unknown error')}"
+                ready_success, ready_response = (
+                    runtime_service.wait_for_runtime_ready_and_alive(
+                        self.user_uuid,
+                        self.app_slug,
+                        self.riff_slug,
+                        self.runtime_url,
+                        timeout=300,
+                        check_interval=5,
+                    )
+                )
+
+                if not ready_success:
+                    error_msg = f"Runtime is not ready and alive: {ready_response.get('error', 'Unknown error')}"
                     logger.error(f"❌ {error_msg}")
                     raise RuntimeError(error_msg)
-                
-                logger.info(f"✅ Runtime is alive, creating conversation: {self.runtime_url}")
+
+                logger.info(
+                    f"✅ Runtime is ready and alive, creating conversation: {self.runtime_url}"
+                )
                 self.conversation = Conversation(
                     agent=self.agent,
                     host=self.runtime_url,
@@ -311,19 +322,30 @@ class AgentLoop:
                     logger.info(
                         f"🌐 Retrying RemoteConversation creation for {self.get_key()}"
                     )
-                    
-                    # Wait for the runtime to be alive before retrying conversation creation
-                    logger.info(f"⏳ Waiting for runtime to be alive before retrying conversation: {self.runtime_url}")
-                    alive_success, alive_response = runtime_service.wait_for_runtime_alive(
-                        self.runtime_url, timeout=300, check_interval=5
+
+                    # Wait for the runtime to be ready and alive before retrying conversation creation
+                    logger.info(
+                        f"⏳ Waiting for runtime to be ready and alive before retrying conversation: {self.runtime_url}"
                     )
-                    
-                    if not alive_success:
-                        error_msg = f"Runtime is not alive during retry: {alive_response.get('error', 'Unknown error')}"
+                    ready_success, ready_response = (
+                        runtime_service.wait_for_runtime_ready_and_alive(
+                            self.user_uuid,
+                            self.app_slug,
+                            self.riff_slug,
+                            self.runtime_url,
+                            timeout=300,
+                            check_interval=5,
+                        )
+                    )
+
+                    if not ready_success:
+                        error_msg = f"Runtime is not ready and alive during retry: {ready_response.get('error', 'Unknown error')}"
                         logger.error(f"❌ {error_msg}")
                         raise RuntimeError(error_msg)
-                    
-                    logger.info(f"✅ Runtime is alive, retrying conversation creation: {self.runtime_url}")
+
+                    logger.info(
+                        f"✅ Runtime is ready and alive, retrying conversation creation: {self.runtime_url}"
+                    )
                     self.conversation = Conversation(
                         agent=self.agent,
                         host=self.runtime_url,

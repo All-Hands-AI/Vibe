@@ -292,7 +292,7 @@ class RuntimeService:
         try:
             url = f"{runtime_url.rstrip('/')}/alive"
             logger.info(f"🔍 Checking runtime alive status: {url}")
-            
+
             response = requests.get(url, timeout=10)
 
             if response.status_code == 200:
@@ -302,7 +302,9 @@ class RuntimeService:
                 logger.warning(
                     f"⚠️ Runtime alive check failed: {response.status_code} for {runtime_url}"
                 )
-                return False, {"error": f"Runtime alive check failed: {response.status_code}"}
+                return False, {
+                    "error": f"Runtime alive check failed: {response.status_code}"
+                }
 
         except requests.exceptions.Timeout:
             logger.warning(f"⏰ Runtime alive check timed out: {runtime_url}")
@@ -314,11 +316,107 @@ class RuntimeService:
             logger.warning(f"❌ Runtime alive check failed: {e} for {runtime_url}")
             return False, {"error": f"Runtime alive check failed: {str(e)}"}
 
+    def wait_for_runtime_ready_and_alive(
+        self,
+        user_uuid: str,
+        app_slug: str,
+        riff_slug: str,
+        runtime_url: str = None,
+        timeout: int = 300,
+        check_interval: int = 5,
+    ) -> Tuple[bool, Dict]:
+        """
+        Wait for a runtime to be both ready (status = "running") and alive (/alive endpoint responds).
+        This combines the runtime-api status check with the actual runtime endpoint check.
+
+        Args:
+            user_uuid: User's UUID
+            app_slug: App slug identifier
+            riff_slug: Riff slug identifier
+            runtime_url: The runtime URL to check (optional, will get from status if not provided)
+            timeout: Maximum time to wait in seconds (default: 300 = 5 minutes)
+            check_interval: Time between checks in seconds (default: 5)
+
+        Returns:
+            Tuple of (success: bool, response_data: Dict)
+        """
+        session_id = f"{user_uuid}.{app_slug}.{riff_slug}"
+        start_time = time.time()
+
+        logger.info(
+            f"⏳ Waiting for runtime to be ready and alive: {session_id} (timeout: {timeout}s)"
+        )
+
+        while time.time() - start_time < timeout:
+            # First check if runtime-api says it's ready
+            ready_success, ready_response = self.get_runtime_status(
+                user_uuid, app_slug, riff_slug
+            )
+
+            if not ready_success:
+                logger.warning(
+                    f"⚠️ Failed to get runtime status, retrying in {check_interval}s..."
+                )
+                time.sleep(check_interval)
+                continue
+
+            status = ready_response.get("status", "unknown")
+            current_runtime_url = runtime_url or ready_response.get("url")
+
+            if status == "error":
+                logger.error(f"❌ Runtime failed to start: {session_id}")
+                return False, {"error": "Runtime failed to start", "status": status}
+            elif status != "running":
+                logger.info(f"🔄 Runtime status: {status}, waiting...")
+                time.sleep(check_interval)
+                continue
+
+            # Runtime-api says it's running, now check if it's actually alive
+            if current_runtime_url:
+                alive_success, alive_response = self.check_runtime_alive(
+                    current_runtime_url
+                )
+
+                if alive_success:
+                    elapsed_time = int(time.time() - start_time)
+                    logger.info(
+                        f"✅ Runtime is ready and alive after {elapsed_time}s: {session_id}"
+                    )
+                    return True, {
+                        **ready_response,
+                        "alive_status": alive_response.get("status"),
+                        "url": current_runtime_url,
+                    }
+                else:
+                    logger.info(f"🔄 Runtime is running but not yet alive, waiting...")
+            else:
+                logger.warning(f"⚠️ Runtime is running but no URL available, waiting...")
+
+            # Log progress every 30 seconds to avoid spam
+            elapsed_time = int(time.time() - start_time)
+            if elapsed_time > 0 and elapsed_time % 30 == 0:
+                logger.info(
+                    f"🔄 Still waiting for runtime to be ready and alive ({elapsed_time}s elapsed): {session_id}"
+                )
+
+            time.sleep(check_interval)
+
+        elapsed_time = int(time.time() - start_time)
+        logger.error(
+            f"⏰ Timeout waiting for runtime to be ready and alive after {elapsed_time}s: {session_id}"
+        )
+        return False, {
+            "error": f"Timeout waiting for runtime to be ready and alive after {elapsed_time}s"
+        }
+
     def wait_for_runtime_alive(
         self, runtime_url: str, timeout: int = 300, check_interval: int = 5
     ) -> Tuple[bool, Dict]:
         """
         Wait for a runtime to be alive by repeatedly checking its /alive endpoint.
+
+        Note: This method only checks the /alive endpoint. For comprehensive checking
+        that includes runtime-api status, use wait_for_runtime_ready_and_alive().
 
         Args:
             runtime_url: The runtime URL to check
@@ -343,17 +441,23 @@ class RuntimeService:
                 elapsed_time = int(time.time() - start_time)
                 logger.info(f"✅ Runtime is alive after {elapsed_time}s: {runtime_url}")
                 return True, response
-            
+
             # Log progress every 30 seconds to avoid spam
             elapsed_time = int(time.time() - start_time)
             if elapsed_time > 0 and elapsed_time % 30 == 0:
-                logger.info(f"🔄 Still waiting for runtime to be alive ({elapsed_time}s elapsed): {runtime_url}")
+                logger.info(
+                    f"🔄 Still waiting for runtime to be alive ({elapsed_time}s elapsed): {runtime_url}"
+                )
 
             time.sleep(check_interval)
 
         elapsed_time = int(time.time() - start_time)
-        logger.error(f"⏰ Timeout waiting for runtime to be alive after {elapsed_time}s: {runtime_url}")
-        return False, {"error": f"Timeout waiting for runtime to be alive after {elapsed_time}s"}
+        logger.error(
+            f"⏰ Timeout waiting for runtime to be alive after {elapsed_time}s: {runtime_url}"
+        )
+        return False, {
+            "error": f"Timeout waiting for runtime to be alive after {elapsed_time}s"
+        }
 
     def handle_agent_reset(
         self, user_uuid: str, app_slug: str, riff_slug: str
@@ -391,9 +495,11 @@ class RuntimeService:
             logger.info(f"▶️ Runtime is paused, resuming: {runtime_id}")
             return self.resume_runtime(runtime_id)
         elif current_status in ["running", "starting"]:
-            # Runtime is already running
-            logger.info(f"✅ Runtime is already {current_status}")
-            return True, status_response
+            # Runtime is running or starting, wait for it to be ready and alive
+            logger.info(
+                f"🔄 Runtime is {current_status}, waiting for it to be ready and alive"
+            )
+            return self.wait_for_runtime_ready_and_alive(user_uuid, app_slug, riff_slug)
         else:
             # Runtime is in an unexpected state, start a new one
             logger.info(
