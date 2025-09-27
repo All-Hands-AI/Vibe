@@ -82,6 +82,10 @@ function AgentStatusBar({ appSlug, riffSlug }) {
       return 'Agent Error'
     }
     
+    if (status.status === 'stuck') {
+      return 'Agent Stuck'
+    }
+    
     if (isAgentPaused(status)) {
       return 'Agent Paused'
     }
@@ -105,6 +109,7 @@ function AgentStatusBar({ appSlug, riffSlug }) {
           isAgentPaused(agentStatus) ? 'bg-yellow-400' :
           isAgentFinished(agentStatus) ? 'bg-green-400' :
           agentStatus?.status === 'error' ? 'bg-red-400' :
+          agentStatus?.status === 'stuck' ? 'bg-orange-400 animate-pulse' :
           'bg-gray-400'
         }`}></div>
         <span className={`font-mono text-sm ${getAgentStatusColor(agentStatus)}`}>

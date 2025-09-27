@@ -31,13 +31,37 @@ from openhands.sdk import (
     TextContent,
     AgentContext,
     LocalFileStore,
-    Event,
+    EventBase,
+    ToolSpec,
 )
 from openhands.sdk.context import render_template
 from openhands.sdk.conversation.state import AgentExecutionStatus
-from openhands.tools import FileEditorTool, TaskTrackerTool, BashTool
+from openhands.sdk.tool.registry import register_tool, list_registered_tools
+
+# Import tools for registration
+from openhands.tools.str_replace_editor import FileEditorTool
+from openhands.tools.task_tracker import TaskTrackerTool
+from openhands.tools.execute_bash import BashTool
 
 logger = get_logger(__name__)
+
+
+def register_openhands_tools():
+    """Register OpenHands tools in the SDK registry."""
+    registered_tools = list_registered_tools()
+
+    # Only register if not already registered
+    if "str_replace_editor" not in registered_tools:
+        register_tool("str_replace_editor", FileEditorTool.create)
+        logger.info("✅ Registered str_replace_editor tool")
+
+    if "task_tracker" not in registered_tools:
+        register_tool("task_tracker", TaskTrackerTool.create)
+        logger.info("✅ Registered task_tracker tool")
+
+    if "execute_bash" not in registered_tools:
+        register_tool("execute_bash", BashTool.create)
+        logger.info("✅ Registered execute_bash tool")
 
 
 def ensure_directory_exists(path: str) -> bool:
@@ -52,6 +76,9 @@ def ensure_directory_exists(path: str) -> bool:
 
 def create_tools_with_validation(workspace_path: str) -> list:
     """Create tools with proper path validation and setup."""
+    # Register tools in the SDK registry first
+    register_openhands_tools()
+
     tools = []
 
     # Ensure workspace exists
@@ -74,16 +101,16 @@ def create_tools_with_validation(workspace_path: str) -> list:
 
     try:
         # FileEditorTool - no specific directory needed
-        tools.append(FileEditorTool.create())
-        logger.info(f"✅ Created FileEditorTool")
+        tools.append(ToolSpec(name="str_replace_editor", params={}))
+        logger.info(f"✅ Created str_replace_editor")
 
         # TaskTrackerTool - save to tasks directory
-        tools.append(TaskTrackerTool.create(save_dir=tasks_dir))
-        logger.info(f"✅ Created TaskTrackerTool with save_dir: {tasks_dir}")
+        tools.append(ToolSpec(name="task_tracker", params={"save_dir": tasks_dir}))
+        logger.info(f"✅ Created task_tracker with save_dir: {tasks_dir}")
 
         # BashTool - work in project directory
-        tools.append(BashTool.create(working_dir=project_dir))
-        logger.info(f"✅ Created BashTool with working_dir: {project_dir}")
+        tools.append(ToolSpec(name="execute_bash", params={"working_dir": project_dir}))
+        logger.info(f"✅ Created execute_bash with working_dir: {project_dir}")
 
     except Exception as e:
         logger.error(f"❌ Failed to create tools: {e}")
@@ -218,6 +245,46 @@ class AgentLoop:
                 conversation_id=conversation_id,
                 visualize=False,
             )
+        except ValueError as e:
+            error_msg = str(e)
+            # Handle tool name migration - clear persisted state if tool names have changed
+            if (
+                ("Tool" in error_msg and "is not registered" in error_msg)
+                or (
+                    "Agent provided is different" in error_msg and "tools:" in error_msg
+                )
+                or ("Conversation ID mismatch" in error_msg)
+            ):
+                logger.warning(
+                    f"⚠️ Detected tool migration issue for {self.get_key()}: {error_msg}"
+                )
+                logger.info(
+                    f"🔄 Clearing persisted state to handle tool name changes..."
+                )
+
+                # Clear the persisted state directory
+                import shutil
+
+                if os.path.exists(self.state_path):
+                    shutil.rmtree(self.state_path)
+                    ensure_directory_exists(self.state_path)
+
+                # Recreate the file store
+                self.file_store = LocalFileStore(self.state_path)
+
+                # Retry conversation creation
+                self.conversation = Conversation(
+                    agent=self.agent,
+                    callbacks=callbacks,
+                    persist_filestore=self.file_store,
+                    conversation_id=conversation_id,
+                    visualize=False,
+                )
+                logger.info(
+                    f"✅ Successfully recreated conversation after state migration"
+                )
+            else:
+                raise
         except Exception as e:
             logger.error(f"❌ Failed to create conversation for {self.get_key()}: {e}")
             raise
@@ -272,7 +339,7 @@ class AgentLoop:
                 user_uuid, app_slug, riff_slug, llm, workspace_path, message_callback
             )
 
-    def _safe_event_callback(self, event: Event):
+    def _safe_event_callback(self, event: EventBase):
         """Safe wrapper for event callbacks with proper error handling."""
         try:
             if self.message_callback:

@@ -46,10 +46,10 @@ def get_llm_instance(api_key: str, model: str = "claude-sonnet-4-20250514"):
     if os.environ.get("MOCK_MODE", "false").lower() == "true":
         # In mock mode, create a real LLM instance but with a fake key
         # The actual API calls will be mocked by the mocks.py module
-        return LLM(api_key="mock-key", model=model)
+        return LLM(api_key="mock-key", model=model, service_id="mock-service")
     else:
         # Use the real API key
-        return LLM(api_key=api_key, model=model)
+        return LLM(api_key=api_key, model=model, service_id="openvibe-llm")
 
 
 from utils.logging import get_logger, log_api_request, log_api_response

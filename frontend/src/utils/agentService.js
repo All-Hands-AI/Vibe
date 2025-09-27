@@ -205,6 +205,8 @@ export function getStatusDescription(status) {
       return 'Finished'
     case 'error':
       return 'Error'
+    case 'stuck':
+      return 'Stuck'
     default:
       // Fallback for any unknown status
       return status.status || 'Unknown'
@@ -238,6 +240,8 @@ export function getStatusColor(status) {
       return 'text-green-400'
     case 'error':
       return 'text-red-400'
+    case 'stuck':
+      return 'text-orange-400'
     default:
       return 'text-gray-400'
   }
