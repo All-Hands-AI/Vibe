@@ -49,6 +49,7 @@ npm run dev
 ## Backend
 ```
 cd backend
+export DATA_DIR=`pwd`/data
 uv venv
 uv pip install .
 uv run python app.py
