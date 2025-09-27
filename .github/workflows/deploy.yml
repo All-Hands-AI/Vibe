@@ -50,11 +50,25 @@ jobs:
           cp fly.toml fly-feature.toml
           sed -i "s/app = 'openvibe'/app = '${{ steps.deployment-env.outputs.app_name }}'/" fly-feature.toml
 
+      - name: Create app for feature environment
+        if: steps.deployment-env.outputs.is_production == 'false'
+        run: |
+          # Create the app if it doesn't exist
+          flyctl apps create ${{ steps.deployment-env.outputs.app_name }} --org personal || true
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+
       - name: Create volumes for production
         if: steps.deployment-env.outputs.is_production == 'true'
         run: |
           # Create volumes if they don't exist (ignore errors if they already exist)
-          flyctl volume create data_volume -r ewr -n 2 -a openvibe || true
+          flyctl volume create data_volume -r ewr -n 2 -a ${{ steps.deployment-env.outputs.app_name }} || true
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+
+      - name: Set secrets
+        run: |
+          flyctl secrets set RUNTIME_API_STAGING_SECRET="${{ secrets.RUNTIME_API_STAGING_SECRET }}" -a ${{ steps.deployment-env.outputs.app_name }}
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
 
@@ -67,10 +81,6 @@ jobs:
       - name: Deploy to feature environment
         if: steps.deployment-env.outputs.is_production == 'false'
         run: |
-          # Create the app if it doesn't exist
-          flyctl apps create ${{ steps.deployment-env.outputs.app_name }} --org personal || true
-          # Create volumes if they don't exist (ignore errors if they already exist)
-          flyctl volume create data_volume -r ewr -n 2 -a ${{ steps.deployment-env.outputs.app_name }} || true
           # Deploy using the feature-specific config
           flyctl deploy --config fly-feature.toml --remote-only
         env:
@@ -79,11 +89,7 @@ jobs:
       - name: Get deployment URL
         id: deployment-url
         run: |
-          if [[ "${{ steps.deployment-env.outputs.is_production }}" == "true" ]]; then
-            echo "url=https://openvibe.fly.dev" >> $GITHUB_OUTPUT
-          else
-            echo "url=https://${{ steps.deployment-env.outputs.app_name }}.fly.dev" >> $GITHUB_OUTPUT
-          fi
+          echo "url=https://${{ steps.deployment-env.outputs.app_name }}.fly.dev" >> $GITHUB_OUTPUT
 
       - name: Comment on PR
         if: github.event_name == 'pull_request'
