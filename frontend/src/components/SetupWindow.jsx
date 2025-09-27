@@ -39,7 +39,7 @@ const SetupWindow = ({ onSetupComplete }) => {
     }))
 
     try {
-      const response = await fetch(`${BACKEND_URL}/integrations/${provider}`, {
+      const response = await fetch(`${BACKEND_URL}/api/integrations/${provider}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
