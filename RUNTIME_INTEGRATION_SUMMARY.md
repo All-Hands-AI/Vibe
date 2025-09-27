@@ -57,7 +57,7 @@ Returns the runtime status for a specific Riff.
 ### Environment Variables
 The service uses the following environment variables:
 
-- `RUNTIME_API_URL`: Runtime API base URL (default: `https://runtime-api-staging.all-hands.dev`)
+- `RUNTIME_API_URL`: Runtime API base URL (default: `https://runtime.staging.all-hands.dev/`)
 - `RUNTIME_API_STAGING_SECRET`: Admin API key for runtime-api authentication
 
 ### Runtime Configuration
@@ -113,7 +113,7 @@ To deploy this integration:
 
 1. Set environment variables in production:
    ```bash
-   export RUNTIME_API_URL="https://runtime-api-staging.all-hands.dev"
+   export RUNTIME_API_URL="https://runtime.staging.all-hands.dev/"
    export RUNTIME_API_STAGING_SECRET="your-admin-api-key"
    ```
 

@@ -22,7 +22,7 @@ class RuntimeService:
     
     def __init__(self):
         # Get configuration from environment variables
-        self.runtime_api_url = os.environ.get('RUNTIME_API_URL', 'https://runtime-api-staging.all-hands.dev')
+        self.runtime_api_url = os.environ.get('RUNTIME_API_URL', 'https://runtime.staging.all-hands.dev/')
         self.admin_api_key = os.environ.get('RUNTIME_API_STAGING_SECRET')
         self.default_image = 'ghcr.io/all-hands-ai/agent-server:8daf576-python'
         
