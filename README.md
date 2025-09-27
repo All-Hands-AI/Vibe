@@ -32,3 +32,18 @@ Create a new Riff for every change you want to make. Preview the change on fly.i
 Once you're happy, merge and start a new Riff!
 
 You can easily have several Riffs going at once. The agent can figure out how to deal with minor conflicts.
+
+## Deployment
+
+### Environment Variables
+
+The application requires the following environment variable for basic authentication:
+
+- `BASIC_AUTH_PASSWORD`: The password for basic authentication (username is `openhands`)
+
+For Fly.io deployment, set this as a secret:
+```bash
+fly secrets set BASIC_AUTH_PASSWORD=your_secure_password_here
+```
+
+The application will generate the `.htpasswd` file dynamically at startup using this environment variable.

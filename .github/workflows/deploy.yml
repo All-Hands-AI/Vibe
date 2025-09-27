@@ -69,6 +69,7 @@ jobs:
       - name: Set secrets
         run: |
           flyctl secrets set RUNTIME_API_STAGING_SECRET="${{ secrets.RUNTIME_API_STAGING_SECRET }}" -a ${{ steps.deployment-env.outputs.app_name }}
+          flyctl secrets set BASIC_AUTH_PASSWORD="${{ secrets.BASIC_AUTH_PASSWORD }}" -a ${{ steps.deployment-env.outputs.app_name }}
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
 

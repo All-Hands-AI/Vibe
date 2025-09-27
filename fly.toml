@@ -24,6 +24,10 @@ primary_region = 'ewr'
   cpus = 2
   memory_mb = 4096
 
+[env]
+  # Basic auth configuration
+  BASIC_AUTH_USERNAME = "openhands"
+
 [mounts]
   source = "data_volume"
   destination = "/data"
