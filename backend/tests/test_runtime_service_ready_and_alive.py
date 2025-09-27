@@ -1,7 +1,7 @@
 """
 Tests for RuntimeService ready and alive functionality.
 """
-import pytest
+
 from unittest.mock import patch, MagicMock
 from services.runtime_service import runtime_service
 
@@ -104,7 +104,9 @@ class TestRuntimeServiceReadyAndAlive:
             )
 
             assert success is False
-            assert "Timeout waiting for runtime to be ready and alive" in response["error"]
+            assert (
+                "Timeout waiting for runtime to be ready and alive" in response["error"]
+            )
 
     def test_wait_for_runtime_ready_and_alive_error_status(self):
         """Test wait for runtime when it has error status."""
@@ -149,7 +151,9 @@ class TestRuntimeServiceReadyAndAlive:
             )
 
             assert success is False
-            assert "Timeout waiting for runtime to be ready and alive" in response["error"]
+            assert (
+                "Timeout waiting for runtime to be ready and alive" in response["error"]
+            )
 
     def test_wait_for_runtime_alive_success(self):
         """Test successful wait for runtime alive."""
@@ -167,9 +171,9 @@ class TestRuntimeServiceReadyAndAlive:
 
     def test_wait_for_runtime_alive_timeout(self):
         """Test timeout waiting for runtime alive."""
-        with patch.object(runtime_service, "check_runtime_alive") as mock_check_alive, patch(
-            "services.runtime_service.time.sleep"
-        ):
+        with patch.object(
+            runtime_service, "check_runtime_alive"
+        ) as mock_check_alive, patch("services.runtime_service.time.sleep"):
 
             # Mock alive check as always failing
             mock_check_alive.return_value = (False, {"error": "Not alive"})
