@@ -49,16 +49,16 @@ logger = get_logger(__name__)
 def register_openhands_tools():
     """Register OpenHands tools in the SDK registry."""
     registered_tools = list_registered_tools()
-    
+
     # Only register if not already registered
     if "str_replace_editor" not in registered_tools:
         register_tool("str_replace_editor", FileEditorTool.create)
         logger.info("✅ Registered str_replace_editor tool")
-    
+
     if "task_tracker" not in registered_tools:
         register_tool("task_tracker", TaskTrackerTool.create)
         logger.info("✅ Registered task_tracker tool")
-    
+
     if "execute_bash" not in registered_tools:
         register_tool("execute_bash", BashTool.create)
         logger.info("✅ Registered execute_bash tool")
@@ -78,7 +78,7 @@ def create_tools_with_validation(workspace_path: str) -> list:
     """Create tools with proper path validation and setup."""
     # Register tools in the SDK registry first
     register_openhands_tools()
-    
+
     tools = []
 
     # Ensure workspace exists
@@ -248,21 +248,30 @@ class AgentLoop:
         except ValueError as e:
             error_msg = str(e)
             # Handle tool name migration - clear persisted state if tool names have changed
-            if ("Tool" in error_msg and "is not registered" in error_msg) or \
-               ("Agent provided is different" in error_msg and "tools:" in error_msg) or \
-               ("Conversation ID mismatch" in error_msg):
-                logger.warning(f"⚠️ Detected tool migration issue for {self.get_key()}: {error_msg}")
-                logger.info(f"🔄 Clearing persisted state to handle tool name changes...")
-                
+            if (
+                ("Tool" in error_msg and "is not registered" in error_msg)
+                or (
+                    "Agent provided is different" in error_msg and "tools:" in error_msg
+                )
+                or ("Conversation ID mismatch" in error_msg)
+            ):
+                logger.warning(
+                    f"⚠️ Detected tool migration issue for {self.get_key()}: {error_msg}"
+                )
+                logger.info(
+                    f"🔄 Clearing persisted state to handle tool name changes..."
+                )
+
                 # Clear the persisted state directory
                 import shutil
+
                 if os.path.exists(self.state_path):
                     shutil.rmtree(self.state_path)
                     ensure_directory_exists(self.state_path)
-                
+
                 # Recreate the file store
                 self.file_store = LocalFileStore(self.state_path)
-                
+
                 # Retry conversation creation
                 self.conversation = Conversation(
                     agent=self.agent,
@@ -271,7 +280,9 @@ class AgentLoop:
                     conversation_id=conversation_id,
                     visualize=False,
                 )
-                logger.info(f"✅ Successfully recreated conversation after state migration")
+                logger.info(
+                    f"✅ Successfully recreated conversation after state migration"
+                )
             else:
                 raise
         except Exception as e:
