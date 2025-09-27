@@ -17,11 +17,6 @@ export const SetupProvider = ({ children }) => {
   const [isLoading, setIsLoading] = useState(true)
   const [userUUID, setUserUUID] = useState(null)
 
-  // Backend URL - in production, backend runs on same domain
-  const BACKEND_URL = import.meta.env.MODE === 'production' 
-    ? '' 
-    : 'http://localhost:8000'
-
   // Initialize user UUID
   useEffect(() => {
     const uuid = getUserUUID()
@@ -39,7 +34,7 @@ export const SetupProvider = ({ children }) => {
       const checks = await Promise.all(
         providers.map(async (provider) => {
           try {
-            const response = await fetch(`${BACKEND_URL}/api/integrations/${provider}`, {
+            const response = await fetch(`/api/integrations/${provider}`, {
               headers: {
                 'X-User-UUID': userUUID
               }
@@ -62,7 +57,7 @@ export const SetupProvider = ({ children }) => {
     } finally {
       setIsLoading(false)
     }
-  }, [BACKEND_URL, userUUID])
+  }, [userUUID])
 
   useEffect(() => {
     checkSetupStatus()
