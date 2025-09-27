@@ -18,10 +18,10 @@ integrations_bp = Blueprint("integrations", __name__)
 api_keys = {"anthropic": None, "github": None, "fly": None}
 
 
-@integrations_bp.route("/integrations/<provider>", methods=["POST"])
+@integrations_bp.route("/api/integrations/<provider>", methods=["POST"])
 def set_api_key(provider):
     """Set API key for a provider"""
-    logger.info(f"🔑 POST /integrations/{provider} - Setting API key")
+    logger.info(f"🔑 POST /api/integrations/{provider} - Setting API key")
     logger.debug(f"📥 Request headers: {dict(request.headers)}")
     logger.debug(f"📥 Request remote addr: {request.remote_addr}")
     logger.debug(
@@ -96,10 +96,10 @@ def set_api_key(provider):
         )
 
 
-@integrations_bp.route("/integrations/<provider>", methods=["GET"])
+@integrations_bp.route("/api/integrations/<provider>", methods=["GET"])
 def check_api_key(provider):
     """Check if API key is set and valid for a provider"""
-    logger.info(f"🔍 GET /integrations/{provider} - Checking API key status")
+    logger.info(f"🔍 GET /api/integrations/{provider} - Checking API key status")
 
     if not is_valid_provider(provider):
         logger.warning(f"❌ Invalid provider requested: {provider}")

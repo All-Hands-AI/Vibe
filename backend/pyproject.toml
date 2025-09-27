@@ -13,7 +13,7 @@ name = "openvibe-backend"
 version = "0.1.0"
 description = "OpenVibe Backend API - A modern Flask application with file-based JSON storage"
 readme = "README.md"
-requires-python = ">=3.8"
+requires-python = ">=3.12"
 authors = [
     {name = "OpenVibe Team", email = "openhands@all-hands.dev"},
 ]

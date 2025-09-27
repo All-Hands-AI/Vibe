@@ -36,3 +36,21 @@ Create a new Riff for every change you want to make. Preview the change on fly.i
 Once you're happy, merge and start a new Riff!
 
 You can easily have several Riffs going at once. The agent can figure out how to deal with minor conflicts.
+
+# Development
+
+## Frontend
+```
+cd frontend
+npm install
+npm run dev
+```
+
+## Backend
+```
+cd backend
+export DATA_DIR=`pwd`/data
+uv venv
+uv pip install .
+uv run python app.py
+```

@@ -39,7 +39,7 @@ export const SetupProvider = ({ children }) => {
       const checks = await Promise.all(
         providers.map(async (provider) => {
           try {
-            const response = await fetch(`${BACKEND_URL}/integrations/${provider}`, {
+            const response = await fetch(`${BACKEND_URL}/api/integrations/${provider}`, {
               headers: {
                 'X-User-UUID': userUUID
               }
