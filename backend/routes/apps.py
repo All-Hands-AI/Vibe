@@ -7,10 +7,10 @@ import time
 import uuid
 from base64 import b64encode
 from datetime import datetime, timezone
-from pathlib import Path
 from nacl import encoding, public
 from keys import load_user_keys
 from storage import get_apps_storage, get_riffs_storage
+from storage.base_storage import DATA_DIR
 from agent_loop import agent_loop_manager
 from utils.deployment_status import get_deployment_status
 
@@ -54,7 +54,7 @@ def delete_user_app(user_uuid, app_slug):
 def load_apps():
     """Load apps from legacy file - DEPRECATED"""
     logger.warning("⚠️ Using deprecated load_apps() function")
-    legacy_file = Path("/data/apps.json")
+    legacy_file = DATA_DIR / "apps.json"
     if legacy_file.exists():
         try:
             with open(legacy_file, "r") as f:

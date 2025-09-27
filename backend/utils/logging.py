@@ -40,7 +40,7 @@ def log_system_info(logger: logging.Logger) -> None:
     """
     import sys
     import os
-    from pathlib import Path
+    from storage.base_storage import DATA_DIR
 
     logger.info("🚀 OpenVibe Backend System Information")
     logger.info("=" * 50)
@@ -55,19 +55,19 @@ def log_system_info(logger: logging.Logger) -> None:
     logger.info(f"  - FLASK_ENV: {os.environ.get('FLASK_ENV', 'production')}")
     logger.info(f"  - PORT: {os.environ.get('PORT', '8000')}")
     logger.info(f"  - PWD: {os.environ.get('PWD', 'unknown')}")
+    logger.info(f"  - DATA_DIR: {DATA_DIR}")
 
     # File system information
-    data_dir = Path("/data")
     logger.info(f"📁 Data directory status:")
-    logger.info(f"  - Path: {data_dir}")
-    logger.info(f"  - Exists: {data_dir.exists()}")
+    logger.info(f"  - Path: {DATA_DIR}")
+    logger.info(f"  - Exists: {DATA_DIR.exists()}")
     logger.info(
-        f"  - Is directory: {data_dir.is_dir() if data_dir.exists() else 'N/A'}"
+        f"  - Is directory: {DATA_DIR.is_dir() if DATA_DIR.exists() else 'N/A'}"
     )
 
-    if data_dir.exists():
+    if DATA_DIR.exists():
         try:
-            subdirs = list(data_dir.iterdir())
+            subdirs = list(DATA_DIR.iterdir())
             logger.info(f"  - Subdirectories: {len(subdirs)}")
             for subdir in subdirs[:5]:  # Show first 5 subdirs
                 logger.info(f"    - {subdir.name}")
