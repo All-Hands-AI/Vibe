@@ -25,7 +25,7 @@ class TestLLMReadinessEndpoints:
         # Set up API keys
         for provider, key in mock_api_keys.items():
             client.post(
-                f"/integrations/{provider}",
+                f"/api/integrations/{provider}",
                 headers=headers,
                 json={"api_key": key},
             )
