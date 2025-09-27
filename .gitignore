@@ -193,3 +193,6 @@ dmypy.json
 
 # Jinja2 template cache
 .jinja_cache/
+
+# Authentication files (generated at runtime)
+.htpasswd

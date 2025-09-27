@@ -46,6 +46,8 @@ RUN apt-get update -qq && \
     curl \
     wget \
     git \
+    # Apache utilities for htpasswd
+    apache2-utils \
     # Python and development tools
     python3 \
     python3-pip \
@@ -127,8 +129,9 @@ RUN mkdir -p /data && chown -R www-data:www-data /data
 # Copy nginx configuration
 COPY nginx.conf /etc/nginx/sites-available/default
 
-# Copy htpasswd file for basic authentication
-COPY .htpasswd /etc/nginx/.htpasswd
+# Copy entrypoint script for dynamic htpasswd generation
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
 
 # Copy supervisor configuration
 COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
@@ -139,5 +142,5 @@ RUN mkdir -p /var/log/supervisor
 # Expose port 80
 EXPOSE 80
 
-# Start supervisor to manage both nginx and python backend
-CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]
+# Use entrypoint script to generate htpasswd and start services
+CMD ["/entrypoint.sh"]
