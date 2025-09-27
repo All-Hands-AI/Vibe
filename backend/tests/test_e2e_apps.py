@@ -54,7 +54,7 @@ class TestAppsEndpoints:
         # First set up API keys
         for provider, key in mock_api_keys.items():
             client.post(
-                f"/integrations/{provider}",
+                f"/api/integrations/{provider}",
                 headers=unique_headers,
                 json={"api_key": key},
             )
@@ -125,7 +125,7 @@ class TestAppsEndpoints:
         # First set up API keys
         for provider, key in mock_api_keys.items():
             client.post(
-                f"/integrations/{provider}",
+                f"/api/integrations/{provider}",
                 headers=sample_headers,
                 json={"api_key": key},
             )
@@ -154,7 +154,7 @@ class TestAppsEndpoints:
         # First set up API keys
         for provider, key in mock_api_keys.items():
             client.post(
-                f"/integrations/{provider}",
+                f"/api/integrations/{provider}",
                 headers=unique_headers,
                 json={"api_key": key},
             )
@@ -189,7 +189,7 @@ class TestAppsEndpoints:
         # First set up API keys
         for provider, key in mock_api_keys.items():
             client.post(
-                f"/integrations/{provider}",
+                f"/api/integrations/{provider}",
                 headers=sample_headers,
                 json={"api_key": key},
             )
@@ -225,7 +225,7 @@ class TestAppsEndpoints:
         # First set up API keys
         for provider, key in mock_api_keys.items():
             client.post(
-                f"/integrations/{provider}",
+                f"/api/integrations/{provider}",
                 headers=sample_headers,
                 json={"api_key": key},
             )
@@ -272,7 +272,9 @@ class TestAppsEndpoints:
         for headers in [user1_headers, user2_headers]:
             for provider, key in mock_api_keys.items():
                 client.post(
-                    f"/integrations/{provider}", headers=headers, json={"api_key": key}
+                    f"/api/integrations/{provider}",
+                    headers=headers,
+                    json={"api_key": key},
                 )
 
         # Create app for user1
@@ -300,7 +302,7 @@ class TestAppsEndpoints:
         # First set up API keys
         for provider, key in mock_api_keys.items():
             client.post(
-                f"/integrations/{provider}",
+                f"/api/integrations/{provider}",
                 headers=sample_headers,
                 json={"api_key": key},
             )
