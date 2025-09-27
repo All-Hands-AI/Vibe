@@ -64,6 +64,9 @@ from routes.apps import (
     user_app_exists,
 )
 
+# Import runtime service for managing remote runtimes
+from services.runtime_service import runtime_service
+
 logger = get_logger(__name__)
 
 # Create Blueprint for riffs
@@ -542,6 +545,25 @@ def create_riff(slug):
             logger.error("❌ Failed to save riff to file")
             return jsonify({"error": "Failed to save riff"}), 500
 
+        # Start remote runtime for the new Riff
+        logger.info(f"🚀 Starting remote runtime for riff: {riff_slug}")
+        runtime_success, runtime_response = runtime_service.start_runtime(
+            user_uuid, slug, riff_slug
+        )
+        
+        if runtime_success:
+            logger.info(f"✅ Remote runtime started successfully: {runtime_response.get('runtime_id')}")
+            # Store runtime info in riff data
+            riff["runtime_id"] = runtime_response.get("runtime_id")
+            riff["runtime_url"] = runtime_response.get("url")
+            riff["session_api_key"] = runtime_response.get("session_api_key")
+            
+            # Update riff with runtime info
+            save_user_riff(user_uuid, slug, riff_slug, riff)
+        else:
+            logger.warning(f"⚠️ Failed to start remote runtime: {runtime_response.get('error')}")
+            # Continue without runtime - local agent will be used as fallback
+
         # Create AgentLoop with user's Anthropic token
         success, error_message = create_agent_for_user(
             user_uuid, slug, riff_slug, send_initial_message=True
@@ -882,6 +904,24 @@ def reset_riff_llm(slug, riff_slug):
         if not user_riff_exists(user_uuid, slug, riff_slug):
             logger.warning(f"❌ Riff not found: {riff_slug}")
             return jsonify({"error": "Riff not found"}), 404
+
+        # Handle runtime reset - check status and unpause/restart as needed
+        logger.info(f"🔄 Handling runtime reset for riff: {riff_slug}")
+        runtime_success, runtime_response = runtime_service.handle_agent_reset(
+            user_uuid, slug, riff_slug
+        )
+        
+        if runtime_success:
+            logger.info(f"✅ Runtime reset handled successfully: {runtime_response.get('status')}")
+            # Update riff with any new runtime info
+            riff_data = load_user_riff(user_uuid, slug, riff_slug)
+            if riff_data and runtime_response.get('runtime_id'):
+                riff_data["runtime_id"] = runtime_response.get("runtime_id")
+                riff_data["runtime_url"] = runtime_response.get("url")
+                save_user_riff(user_uuid, slug, riff_slug, riff_data)
+        else:
+            logger.warning(f"⚠️ Runtime reset failed: {runtime_response.get('error')}")
+            # Continue with local agent reset as fallback
 
         # Remove existing AgentLoop if it exists
         existing_removed = agent_loop_manager.remove_agent_loop(
@@ -1490,3 +1530,103 @@ def get_riff_deployment_status(slug, riff_slug):
     except Exception as e:
         logger.error(f"💥 Error getting riff deployment status: {str(e)}")
         return jsonify({"error": "Failed to get deployment status"}), 500
+
+
+# Runtime API Status endpoint
+@riffs_bp.route("/api/runtime/status", methods=["GET"])
+def get_runtime_api_status():
+    """Get the status of the runtime API service"""
+    log_api_request(logger, "GET", "/api/runtime/status")
+
+    try:
+        # Get UUID from headers for logging purposes
+        user_uuid = request.headers.get("X-User-UUID")
+        if user_uuid:
+            user_uuid = user_uuid.strip()
+            logger.info(f"🏥 Runtime API status check requested by user {user_uuid[:8]}")
+        else:
+            logger.info("🏥 Runtime API status check requested (no user UUID)")
+
+        # Check runtime API health
+        success, health_response = runtime_service.get_api_health()
+        
+        if success:
+            logger.info("✅ Runtime API is healthy")
+            log_api_response(logger, "GET", "/api/runtime/status", 200, user_uuid)
+            return jsonify({
+                "status": "healthy",
+                "runtime_api_url": runtime_service.runtime_api_url,
+                "details": health_response
+            }), 200
+        else:
+            logger.warning(f"⚠️ Runtime API health check failed: {health_response.get('error')}")
+            log_api_response(logger, "GET", "/api/runtime/status", 503, user_uuid)
+            return jsonify({
+                "status": "unhealthy",
+                "runtime_api_url": runtime_service.runtime_api_url,
+                "error": health_response.get("error"),
+                "details": health_response
+            }), 503
+
+    except Exception as e:
+        logger.error(f"💥 Error checking runtime API status: {str(e)}")
+        log_api_response(logger, "GET", "/api/runtime/status", 500, user_uuid if 'user_uuid' in locals() else None)
+        return jsonify({
+            "status": "error",
+            "error": f"Failed to check runtime API status: {str(e)}"
+        }), 500
+
+
+# Runtime Status endpoint for specific riff
+@riffs_bp.route("/api/apps/<slug>/riffs/<riff_slug>/runtime/status", methods=["GET"])
+def get_riff_runtime_status(slug, riff_slug):
+    """Get the runtime status for a specific riff"""
+    log_api_request(logger, "GET", f"/api/apps/{slug}/riffs/{riff_slug}/runtime/status")
+
+    try:
+        # Get UUID from headers
+        user_uuid = request.headers.get("X-User-UUID")
+        if not user_uuid:
+            logger.warning("❌ X-User-UUID header is required")
+            return jsonify({"error": "X-User-UUID header is required"}), 400
+
+        user_uuid = user_uuid.strip()
+        if not user_uuid:
+            logger.warning("❌ Empty UUID provided in header")
+            return jsonify({"error": "UUID cannot be empty"}), 400
+
+        # Verify app exists
+        if not user_app_exists(user_uuid, slug):
+            logger.warning(f"❌ App not found: {slug}")
+            return jsonify({"error": "App not found"}), 404
+
+        # Verify riff exists
+        if not user_riff_exists(user_uuid, slug, riff_slug):
+            logger.warning(f"❌ Riff not found: {riff_slug}")
+            return jsonify({"error": "Riff not found"}), 404
+
+        logger.info(f"📊 Getting runtime status for riff: {user_uuid[:8]}:{slug}:{riff_slug}")
+
+        # Get runtime status
+        success, status_response = runtime_service.get_runtime_status(user_uuid, slug, riff_slug)
+        
+        if success:
+            logger.info(f"✅ Runtime status retrieved: {status_response.get('status')}")
+            log_api_response(logger, "GET", f"/api/apps/{slug}/riffs/{riff_slug}/runtime/status", 200, user_uuid)
+            return jsonify({
+                "status": "found",
+                "runtime": status_response
+            }), 200
+        else:
+            logger.info(f"ℹ️ Runtime not found or error: {status_response.get('error')}")
+            log_api_response(logger, "GET", f"/api/apps/{slug}/riffs/{riff_slug}/runtime/status", 404, user_uuid)
+            return jsonify({
+                "status": "not_found",
+                "error": status_response.get("error"),
+                "details": status_response
+            }), 404
+
+    except Exception as e:
+        logger.error(f"💥 Error getting riff runtime status: {str(e)}")
+        log_api_response(logger, "GET", f"/api/apps/{slug}/riffs/{riff_slug}/runtime/status", 500, user_uuid if 'user_uuid' in locals() else None)
+        return jsonify({"error": "Failed to get runtime status"}), 500
