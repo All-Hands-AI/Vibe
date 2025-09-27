@@ -104,7 +104,7 @@ class RuntimeService:
         Returns:
             Tuple of (success: bool, response_data: Dict)
         """
-        session_id = f"{user_uuid}:{app_slug}:{riff_slug}"
+        session_id = f"{user_uuid}.{app_slug}.{riff_slug}"
 
         runtime_config = {
             "session_id": session_id,
@@ -142,7 +142,7 @@ class RuntimeService:
         Returns:
             Tuple of (success: bool, response_data: Dict)
         """
-        session_id = f"{user_uuid}:{app_slug}:{riff_slug}"
+        session_id = f"{user_uuid}.{app_slug}.{riff_slug}"
 
         logger.info(f"📊 Getting runtime status for session: {session_id}")
         success, response = self._make_request("GET", f"/sessions/{session_id}")
@@ -241,7 +241,7 @@ class RuntimeService:
             Tuple of (success: bool, response_data: Dict)
         """
         logger.info(
-            f"🔄 Handling agent reset for {user_uuid[:8]}:{app_slug}:{riff_slug}"
+            f"🔄 Handling agent reset for {user_uuid[:8]}.{app_slug}.{riff_slug}"
         )
 
         # First, check the current runtime status
