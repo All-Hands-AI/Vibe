@@ -112,6 +112,7 @@ class RuntimeService:
             "command": "/usr/local/bin/openhands-agent-server --port 60000",
             "working_dir": "/",
             "run_as_user": 0,
+            "environment": {"DEBUG": "true"},
         }
 
         logger.info(f"🚀 Starting runtime for session: {session_id}")
