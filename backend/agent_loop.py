@@ -36,6 +36,7 @@ from openhands.sdk import (
 )
 from openhands.sdk.context import render_template
 from openhands.sdk.conversation.state import AgentExecutionStatus
+
 # Tool imports no longer needed - using ToolSpec format
 
 logger = get_logger(__name__)
