@@ -20,8 +20,12 @@ we use OpenHands Vibe to make OpenHands Vibe.
 * **OpenHands** for agents
 
 ## Workflow
+* Every App corresponds to a single GitHub repo
+* Every Riff corresponds to a single branch/PR
+* Every Riff gets a preview deployment on Fly.io
+
 When you create a new App, a corresponding GitHub repo will be created as well.
-It will start from the [template repo](https://github.com/rbren/openvibe-template), which contains a hello world React + Python app,
+It will start from the [template repo](https://github.com/all-hands-ai/vibe-template), which contains a hello world React + Python app,
 plus a standardized dev setup.
 
 Your first Riff (a change to the app) will be created automatically. It will make some required edits to the default template.
@@ -32,18 +36,3 @@ Create a new Riff for every change you want to make. Preview the change on fly.i
 Once you're happy, merge and start a new Riff!
 
 You can easily have several Riffs going at once. The agent can figure out how to deal with minor conflicts.
-
-## Deployment
-
-### Environment Variables
-
-The application requires the following environment variable for basic authentication:
-
-- `BASIC_AUTH_PASSWORD`: The password for basic authentication (username is `openhands`)
-
-For Fly.io deployment, set this as a secret:
-```bash
-fly secrets set BASIC_AUTH_PASSWORD=your_secure_password_here
-```
-
-The application will generate the `.htpasswd` file dynamically at startup using this environment variable.
