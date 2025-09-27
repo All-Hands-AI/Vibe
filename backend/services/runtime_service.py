@@ -112,7 +112,8 @@ class RuntimeService:
             "command": "/usr/local/bin/openhands-agent-server",
             "working_dir": "/workspace",
             "environment": {
-                "SESSION_API_KEY": user_uuid  # Set user's UUID as session API key
+                "SESSION_API_KEY": user_uuid,  # Set user's UUID as session API key
+                "PORT": "60000",  # Set port for OpenHands agent server
             },
         }
 
