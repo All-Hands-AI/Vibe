@@ -50,6 +50,14 @@ jobs:
           cp fly.toml fly-feature.toml
           sed -i "s/app = 'openvibe'/app = '${{ steps.deployment-env.outputs.app_name }}'/" fly-feature.toml
 
+      - name: Create app for feature environment
+        if: steps.deployment-env.outputs.is_production == 'false'
+        run: |
+          # Create the app if it doesn't exist
+          flyctl apps create ${{ steps.deployment-env.outputs.app_name }} --org personal || true
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+
       - name: Create volumes for production
         if: steps.deployment-env.outputs.is_production == 'true'
         run: |
@@ -58,8 +66,7 @@ jobs:
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
 
-      - name: Set secrets for production
-        if: steps.deployment-env.outputs.is_production == 'true'
+      - name: Set secrets
         run: |
           flyctl secrets set RUNTIME_API_STAGING_SECRET="${{ secrets.RUNTIME_API_STAGING_SECRET }}" -a ${{ steps.deployment-env.outputs.app_name }}
         env:
@@ -74,12 +81,6 @@ jobs:
       - name: Deploy to feature environment
         if: steps.deployment-env.outputs.is_production == 'false'
         run: |
-          # Create the app if it doesn't exist
-          flyctl apps create ${{ steps.deployment-env.outputs.app_name }} --org personal || true
-          # Create volumes if they don't exist (ignore errors if they already exist)
-          flyctl volume create data_volume -r ewr -n 2 -a ${{ steps.deployment-env.outputs.app_name }} || true
-          # Set secrets for the feature environment
-          flyctl secrets set RUNTIME_API_STAGING_SECRET="${{ secrets.RUNTIME_API_STAGING_SECRET }}" -a ${{ steps.deployment-env.outputs.app_name }}
           # Deploy using the feature-specific config
           flyctl deploy --config fly-feature.toml --remote-only
         env:
