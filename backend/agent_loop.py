@@ -31,11 +31,13 @@ from openhands.sdk import (
     TextContent,
     AgentContext,
     LocalFileStore,
-    Event,
+    EventBase,
 )
 from openhands.sdk.context import render_template
 from openhands.sdk.conversation.state import AgentExecutionStatus
-from openhands.tools import FileEditorTool, TaskTrackerTool, BashTool
+from openhands.tools.str_replace_editor import FileEditorTool
+from openhands.tools.task_tracker import TaskTrackerTool
+from openhands.tools.execute_bash import BashTool
 
 logger = get_logger(__name__)
 
@@ -272,7 +274,7 @@ class AgentLoop:
                 user_uuid, app_slug, riff_slug, llm, workspace_path, message_callback
             )
 
-    def _safe_event_callback(self, event: Event):
+    def _safe_event_callback(self, event: EventBase):
         """Safe wrapper for event callbacks with proper error handling."""
         try:
             if self.message_callback:
