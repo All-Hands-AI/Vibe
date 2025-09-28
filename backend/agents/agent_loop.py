@@ -18,6 +18,7 @@ from .agent_factory import create_agent
 from .conversation_factory import ConversationFactory
 
 # Add the site-packages to the path for openhands imports
+from openhands.sdk.event import MessageEvent
 sys.path.insert(0, ".venv/lib/python3.12/site-packages")
 
 from openhands.sdk import (
@@ -251,11 +252,11 @@ class AgentLoop:
                 "state_path": runtime_info["state_path"],
                 "conversation_state": {
                     "status": (
-                        state.status.value
-                        if hasattr(state.status, "value")
-                        else str(state.status)
+                        state.agent_status.value
+                        if hasattr(state.agent_status, "value")
+                        else str(state.agent_status)
                     ),
-                    "message_count": len(state.messages),
+                    "message_count": len([e for e in state.events if isinstance(e, MessageEvent)]),
                     "event_count": len(state.events),
                 },
             }
