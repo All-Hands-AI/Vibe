@@ -36,9 +36,8 @@ from openhands.sdk import (
 )
 from openhands.sdk.context import render_template
 from openhands.sdk.conversation.state import AgentExecutionStatus
-from openhands.sdk.tool.registry import register_tool, list_registered_tools
 
-# Import tools for registration
+# Import tools to register them automatically
 from openhands.tools.str_replace_editor import FileEditorTool
 from openhands.tools.task_tracker import TaskTrackerTool
 from openhands.tools.execute_bash import BashTool
@@ -47,24 +46,6 @@ logger = get_logger(__name__)
 
 # Import runtime service for checking runtime alive status
 from services.runtime_service import runtime_service
-
-
-def register_openhands_tools():
-    """Register OpenHands tools in the SDK registry."""
-    registered_tools = list_registered_tools()
-
-    # Only register if not already registered
-    if "str_replace_editor" not in registered_tools:
-        register_tool("str_replace_editor", FileEditorTool.create)
-        logger.info("✅ Registered str_replace_editor tool")
-
-    if "task_tracker" not in registered_tools:
-        register_tool("task_tracker", TaskTrackerTool.create)
-        logger.info("✅ Registered task_tracker tool")
-
-    if "execute_bash" not in registered_tools:
-        register_tool("execute_bash", BashTool.create)
-        logger.info("✅ Registered execute_bash tool")
 
 
 def ensure_directory_exists(path: str) -> bool:
@@ -79,9 +60,6 @@ def ensure_directory_exists(path: str) -> bool:
 
 def create_tools_with_validation(workspace_path: str) -> list:
     """Create tools with proper path validation and setup."""
-    # Register tools in the SDK registry first
-    register_openhands_tools()
-
     tools = []
 
     # Ensure workspace exists
