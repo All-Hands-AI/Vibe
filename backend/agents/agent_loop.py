@@ -214,7 +214,7 @@ class AgentLoop:
             List of events from the conversation
         """
         try:
-            return self.conversation.get_events()
+            return list(self.conversation.state.events)
         except Exception as e:
             logger.error(f"❌ Failed to get events for {self.get_key()}: {e}")
             return []
@@ -228,7 +228,7 @@ class AgentLoop:
         """
         try:
             # Get conversation state
-            state = self.conversation.get_state()
+            state = self.conversation.state
 
             # Get runtime info
             runtime_info = self.runtime_handler.get_runtime_info()
@@ -239,31 +239,34 @@ class AgentLoop:
                     self._current_task is not None and not self._current_task.done()
                 )
 
+            # Return SDK state transparently with minimal wrapper
+            # Convert the state to a dict to make it JSON serializable
+            state_dict = state.model_dump()
+
+            # Add minimal metadata that the frontend needs
             status = {
-                "key": self.get_key(),
-                "user_uuid": self.user_uuid,
-                "app_slug": self.app_slug,
-                "riff_slug": self.riff_slug,
-                "is_running": is_running,
-                "has_active_task": has_active_task,
-                "runtime_type": runtime_info["type"],
-                "workspace_path": runtime_info["workspace_path"],
-                "state_path": runtime_info["state_path"],
-                "conversation_state": {
-                    "status": (
-                        state.status.value
-                        if hasattr(state.status, "value")
-                        else str(state.status)
-                    ),
-                    "message_count": len(state.messages),
-                    "event_count": len(state.events),
+                # Core SDK state - transparent passthrough
+                **state_dict,
+                # Minimal metadata for the frontend
+                "_metadata": {
+                    "key": self.get_key(),
+                    "user_uuid": self.user_uuid,
+                    "app_slug": self.app_slug,
+                    "riff_slug": self.riff_slug,
+                    "is_running": is_running,
+                    "has_active_task": has_active_task,
+                    "runtime_type": runtime_info["type"],
+                    "workspace_path": runtime_info["workspace_path"],
+                    "state_path": runtime_info["state_path"],
                 },
             }
 
-            # Add runtime-specific info
+            # Add runtime-specific info to metadata
             if runtime_info["type"] == "remote":
-                status["runtime_url"] = runtime_info.get("runtime_url")
-                status["has_session_key"] = runtime_info.get("has_session_key", False)
+                status["_metadata"]["runtime_url"] = runtime_info.get("runtime_url")
+                status["_metadata"]["has_session_key"] = runtime_info.get(
+                    "has_session_key", False
+                )
 
             return status
 
