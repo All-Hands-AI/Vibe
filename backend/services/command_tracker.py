@@ -3,12 +3,9 @@ Command tracking service for monitoring action commands sent to agents.
 Tracks command IDs and their execution status for install, run, test, and lint actions.
 """
 
-import json
 from datetime import datetime, timezone
-from pathlib import Path
 from typing import Dict, Any, Optional
 from utils.logging import get_logger
-from storage.base_storage import DATA_DIR
 
 logger = get_logger(__name__)
 
@@ -17,45 +14,43 @@ class CommandTracker:
     """Service for tracking command execution for riff actions"""
 
     def __init__(self):
-        self.commands_dir = DATA_DIR / "commands"
-        self.commands_dir.mkdir(exist_ok=True)
+        # In-memory storage: {user_uuid: {app_slug: {riff_slug: commands_data}}}
+        self._commands_store: Dict[str, Dict[str, Dict[str, Dict[str, Any]]]] = {}
 
-    def _get_command_file_path(
-        self, user_uuid: str, app_slug: str, riff_slug: str
-    ) -> Path:
-        """Get the file path for storing command tracking data"""
-        user_dir = self.commands_dir / user_uuid / app_slug / riff_slug
-        user_dir.mkdir(parents=True, exist_ok=True)
-        return user_dir / "commands.json"
-
-    def _load_commands(
+    def _get_commands(
         self, user_uuid: str, app_slug: str, riff_slug: str
     ) -> Dict[str, Any]:
-        """Load command tracking data from file"""
+        """Get command tracking data from memory"""
         try:
-            file_path = self._get_command_file_path(user_uuid, app_slug, riff_slug)
-            if file_path.exists():
-                with open(file_path, "r") as f:
-                    return json.load(f)
-            return {}
+            if user_uuid not in self._commands_store:
+                self._commands_store[user_uuid] = {}
+            if app_slug not in self._commands_store[user_uuid]:
+                self._commands_store[user_uuid][app_slug] = {}
+            if riff_slug not in self._commands_store[user_uuid][app_slug]:
+                self._commands_store[user_uuid][app_slug][riff_slug] = {}
+
+            return self._commands_store[user_uuid][app_slug][riff_slug]
         except Exception as e:
             logger.error(
-                f"❌ Error loading commands for {user_uuid[:8]}:{app_slug}:{riff_slug}: {e}"
+                f"❌ Error getting commands for {user_uuid[:8]}:{app_slug}:{riff_slug}: {e}"
             )
             return {}
 
-    def _save_commands(
+    def _set_commands(
         self, user_uuid: str, app_slug: str, riff_slug: str, commands: Dict[str, Any]
     ) -> bool:
-        """Save command tracking data to file"""
+        """Set command tracking data in memory"""
         try:
-            file_path = self._get_command_file_path(user_uuid, app_slug, riff_slug)
-            with open(file_path, "w") as f:
-                json.dump(commands, f, indent=2)
+            if user_uuid not in self._commands_store:
+                self._commands_store[user_uuid] = {}
+            if app_slug not in self._commands_store[user_uuid]:
+                self._commands_store[user_uuid][app_slug] = {}
+
+            self._commands_store[user_uuid][app_slug][riff_slug] = commands
             return True
         except Exception as e:
             logger.error(
-                f"❌ Error saving commands for {user_uuid[:8]}:{app_slug}:{riff_slug}: {e}"
+                f"❌ Error setting commands for {user_uuid[:8]}:{app_slug}:{riff_slug}: {e}"
             )
             return False
 
@@ -83,7 +78,7 @@ class CommandTracker:
             Command tracking ID
         """
         try:
-            commands = self._load_commands(user_uuid, app_slug, riff_slug)
+            commands = self._get_commands(user_uuid, app_slug, riff_slug)
 
             # Generate a unique command ID
             command_id = (
@@ -112,11 +107,11 @@ class CommandTracker:
             commands[action]["commands"].append(command_record)
             commands[action]["latest_command_id"] = command_id
 
-            # Keep only last 10 commands per action to prevent file bloat
+            # Keep only last 10 commands per action to prevent memory bloat
             commands[action]["commands"] = commands[action]["commands"][-10:]
 
-            # Save to file
-            if self._save_commands(user_uuid, app_slug, riff_slug, commands):
+            # Save to memory
+            if self._set_commands(user_uuid, app_slug, riff_slug, commands):
                 logger.info(f"✅ Tracked command sent: {command_id} for {action}")
                 return command_id
             else:
@@ -153,7 +148,7 @@ class CommandTracker:
             True if update was successful
         """
         try:
-            commands = self._load_commands(user_uuid, app_slug, riff_slug)
+            commands = self._get_commands(user_uuid, app_slug, riff_slug)
 
             # Find the most recent command that matches this event
             updated = False
@@ -194,7 +189,7 @@ class CommandTracker:
                         break
 
             if updated:
-                self._save_commands(user_uuid, app_slug, riff_slug, commands)
+                self._set_commands(user_uuid, app_slug, riff_slug, commands)
                 logger.info(f"✅ Updated command with event: {event_type}")
                 return True
             else:
@@ -221,7 +216,7 @@ class CommandTracker:
             Latest command ID or None if not found
         """
         try:
-            commands = self._load_commands(user_uuid, app_slug, riff_slug)
+            commands = self._get_commands(user_uuid, app_slug, riff_slug)
             return commands.get(action, {}).get("latest_command_id")
         except Exception as e:
             logger.error(f"❌ Error getting latest command ID: {e}")
@@ -243,7 +238,7 @@ class CommandTracker:
             Dictionary with command status information
         """
         try:
-            commands = self._load_commands(user_uuid, app_slug, riff_slug)
+            commands = self._get_commands(user_uuid, app_slug, riff_slug)
 
             if action not in commands or not commands[action]["commands"]:
                 return {"status": "none", "message": "No commands found"}

@@ -7,7 +7,6 @@ import uuid
 from datetime import datetime, timezone
 from typing import Dict, Any, Optional
 from utils.logging import get_logger
-from services.command_tracker import command_tracker
 
 # Add the site-packages to the path for openhands imports
 sys.path.insert(0, ".venv/lib/python3.12/site-packages")
@@ -55,9 +54,6 @@ def serialize_agent_event_to_message(
                 "source": getattr(event, "source", "unknown"),
             },
         }
-
-        # Update command tracker with event information
-        _update_command_tracker(event, user_uuid, app_slug, riff_slug)
 
         # Handle different event types
         if isinstance(event, MessageEvent):
@@ -422,39 +418,6 @@ def _extract_metrics(event) -> Optional[Dict[str, Any]]:
     except Exception as e:
         logger.error(f"❌ Error extracting metrics: {e}")
         return None
-
-
-def _update_command_tracker(event, user_uuid: str, app_slug: str, riff_slug: str):
-    """Update command tracker with event information"""
-    try:
-        event_type = type(event).__name__
-        tool_call_id = getattr(event, "tool_call_id", None)
-        action_id = getattr(event, "action_id", None)
-
-        # Extract event data based on type
-        event_data = {}
-        if isinstance(event, ActionEvent):
-            if hasattr(event, "action"):
-                action = event.action
-                event_data = _safe_extract_action_details(action)
-        elif isinstance(event, ObservationEvent):
-            if hasattr(event, "observation"):
-                observation = event.observation
-                event_data = _safe_extract_observation_details(observation)
-
-        # Update command tracker if we have relevant information
-        if tool_call_id or action_id or event_data:
-            command_tracker.update_command_with_event(
-                user_uuid,
-                app_slug,
-                riff_slug,
-                tool_call_id=tool_call_id,
-                action_id=action_id,
-                event_type=event_type,
-                event_data=event_data,
-            )
-    except Exception as e:
-        logger.error(f"❌ Error updating command tracker: {e}")
 
 
 def _create_fallback_message(
