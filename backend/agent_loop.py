@@ -163,23 +163,12 @@ class CustomAgent(Agent):
         return system_message
 
 
-class LocalPromptsAgent(Agent):
-    """Agent that uses our local system prompt directory."""
-
-    @property
-    def prompt_dir(self) -> str:
-        """Override to use our backend/prompts directory."""
-        return os.path.join(os.path.dirname(__file__), "prompts")
-
-
 def create_agent(llm, tools, workspace_path):
     """Create an agent with development tools and workspace configuration"""
-    # Use the base Agent class with workspace_path in system_prompt_kwargs
-    # This allows the base Agent's system_message implementation to handle template rendering
-    return LocalPromptsAgent(
+    # Use the base Agent class directly with no custom prompts
+    return Agent(
         llm=llm,
-        tools=tools,
-        system_prompt_kwargs={"workspace_path": workspace_path}
+        tools=tools
     )
 
 
