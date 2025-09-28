@@ -1,5 +1,8 @@
 # 🤙 OpenHands Vibe
 
+> [!NOTE]
+> This project is in beta, and is changing quickly.
+
 OpenHands Vibe is **opinionated vibecoding** for **professional developers**.
 
 It's powered by
