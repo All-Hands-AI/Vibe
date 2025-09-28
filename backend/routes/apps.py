@@ -11,7 +11,7 @@ from nacl import encoding, public
 from keys import load_user_keys
 from storage import get_apps_storage, get_riffs_storage
 from storage.base_storage import DATA_DIR
-from agent_loop import agent_loop_manager
+from agents import agent_loop_manager
 from utils.deployment_status import get_deployment_status
 
 logger = logging.getLogger(__name__)
