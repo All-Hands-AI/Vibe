@@ -430,7 +430,7 @@ def _update_command_tracker(event, user_uuid: str, app_slug: str, riff_slug: str
         event_type = type(event).__name__
         tool_call_id = getattr(event, "tool_call_id", None)
         action_id = getattr(event, "action_id", None)
-        
+
         # Extract event data based on type
         event_data = {}
         if isinstance(event, ActionEvent):
@@ -441,15 +441,17 @@ def _update_command_tracker(event, user_uuid: str, app_slug: str, riff_slug: str
             if hasattr(event, "observation"):
                 observation = event.observation
                 event_data = _safe_extract_observation_details(observation)
-        
+
         # Update command tracker if we have relevant information
         if tool_call_id or action_id or event_data:
             command_tracker.update_command_with_event(
-                user_uuid, app_slug, riff_slug,
+                user_uuid,
+                app_slug,
+                riff_slug,
                 tool_call_id=tool_call_id,
                 action_id=action_id,
                 event_type=event_type,
-                event_data=event_data
+                event_data=event_data,
             )
     except Exception as e:
         logger.error(f"❌ Error updating command tracker: {e}")

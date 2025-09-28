@@ -158,10 +158,10 @@ function RiffActionButtons({ appSlug, riffSlug }) {
       
       {/* Status summary */}
       <div className="mt-3 text-xs text-gray-400">
-        {Object.entries(actionStatus).some(([_, status]) => status.status !== 'none') && (
+        {Object.entries(actionStatus).some(([, status]) => status.status !== 'none') && (
           <div className="space-y-1">
             {Object.entries(actionStatus)
-              .filter(([_, status]) => status.status !== 'none')
+              .filter(([, status]) => status.status !== 'none')
               .map(([action, status]) => (
                 <div key={action} className="flex justify-between items-center">
                   <span className="capitalize">{action}:</span>
