@@ -3,6 +3,7 @@ import re
 import uuid
 import sys
 import traceback
+import requests
 from datetime import datetime, timezone
 from storage import get_riffs_storage, get_apps_storage
 from storage.base_storage import DATA_DIR
@@ -67,6 +68,9 @@ from routes.apps import (
 
 # Import runtime service for managing remote runtimes
 from services.runtime_service import runtime_service
+
+# Import command tracker for tracking action commands
+from services.command_tracker import command_tracker
 
 logger = get_logger(__name__)
 
@@ -1706,3 +1710,261 @@ def get_riff_runtime_status(slug, riff_slug):
             user_uuid if "user_uuid" in locals() else None,
         )
         return jsonify({"error": "Failed to get runtime status"}), 500
+
+
+# Action endpoints for install, run, test, lint
+@riffs_bp.route("/api/apps/<slug>/riffs/<riff_slug>/actions/<action>", methods=["POST"])
+def execute_riff_action(slug, riff_slug, action):
+    """Execute a specific action (install, run, test, lint) for a riff"""
+    log_api_request(
+        logger, "POST", f"/api/apps/{slug}/riffs/{riff_slug}/actions/{action}"
+    )
+
+    try:
+        # Get UUID from headers
+        user_uuid = request.headers.get("X-User-UUID")
+        if not user_uuid:
+            logger.warning("❌ X-User-UUID header is required")
+            return jsonify({"error": "X-User-UUID header is required"}), 400
+
+        user_uuid = user_uuid.strip()
+        if not user_uuid:
+            logger.warning("❌ Empty UUID provided in header")
+            return jsonify({"error": "UUID cannot be empty"}), 400
+
+        logger.info(f"🔍 Received user_uuid: '{user_uuid}' (length: {len(user_uuid)})")
+
+        # Validate action
+        valid_actions = ["install", "run", "test", "lint"]
+        if action not in valid_actions:
+            logger.warning(f"❌ Invalid action: {action}")
+            return (
+                jsonify(
+                    {
+                        "error": f"Invalid action. Must be one of: {', '.join(valid_actions)}"
+                    }
+                ),
+                400,
+            )
+
+        # Verify app exists
+        if not user_app_exists(user_uuid, slug):
+            logger.warning(f"❌ App not found: {slug}")
+            return jsonify({"error": "App not found"}), 404
+
+        # Verify riff exists
+        if not user_riff_exists(user_uuid, slug, riff_slug):
+            logger.warning(f"❌ Riff not found: {riff_slug}")
+            return jsonify({"error": "Riff not found"}), 404
+
+        logger.info(
+            f"🚀 Executing {action} action for riff: {user_uuid[:8]}:{slug}:{riff_slug}"
+        )
+
+        # Get or create agent loop
+        agent_loop = agent_loop_manager.get_agent_loop(user_uuid, slug, riff_slug)
+        if not agent_loop:
+            logger.info(
+                f"🔄 No existing agent found, attempting to reconstruct from state"
+            )
+            success, error = reconstruct_agent_from_state(user_uuid, slug, riff_slug)
+            if not success:
+                logger.warning(f"⚠️ Failed to reconstruct agent: {error}")
+                logger.info(
+                    f"🆕 Creating new agent for {user_uuid[:8]}:{slug}:{riff_slug}"
+                )
+                success, error = create_agent_for_user(user_uuid, slug, riff_slug)
+                if not success:
+                    logger.error(f"❌ Failed to create agent: {error}")
+                    return (
+                        jsonify({"error": f"Failed to initialize agent: {error}"}),
+                        500,
+                    )
+
+            agent_loop = agent_loop_manager.get_agent_loop(user_uuid, slug, riff_slug)
+            if not agent_loop:
+                logger.error(f"❌ Agent loop still not available after creation")
+                return jsonify({"error": "Failed to get agent loop"}), 500
+
+        # Map actions to commands
+        command_map = {
+            "install": "make install",
+            "run": "make run",
+            "test": "make test",
+            "lint": "make lint",
+        }
+
+        command = command_map[action]
+        logger.info(f"📨 Executing {action} command via AgentServer: {command}")
+
+        # Execute command via AgentServer execute_bash endpoint
+        try:
+            # Get runtime info from agent loop
+            agent_status = agent_loop.get_agent_status()
+            runtime_type = agent_status.get("runtime_type", "local")
+
+            if runtime_type == "remote":
+                runtime_url = agent_status.get("runtime_url")
+                if not runtime_url:
+                    logger.error(f"❌ No runtime URL found for remote agent")
+                    return jsonify({"error": "Runtime URL not available"}), 500
+
+                # Make request to AgentServer execute_bash endpoint
+                execute_url = f"{runtime_url}/execute_bash_command"
+                payload = {
+                    "command": command,
+                    "cwd": "/workspace/project",
+                    "timeout": 300,
+                }
+
+                logger.info(
+                    f"🌐 Making request to {execute_url} with command: {command}"
+                )
+                response = requests.post(execute_url, json=payload, timeout=30)
+
+                if response.status_code == 200:
+                    bash_command = response.json()
+                    command_id_from_server = bash_command.get("id")
+                    logger.info(
+                        f"✅ {action} command executed successfully via AgentServer: {command_id_from_server}"
+                    )
+                    result = f"Command executed via AgentServer with ID: {command_id_from_server}"
+                else:
+                    logger.error(
+                        f"❌ AgentServer request failed: {response.status_code} - {response.text}"
+                    )
+                    return (
+                        jsonify(
+                            {
+                                "error": f"Failed to execute command via AgentServer: {response.text}"
+                            }
+                        ),
+                        500,
+                    )
+            else:
+                # For local agents, fall back to sending message
+                logger.info(f"🏠 Using local agent, sending message: {command}")
+                result = agent_loop.send_message(command)
+                logger.info(f"✅ {action} command sent to local agent: {result}")
+
+            # Track the command with command tracker
+            command_id = command_tracker.track_command_sent(
+                user_uuid, slug, riff_slug, action, command, result
+            )
+
+            # Update riff with latest action info
+            riff_data = load_user_riff(user_uuid, slug, riff_slug)
+            if not riff_data:
+                riff_data = {}
+
+            # Track the action execution
+            if "actions" not in riff_data:
+                riff_data["actions"] = {}
+
+            riff_data["actions"][action] = {
+                "last_executed": datetime.now(timezone.utc).isoformat(),
+                "command": command,
+                "command_id": command_id,
+                "status": "sent",
+            }
+
+            save_user_riff(user_uuid, slug, riff_slug, riff_data)
+
+            log_api_response(
+                logger,
+                "POST",
+                f"/api/apps/{slug}/riffs/{riff_slug}/actions/{action}",
+                200,
+                user_uuid,
+            )
+
+            return (
+                jsonify(
+                    {
+                        "success": True,
+                        "action": action,
+                        "command": command,
+                        "command_id": command_id,
+                        "message": f"{action} command sent to agent",
+                        "result": result,
+                    }
+                ),
+                200,
+            )
+
+        except Exception as e:
+            logger.error(f"❌ Failed to send {action} command to agent: {e}")
+            return (
+                jsonify({"error": f"Failed to execute {action} command: {str(e)}"}),
+                500,
+            )
+
+    except Exception as e:
+        logger.error(f"💥 Error executing {action} action: {str(e)}")
+        log_api_response(
+            logger,
+            "POST",
+            f"/api/apps/{slug}/riffs/{riff_slug}/actions/{action}",
+            500,
+            user_uuid if "user_uuid" in locals() else None,
+        )
+        return jsonify({"error": f"Failed to execute {action} action"}), 500
+
+
+# Get command status endpoint
+@riffs_bp.route("/api/apps/<slug>/riffs/<riff_slug>/actions/status", methods=["GET"])
+def get_riff_actions_status(slug, riff_slug):
+    """Get the status of all actions for a riff"""
+    log_api_request(logger, "GET", f"/api/apps/{slug}/riffs/{riff_slug}/actions/status")
+
+    try:
+        # Get UUID from headers
+        user_uuid = request.headers.get("X-User-UUID")
+        if not user_uuid:
+            logger.warning("❌ X-User-UUID header is required")
+            return jsonify({"error": "X-User-UUID header is required"}), 400
+
+        user_uuid = user_uuid.strip()
+        if not user_uuid:
+            logger.warning("❌ Empty UUID provided in header")
+            return jsonify({"error": "UUID cannot be empty"}), 400
+
+        # Verify app exists
+        if not user_app_exists(user_uuid, slug):
+            logger.warning(f"❌ App not found: {slug}")
+            return jsonify({"error": "App not found"}), 404
+
+        # Verify riff exists
+        if not user_riff_exists(user_uuid, slug, riff_slug):
+            logger.warning(f"❌ Riff not found: {riff_slug}")
+            return jsonify({"error": "Riff not found"}), 404
+
+        logger.info(
+            f"📊 Getting actions status for riff: {user_uuid[:8]}:{slug}:{riff_slug}"
+        )
+
+        # Get command status from tracker
+        actions_status = command_tracker.get_all_commands_status(
+            user_uuid, slug, riff_slug
+        )
+
+        log_api_response(
+            logger,
+            "GET",
+            f"/api/apps/{slug}/riffs/{riff_slug}/actions/status",
+            200,
+            user_uuid,
+        )
+
+        return jsonify({"success": True, "actions": actions_status}), 200
+
+    except Exception as e:
+        logger.error(f"💥 Error getting actions status: {str(e)}")
+        log_api_response(
+            logger,
+            "GET",
+            f"/api/apps/{slug}/riffs/{riff_slug}/actions/status",
+            500,
+            user_uuid if "user_uuid" in locals() else None,
+        )
+        return jsonify({"error": "Failed to get actions status"}), 500

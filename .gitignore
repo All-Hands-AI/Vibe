@@ -1,4 +1,5 @@
 backend/data
+data/
 
 # Logs
 logs
