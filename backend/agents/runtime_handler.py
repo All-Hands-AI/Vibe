@@ -116,7 +116,7 @@ class RuntimeHandler:
         """
         paths = self.get_runtime_paths()
 
-        info = {
+        info: Dict[str, Any] = {
             "type": "remote" if self.is_remote else "local",
             "workspace_path": self.workspace_path,
             "state_path": self.state_path,

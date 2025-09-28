@@ -210,7 +210,7 @@ def reconstruct_agent_from_state(user_uuid, app_slug, riff_slug):
         return False, f"Failed to reconstruct Agent: {str(e)}"
 
 
-def create_agent_for_user(user_uuid, app_slug, riff_slug, send_initial_message=False):
+def create_agent_for_user(user_uuid, app_slug, riff_slug):
     """
     Create and store an Agent object for a specific user, app, and riff.
     This function creates an AgentLoop with Agent and Conversation from openhands-sdk.
@@ -219,7 +219,6 @@ def create_agent_for_user(user_uuid, app_slug, riff_slug, send_initial_message=F
         user_uuid: User's UUID
         app_slug: App slug identifier
         riff_slug: Riff slug identifier
-        send_initial_message: Whether to send initial ls command (only for brand new riffs)
 
     Returns:
         tuple: (success: bool, error_message: str or None)
@@ -342,22 +341,7 @@ def create_agent_for_user(user_uuid, app_slug, riff_slug, send_initial_message=F
                     f"✅ AgentLoop verification successful for {user_uuid[:8]}:{app_slug}:{riff_slug}"
                 )
 
-                if send_initial_message:
-                    try:
-                        project_path = f"{workspace_path}/project"
-                        initial_message = f"run `ls {project_path}` and briefly describe what you see. Do nothing else until the user asks."
-                        logger.debug(
-                            f"📨 Sending initial message to new riff agent for {user_uuid[:8]}:{app_slug}:{riff_slug}: {initial_message}"
-                        )
-                        agent_loop.send_message(initial_message)
-                        logger.debug(
-                            f"✅ Initial message sent successfully to new riff agent"
-                        )
-                    except Exception as e:
-                        logger.error(
-                            f"❌ Failed to send initial message to new riff agent: {e}"
-                        )
-                        # Don't fail the creation if initial message fails
+                # Initial message logic removed - agents will wait for user input
 
                 return True, None
             else:
@@ -608,9 +592,7 @@ def create_riff(slug):
             # Continue without runtime - local agent will be used as fallback
 
         # Create AgentLoop with user's Anthropic token
-        success, error_message = create_agent_for_user(
-            user_uuid, slug, riff_slug, send_initial_message=True
-        )
+        success, error_message = create_agent_for_user(user_uuid, slug, riff_slug)
         if not success:
             logger.error(f"❌ Failed to create Agent for riff: {error_message}")
             # Return 500 for git/workspace setup failures, 400 for other client errors
