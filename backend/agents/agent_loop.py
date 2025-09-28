@@ -241,6 +241,17 @@ class AgentLoop:
                     self._current_task is not None and not self._current_task.done()
                 )
 
+            # Extract the agent status for frontend compatibility
+            agent_status = (
+                state.agent_status.value
+                if hasattr(state.agent_status, "value")
+                else str(state.agent_status)
+            )
+            message_count = len(
+                [e for e in state.events if isinstance(e, MessageEvent)]
+            )
+            event_count = len(state.events)
+
             status = {
                 "key": self.get_key(),
                 "user_uuid": self.user_uuid,
@@ -251,16 +262,15 @@ class AgentLoop:
                 "runtime_type": runtime_info["type"],
                 "workspace_path": runtime_info["workspace_path"],
                 "state_path": runtime_info["state_path"],
+                # Frontend expects status directly at top level
+                "status": agent_status,
+                "message_count": message_count,
+                "event_count": event_count,
+                # Keep nested structure for backward compatibility
                 "conversation_state": {
-                    "status": (
-                        state.agent_status.value
-                        if hasattr(state.agent_status, "value")
-                        else str(state.agent_status)
-                    ),
-                    "message_count": len(
-                        [e for e in state.events if isinstance(e, MessageEvent)]
-                    ),
-                    "event_count": len(state.events),
+                    "status": agent_status,
+                    "message_count": message_count,
+                    "event_count": event_count,
                 },
             }
 
