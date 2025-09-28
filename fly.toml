@@ -27,6 +27,3 @@ primary_region = 'ewr'
 [mounts]
   source = "data_volume"
   destination = "/data"
-
-[env]
-  OPENHANDS_LOG_LEVEL = "DEBUG"
