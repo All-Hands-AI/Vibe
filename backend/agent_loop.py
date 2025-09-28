@@ -124,10 +124,10 @@ def load_system_prompt(workspace_path: str, use_remote_runtime: bool = False) ->
     # Get the directory where this script is located
     script_dir = os.path.dirname(os.path.abspath(__file__))
     prompt_file = os.path.join(script_dir, "prompts", "system_prompt.txt")
-    
+
     # Load the base system prompt from file
     try:
-        with open(prompt_file, 'r', encoding='utf-8') as f:
+        with open(prompt_file, "r", encoding="utf-8") as f:
             base_prompt = f.read()
     except FileNotFoundError:
         logger.error(f"❌ System prompt file not found: {prompt_file}")
@@ -136,13 +136,13 @@ def load_system_prompt(workspace_path: str, use_remote_runtime: bool = False) ->
     except Exception as e:
         logger.error(f"❌ Error loading system prompt file: {e}")
         base_prompt = "You are OpenHands agent, a helpful AI assistant that can interact with a computer to solve tasks."
-    
+
     # For remote runtimes, tell the agent about the remote workspace path
     if use_remote_runtime:
         agent_workspace_path = "/workspace"
     else:
         agent_workspace_path = workspace_path
-    
+
     # Add workspace-specific information
     workspace_info = f"""
 
@@ -170,7 +170,7 @@ For subsequent pushes, update the PR title and description as necessary, especia
 
 For PR descriptions: keep it short!
 </WORKFLOW>"""
-    
+
     return base_prompt + workspace_info
 
 
@@ -178,7 +178,7 @@ def create_agent(llm, tools, workspace_path, use_remote_runtime: bool = False):
     """Create an agent with development tools and workspace configuration"""
     # Load the complete system prompt from file
     system_prompt = load_system_prompt(workspace_path, use_remote_runtime)
-    
+
     # Create agent context with the complete system prompt as suffix
     # This will be appended to the default OpenHands system prompt
     agent_context = AgentContext(system_message_suffix=system_prompt)
