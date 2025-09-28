@@ -6,7 +6,7 @@ import traceback
 from datetime import datetime, timezone
 from storage import get_riffs_storage, get_apps_storage
 from storage.base_storage import DATA_DIR
-from agent_loop import agent_loop_manager
+from agents import agent_loop_manager
 from keys import get_user_key, load_user_keys
 from utils.repository import setup_riff_workspace
 from utils.event_serializer import serialize_agent_event_to_message
