@@ -3,6 +3,7 @@ import ChatWindow from './ChatWindow'
 import RiffNavigation from './RiffNavigation'
 import RiffHeader from './RiffHeader'
 import DeploymentStatus from './DeploymentStatus'
+import RiffActionButtons from './RiffActionButtons'
 
 function RiffSidebar({ 
   app, 
@@ -19,6 +20,10 @@ function RiffSidebar({
         <RiffHeader riff={riff} prStatus={prStatus} />
         <DeploymentStatus 
           deploymentStatus={deploymentStatus} 
+          appSlug={app.slug} 
+          riffSlug={riff.slug} 
+        />
+        <RiffActionButtons 
           appSlug={app.slug} 
           riffSlug={riff.slug} 
         />
