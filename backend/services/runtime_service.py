@@ -111,7 +111,7 @@ class RuntimeService:
             "session_id": session_id,
             "image": self.default_image,
             "command": "/usr/local/bin/openhands-agent-server --port 60000",
-            "working_dir": "/",
+            "working_dir": "/workspace/project",
             "run_as_user": 0,
             "environment": {"DEBUG": "true"},
         }
