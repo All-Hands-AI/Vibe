@@ -172,13 +172,13 @@ class AgentLoop:
             A status message indicating the result
         """
         try:
-            # Create message object
-            msg = Message(content=[TextContent(text=message)])
+            # Create message object with user role
+            msg = Message(role="user", content=[TextContent(text=message)])
 
-            # Add message to conversation
-            self.conversation.add_message(msg)
+            # Send message to conversation
+            self.conversation.send_message(msg)
             logger.info(
-                f"📤 Added message to conversation for {self.get_key()}: {message[:100]}..."
+                f"📤 Sent message to conversation for {self.get_key()}: {message[:100]}..."
             )
 
             # Start conversation in thread if not already running
@@ -197,7 +197,7 @@ class AgentLoop:
                     )
                 else:
                     return (
-                        f"✅ Message added to running conversation for {self.get_key()}"
+                        f"✅ Message sent to running conversation for {self.get_key()}"
                     )
 
         except Exception as e:
