@@ -58,27 +58,38 @@ def ensure_directory_exists(path: str) -> bool:
         return False
 
 
-def create_tools_with_validation(workspace_path: str) -> list:
+def create_tools_with_validation(
+    workspace_path: str, use_remote_runtime: bool = False
+) -> list:
     """Create tools with proper path validation and setup."""
     tools = []
 
-    # Ensure workspace exists
-    if not ensure_directory_exists(workspace_path):
-        raise ValueError(f"Cannot create workspace directory: {workspace_path}")
+    if use_remote_runtime:
+        # For remote runtimes, use fixed paths that match the remote environment
+        project_dir = "/workspace/project"
+        tasks_dir = "/workspace/tasks"
+        logger.info(
+            f"🌐 Using remote runtime paths - project_dir: {project_dir}, tasks_dir: {tasks_dir}"
+        )
+    else:
+        # For local runtimes, use workspace_path-based directories
+        # Ensure workspace exists
+        if not ensure_directory_exists(workspace_path):
+            raise ValueError(f"Cannot create workspace directory: {workspace_path}")
 
-    # Create project directory if it doesn't exist
-    project_dir = os.path.join(workspace_path, "project")
-    if not ensure_directory_exists(project_dir):
-        logger.warning(f"⚠️ Could not create project directory: {project_dir}")
-        # Fall back to workspace root for bash operations
-        project_dir = workspace_path
+        # Create project directory if it doesn't exist
+        project_dir = os.path.join(workspace_path, "project")
+        if not ensure_directory_exists(project_dir):
+            logger.warning(f"⚠️ Could not create project directory: {project_dir}")
+            # Fall back to workspace root for bash operations
+            project_dir = workspace_path
 
-    # Create tasks directory for TaskTracker
-    tasks_dir = os.path.join(workspace_path, "tasks")
-    if not ensure_directory_exists(tasks_dir):
-        logger.warning(f"⚠️ Could not create tasks directory: {tasks_dir}")
-        # Fall back to workspace root
-        tasks_dir = workspace_path
+        # Create tasks directory for TaskTracker
+        tasks_dir = os.path.join(workspace_path, "tasks")
+        if not ensure_directory_exists(tasks_dir):
+            logger.warning(f"⚠️ Could not create tasks directory: {tasks_dir}")
+            # Fall back to workspace root
+            tasks_dir = workspace_path
 
     try:
         # BashTool - work in project directory
@@ -86,7 +97,9 @@ def create_tools_with_validation(workspace_path: str) -> list:
         logger.info(f"✅ Created BashTool with working_dir: {project_dir}")
 
         # FileEditorTool - workspace root directory
-        tools.append(ToolSpec(name="FileEditorTool", params={"workspace_root": project_dir}))
+        tools.append(
+            ToolSpec(name="FileEditorTool", params={"workspace_root": project_dir})
+        )
         logger.info(f"✅ Created FileEditorTool with workspace_root: {project_dir}")
 
         # TaskTrackerTool - save to tasks directory
@@ -141,13 +154,19 @@ class CustomAgent(Agent):
         return system_message
 
 
-def create_agent(llm, tools, workspace_path):
+def create_agent(llm, tools, workspace_path, use_remote_runtime: bool = False):
     """Create an agent with development tools and workspace configuration"""
-    # Use the base Agent class directly with no custom prompts
-    return Agent(
-        llm=llm,
-        tools=tools
-    )
+    # For remote runtimes, tell the agent about the remote workspace path
+    if use_remote_runtime:
+        agent_workspace_path = "/workspace"
+    else:
+        agent_workspace_path = workspace_path
+
+    # Create custom agent context with workspace path
+    agent_context = CustomAgentContext(workspace_path=agent_workspace_path)
+
+    # Use CustomAgent to get proper system message with workspace_path template
+    return CustomAgent(llm=llm, tools=tools, agent_context=agent_context)
 
 
 class AgentLoop:
@@ -192,16 +211,23 @@ class AgentLoop:
         if not ensure_directory_exists(self.state_path):
             raise ValueError(f"Cannot create state directory: {self.state_path}")
 
+        # Determine if we're using remote runtime
+        use_remote_runtime = bool(self.runtime_url and self.session_api_key)
+
         # Create tools with validation
         try:
-            tools = create_tools_with_validation(self.workspace_path)
+            tools = create_tools_with_validation(
+                self.workspace_path, use_remote_runtime
+            )
         except Exception as e:
             logger.error(f"❌ Failed to create tools for {self.get_key()}: {e}")
             raise
 
         # Create agent
         try:
-            self.agent = create_agent(llm, tools, self.workspace_path)
+            self.agent = create_agent(
+                llm, tools, self.workspace_path, use_remote_runtime
+            )
         except Exception as e:
             logger.error(f"❌ Failed to create agent for {self.get_key()}: {e}")
             raise
