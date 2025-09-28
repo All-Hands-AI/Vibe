@@ -39,9 +39,9 @@ from openhands.sdk.context import render_template
 from openhands.sdk.conversation.state import AgentExecutionStatus
 
 # Import tools to register them automatically
-from openhands.tools.str_replace_editor import FileEditorTool
-from openhands.tools.task_tracker import TaskTrackerTool
-from openhands.tools.execute_bash import BashTool
+from openhands.tools.str_replace_editor import FileEditorTool  # noqa: F401
+from openhands.tools.task_tracker import TaskTrackerTool  # noqa: F401
+from openhands.tools.execute_bash import BashTool  # noqa: F401
 
 logger = get_logger(__name__)
 
@@ -65,9 +65,10 @@ def create_tools_with_validation(
     """Create tools with proper path validation and setup."""
     # Register default tools first
     from openhands.sdk.preset.default import register_default_tools
+
     register_default_tools(enable_browser=False)
     logger.info("✅ Registered default tools")
-    
+
     tools = []
 
     if use_remote_runtime:
