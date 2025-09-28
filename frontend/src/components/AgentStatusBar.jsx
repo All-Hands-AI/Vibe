@@ -78,11 +78,15 @@ function AgentStatusBar({ appSlug, riffSlug }) {
   const getDisplayStatus = (status) => {
     if (!status) return 'Agent Ready'
     
-    if (status.status === 'error') {
+    // SDK uses agent_status field (transparent passthrough)
+    const agentStatus = status.agent_status || status.status
+    const hasActiveTask = status._metadata?.has_active_task || status.has_active_task
+    
+    if (agentStatus === 'error') {
       return 'Agent Error'
     }
     
-    if (status.status === 'stuck') {
+    if (agentStatus === 'stuck') {
       return 'Agent Stuck'
     }
     
@@ -90,7 +94,7 @@ function AgentStatusBar({ appSlug, riffSlug }) {
       return 'Agent Paused'
     }
     
-    if (isAgentRunning(status) && status.has_active_task) {
+    if (isAgentRunning(status) && hasActiveTask) {
       return 'Agent Running'
     }
     
@@ -100,16 +104,20 @@ function AgentStatusBar({ appSlug, riffSlug }) {
   // Determine agent button state using helper functions
   const canPlay = canPlayAgent(agentStatus)
   const isRunning = isAgentRunning(agentStatus) && !isAgentFinished(agentStatus)
+  
+  // Extract values for status indicator
+  const hasActiveTask = agentStatus?._metadata?.has_active_task || agentStatus?.has_active_task
+  const currentAgentStatus = agentStatus?.agent_status || agentStatus?.status
 
   return (
     <div className="flex items-center justify-between px-4 py-2 bg-gray-800">
       <div className="flex items-center gap-2">
         <div className={`w-2 h-2 rounded-full ${
-          isAgentRunning(agentStatus) && agentStatus?.has_active_task ? 'bg-neon-green animate-pulse' : 
+          isAgentRunning(agentStatus) && hasActiveTask ? 'bg-neon-green animate-pulse' : 
           isAgentPaused(agentStatus) ? 'bg-yellow-400' :
           isAgentFinished(agentStatus) ? 'bg-green-400' :
-          agentStatus?.status === 'error' ? 'bg-red-400' :
-          agentStatus?.status === 'stuck' ? 'bg-orange-400 animate-pulse' :
+          currentAgentStatus === 'error' ? 'bg-red-400' :
+          currentAgentStatus === 'stuck' ? 'bg-orange-400 animate-pulse' :
           'bg-gray-400'
         }`}></div>
         <span className={`font-mono text-sm ${getAgentStatusColor(agentStatus)}`}>

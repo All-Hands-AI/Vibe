@@ -172,13 +172,13 @@ export function startAgentStatusPolling(appSlug, riffSlug, callback, interval = 
 
 /**
  * Get a human-readable status description
- * @param {Object} status - Agent status object
+ * @param {Object} status - Agent status object (SDK ConversationState)
  * @returns {string} Human-readable status
  */
 export function getStatusDescription(status) {
   if (!status) return 'Unknown'
   
-  // Handle special backend status values
+  // Handle special backend status values (for backward compatibility)
   if (status.status === 'not_found') {
     return 'Not Found'
   }
@@ -187,11 +187,14 @@ export function getStatusDescription(status) {
     return 'Not Initialized'
   }
   
-  // Primary status field is now the SDK status (transparent passthrough)
-  switch (status.status) {
+  // SDK uses agent_status field (transparent passthrough)
+  const agentStatus = status.agent_status || status.status
+  const eventCount = status.events ? status.events.length : (status.event_count || 0)
+  
+  switch (agentStatus) {
     case 'idle':
       // Check if it has any activity
-      if (status.event_count <= 1) {
+      if (eventCount <= 1) {
         return 'Idle (No Messages)'
       }
       return 'Idle'
@@ -209,25 +212,27 @@ export function getStatusDescription(status) {
       return 'Stuck'
     default:
       // Fallback for any unknown status
-      return status.status || 'Unknown'
+      return agentStatus || 'Unknown'
   }
 }
 
 /**
  * Get status color class for UI styling
- * @param {Object} status - Agent status object
+ * @param {Object} status - Agent status object (SDK ConversationState)
  * @returns {string} CSS color class
  */
 export function getStatusColor(status) {
   if (!status) return 'text-gray-400'
   
-  // Handle special backend status values
+  // Handle special backend status values (for backward compatibility)
   if (status.status === 'not_found' || status.status === 'not_initialized') {
     return 'text-gray-400'
   }
   
-  // Primary status field is now the SDK status (transparent passthrough)
-  switch (status.status) {
+  // SDK uses agent_status field (transparent passthrough)
+  const agentStatus = status.agent_status || status.status
+  
+  switch (agentStatus) {
     case 'idle':
       return 'text-gray-400'
     case 'running':
@@ -249,63 +254,74 @@ export function getStatusColor(status) {
 
 /**
  * Check if agent can be played/resumed
- * @param {Object} status - Agent status object
+ * @param {Object} status - Agent status object (SDK ConversationState)
  * @returns {boolean} Whether agent can be played
  */
 export function canPlayAgent(status) {
   if (!status) return false
   
-  // Primary status field is now the SDK status (transparent passthrough)
-  return status.status === 'paused' || 
-         (status.status === 'idle' && status.event_count <= 1)
+  // SDK uses agent_status field (transparent passthrough)
+  const agentStatus = status.agent_status || status.status
+  const eventCount = status.events ? status.events.length : (status.event_count || 0)
+  
+  return agentStatus === 'paused' || 
+         (agentStatus === 'idle' && eventCount <= 1)
 }
 
 /**
  * Check if agent can be paused
- * @param {Object} status - Agent status object
+ * @param {Object} status - Agent status object (SDK ConversationState)
  * @returns {boolean} Whether agent can be paused
  */
 export function canPauseAgent(status) {
   if (!status) return false
   
-  // Primary status field is now the SDK status (transparent passthrough)
-  return status.status === 'running' || 
-         status.status === 'waiting_for_confirmation'
+  // SDK uses agent_status field (transparent passthrough)
+  const agentStatus = status.agent_status || status.status
+  
+  return agentStatus === 'running' || 
+         agentStatus === 'waiting_for_confirmation'
 }
 
 /**
  * Check if agent is currently running
- * @param {Object} status - Agent status object
+ * @param {Object} status - Agent status object (SDK ConversationState)
  * @returns {boolean} Whether agent is running
  */
 export function isAgentRunning(status) {
   if (!status) return false
   
-  // Primary status field is now the SDK status (transparent passthrough)
-  return status.status === 'running' || 
-         status.status === 'waiting_for_confirmation'
+  // SDK uses agent_status field (transparent passthrough)
+  const agentStatus = status.agent_status || status.status
+  
+  return agentStatus === 'running' || 
+         agentStatus === 'waiting_for_confirmation'
 }
 
 /**
  * Check if agent is finished
- * @param {Object} status - Agent status object
+ * @param {Object} status - Agent status object (SDK ConversationState)
  * @returns {boolean} Whether agent is finished
  */
 export function isAgentFinished(status) {
   if (!status) return false
   
-  // Primary status field is now the SDK status (transparent passthrough)
-  return status.status === 'finished'
+  // SDK uses agent_status field (transparent passthrough)
+  const agentStatus = status.agent_status || status.status
+  
+  return agentStatus === 'finished'
 }
 
 /**
  * Check if agent is paused
- * @param {Object} status - Agent status object
+ * @param {Object} status - Agent status object (SDK ConversationState)
  * @returns {boolean} Whether agent is paused
  */
 export function isAgentPaused(status) {
   if (!status) return false
   
-  // Primary status field is now the SDK status (transparent passthrough)
-  return status.status === 'paused'
+  // SDK uses agent_status field (transparent passthrough)
+  const agentStatus = status.agent_status || status.status
+  
+  return agentStatus === 'paused'
 }

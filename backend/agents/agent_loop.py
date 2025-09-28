@@ -18,8 +18,6 @@ from .agent_factory import create_agent
 from .conversation_factory import ConversationFactory
 
 # Add the site-packages to the path for openhands imports
-from openhands.sdk.event import MessageEvent
-
 sys.path.insert(0, ".venv/lib/python3.12/site-packages")
 
 from openhands.sdk import (
@@ -241,43 +239,34 @@ class AgentLoop:
                     self._current_task is not None and not self._current_task.done()
                 )
 
-            # Extract the agent status for frontend compatibility
-            agent_status = (
-                state.agent_status.value
-                if hasattr(state.agent_status, "value")
-                else str(state.agent_status)
-            )
-            message_count = len(
-                [e for e in state.events if isinstance(e, MessageEvent)]
-            )
-            event_count = len(state.events)
+            # Return SDK state transparently with minimal wrapper
+            # Convert the state to a dict to make it JSON serializable
+            state_dict = state.model_dump()
 
+            # Add minimal metadata that the frontend needs
             status = {
-                "key": self.get_key(),
-                "user_uuid": self.user_uuid,
-                "app_slug": self.app_slug,
-                "riff_slug": self.riff_slug,
-                "is_running": is_running,
-                "has_active_task": has_active_task,
-                "runtime_type": runtime_info["type"],
-                "workspace_path": runtime_info["workspace_path"],
-                "state_path": runtime_info["state_path"],
-                # Frontend expects status directly at top level
-                "status": agent_status,
-                "message_count": message_count,
-                "event_count": event_count,
-                # Keep nested structure for backward compatibility
-                "conversation_state": {
-                    "status": agent_status,
-                    "message_count": message_count,
-                    "event_count": event_count,
+                # Core SDK state - transparent passthrough
+                **state_dict,
+                # Minimal metadata for the frontend
+                "_metadata": {
+                    "key": self.get_key(),
+                    "user_uuid": self.user_uuid,
+                    "app_slug": self.app_slug,
+                    "riff_slug": self.riff_slug,
+                    "is_running": is_running,
+                    "has_active_task": has_active_task,
+                    "runtime_type": runtime_info["type"],
+                    "workspace_path": runtime_info["workspace_path"],
+                    "state_path": runtime_info["state_path"],
                 },
             }
 
-            # Add runtime-specific info
+            # Add runtime-specific info to metadata
             if runtime_info["type"] == "remote":
-                status["runtime_url"] = runtime_info.get("runtime_url")
-                status["has_session_key"] = runtime_info.get("has_session_key", False)
+                status["_metadata"]["runtime_url"] = runtime_info.get("runtime_url")
+                status["_metadata"]["has_session_key"] = runtime_info.get(
+                    "has_session_key", False
+                )
 
             return status
 
