@@ -1,411 +1,25 @@
 from flask import Blueprint, jsonify, request
-import re
-import uuid
-import sys
-import traceback
-from datetime import datetime, timezone
-from storage import get_riffs_storage, get_apps_storage
-from storage.base_storage import DATA_DIR
-from agents import agent_loop_manager
-from keys import get_user_key, load_user_keys
-from utils.repository import setup_riff_workspace
-from utils.event_serializer import serialize_agent_event_to_message
-from utils.deployment_status import get_deployment_status
+import logging
+from services.riffs_service import riffs_service
+from utils.logging import log_api_request, log_api_response
 
-import os
-
-# Add the site-packages to the path for openhands imports
-sys.path.insert(0, ".venv/lib/python3.12/site-packages")
-
-from openhands.sdk import LLM
-
-
-# Mock LLM class for testing
-class MockLLM:
-    def __init__(self, *args, **kwargs):
-        pass
-
-    def completion(self, messages):
-        # Mock response for testing
-        class MockChoice:
-            def __init__(self):
-                self.message = MockMessage()
-
-        class MockMessage:
-            def __init__(self):
-                self.content = "Hello! This is a mock response from the LLM."
-
-        class MockResponse:
-            def __init__(self):
-                self.choices = [MockChoice()]
-
-        return MockResponse()
-
-
-def get_llm_instance(api_key: str, model: str = "claude-sonnet-4-20250514"):
-    """Get the appropriate LLM instance based on MOCK_MODE environment variable"""
-    if os.environ.get("MOCK_MODE", "false").lower() == "true":
-        # In mock mode, create a real LLM instance but with a fake key
-        # The actual API calls will be mocked by the mocks.py module
-        return LLM(api_key="mock-key", model=model, service_id="mock-service")
-    else:
-        # Use the real API key
-        return LLM(api_key=api_key, model=model, service_id="openvibe-llm")
-
-
-from utils.logging import get_logger, log_api_request, log_api_response
-
-# Import functions from apps.py for GitHub and Fly.io operations and PR status
-from routes.apps import (
-    close_github_pr,
-    delete_github_branch,
-    delete_fly_app,
-    load_user_app,
-    get_pr_status,
-    user_app_exists,
-)
-
-# Import runtime service for managing remote runtimes
-from services.runtime_service import runtime_service
-
-logger = get_logger(__name__)
+logger = logging.getLogger(__name__)
 
 # Create Blueprint for riffs
 riffs_bp = Blueprint("riffs", __name__)
 
 
-def reconstruct_agent_from_state(user_uuid, app_slug, riff_slug):
-    """
-    Reconstruct an Agent object from existing serialized state for a specific user, app, and riff.
-    This function creates an AgentLoop from existing state without re-cloning the repository.
+def get_user_uuid_from_request():
+    """Helper function to extract and validate user UUID from request headers."""
+    user_uuid = request.headers.get("X-User-UUID")
+    if not user_uuid:
+        return None, jsonify({"error": "X-User-UUID header is required"}), 400
 
-    Args:
-        user_uuid: User's UUID
-        app_slug: App slug identifier
-        riff_slug: Riff slug identifier
+    user_uuid = user_uuid.strip()
+    if not user_uuid:
+        return None, jsonify({"error": "UUID cannot be empty"}), 400
 
-    Returns:
-        tuple: (success: bool, error_message: str or None)
-    """
-    try:
-        # Get user's Anthropic token
-        anthropic_token = get_user_key(user_uuid, "anthropic")
-        if not anthropic_token:
-            logger.warning(f"⚠️ No Anthropic token found for user {user_uuid[:8]}")
-            return False, "Anthropic API key required"
-
-        # Get workspace path (should already exist from previous setup)
-        workspace_path = str(
-            DATA_DIR / user_uuid / "apps" / app_slug / "riffs" / riff_slug / "workspace"
-        )
-
-        # Check if workspace exists - if not, fall back to creating new agent
-        if not os.path.exists(workspace_path):
-            logger.warning(
-                f"⚠️ Workspace not found at {workspace_path}, falling back to creating new agent"
-            )
-            return create_agent_for_user(user_uuid, app_slug, riff_slug)
-
-        logger.info(f"🔄 Reconstructing agent from state for riff {riff_slug}")
-
-        # Create LLM instance
-        try:
-            llm = get_llm_instance(
-                api_key=anthropic_token, model="claude-sonnet-4-20250514"
-            )
-
-            # Create message callback to store events as messages
-            def message_callback(event):
-                """Callback to handle events from the agent conversation"""
-                try:
-                    logger.info(f"📨 Received event from agent: {type(event).__name__}")
-
-                    # Serialize the event to a message format
-                    serialized_message = serialize_agent_event_to_message(
-                        event, user_uuid, app_slug, riff_slug
-                    )
-
-                    if serialized_message:
-                        # Save the serialized message
-                        if add_user_message(
-                            user_uuid, app_slug, riff_slug, serialized_message
-                        ):
-                            logger.info(
-                                f"✅ Agent event ({type(event).__name__}) saved as message for riff: {riff_slug}"
-                            )
-
-                            # Update riff message stats
-                            messages = load_user_messages(
-                                user_uuid, app_slug, riff_slug
-                            )
-                            update_riff_message_stats(
-                                user_uuid,
-                                app_slug,
-                                riff_slug,
-                                len(messages),
-                                serialized_message["created_at"],
-                            )
-                        else:
-                            logger.error(
-                                f"❌ Failed to save agent event ({type(event).__name__}) for riff: {riff_slug}"
-                            )
-                    else:
-                        logger.debug(
-                            f"🔇 Event {type(event).__name__} was not serialized (likely filtered out)"
-                        )
-
-                except Exception as e:
-                    logger.error(f"❌ Error in message callback: {e}")
-                    logger.error(f"❌ Traceback: {traceback.format_exc()}")
-
-            # Load riff data to get runtime information
-            riff_data = load_user_riff(user_uuid, app_slug, riff_slug)
-            runtime_url = riff_data.get("runtime_url") if riff_data else None
-            session_api_key = riff_data.get("session_api_key") if riff_data else None
-
-            if runtime_url and session_api_key:
-                logger.info(f"🌐 Found runtime info for {riff_slug}: {runtime_url}")
-            else:
-                logger.info(
-                    f"🏠 No runtime info found for {riff_slug}, using local agent"
-                )
-
-            # Create and store the agent loop from existing state
-            logger.info(
-                f"🔧 Reconstructing AgentLoop from state with key: {user_uuid[:8]}:{app_slug}:{riff_slug}"
-            )
-            agent_loop_manager.create_agent_loop_from_state(
-                user_uuid,
-                app_slug,
-                riff_slug,
-                llm,
-                workspace_path,
-                message_callback,
-                runtime_url,
-                session_api_key,
-            )
-            logger.info(f"🤖 Reconstructed AgentLoop for riff: {riff_slug}")
-
-            # Verify it was stored correctly
-            agent_loop = agent_loop_manager.get_agent_loop(
-                user_uuid, app_slug, riff_slug
-            )
-            if agent_loop:
-                logger.info(
-                    f"✅ AgentLoop reconstruction verification successful for {user_uuid[:8]}:{app_slug}:{riff_slug}"
-                )
-                return True, None
-            else:
-                logger.error(
-                    f"❌ AgentLoop reconstruction verification failed for {user_uuid[:8]}:{app_slug}:{riff_slug}"
-                )
-                return False, "Failed to verify Agent reconstruction"
-
-        except Exception as e:
-            logger.error(f"❌ Failed to create LLM instance: {e}")
-            return False, f"Failed to initialize LLM: {str(e)}"
-
-    except Exception as e:
-        logger.error(f"❌ Failed to reconstruct AgentLoop: {e}")
-        return False, f"Failed to reconstruct Agent: {str(e)}"
-
-
-def create_agent_for_user(user_uuid, app_slug, riff_slug):
-    """
-    Create and store an Agent object for a specific user, app, and riff.
-    This function creates an AgentLoop with Agent and Conversation from openhands-sdk.
-
-    Args:
-        user_uuid: User's UUID
-        app_slug: App slug identifier
-        riff_slug: Riff slug identifier
-
-    Returns:
-        tuple: (success: bool, error_message: str or None)
-    """
-    try:
-        # Get user's Anthropic token
-        anthropic_token = get_user_key(user_uuid, "anthropic")
-        if not anthropic_token:
-            logger.warning(f"⚠️ No Anthropic token found for user {user_uuid[:8]}")
-            return False, "Anthropic API key required"
-
-        # Get app data to retrieve GitHub URL
-        apps_storage = get_apps_storage(user_uuid)
-        app_data = apps_storage.load_app(app_slug)
-        if not app_data:
-            logger.error(f"❌ App data not found for {app_slug}")
-            return False, "App not found"
-
-        github_url = app_data.get("github_url")
-        if not github_url:
-            logger.error(f"❌ No GitHub URL found for app {app_slug}")
-            return False, "GitHub URL not configured for this app"
-
-        # Setup workspace: create directory and clone repository
-        logger.info(f"🏗️ Setting up workspace for riff {riff_slug}")
-        workspace_success, workspace_path, workspace_error = setup_riff_workspace(
-            user_uuid, app_slug, riff_slug, github_url
-        )
-
-        if not workspace_success:
-            logger.error(f"❌ Failed to setup workspace: {workspace_error}")
-            return False, f"Failed to setup workspace: {workspace_error}"
-
-        logger.info(f"✅ Workspace ready at: {workspace_path}")
-
-        # Create LLM instance
-        try:
-            llm = get_llm_instance(
-                api_key=anthropic_token, model="claude-sonnet-4-20250514"
-            )
-
-            # Create message callback to store events as messages
-            def message_callback(event):
-                """Callback to handle events from the agent conversation"""
-                try:
-                    logger.info(f"📨 Received event from agent: {type(event).__name__}")
-
-                    # Serialize the event to a message format
-                    serialized_message = serialize_agent_event_to_message(
-                        event, user_uuid, app_slug, riff_slug
-                    )
-
-                    if serialized_message:
-                        # Save the serialized message
-                        if add_user_message(
-                            user_uuid, app_slug, riff_slug, serialized_message
-                        ):
-                            logger.info(
-                                f"✅ Agent event ({type(event).__name__}) saved as message for riff: {riff_slug}"
-                            )
-
-                            # Update riff message stats
-                            messages = load_user_messages(
-                                user_uuid, app_slug, riff_slug
-                            )
-                            update_riff_message_stats(
-                                user_uuid,
-                                app_slug,
-                                riff_slug,
-                                len(messages),
-                                serialized_message["created_at"],
-                            )
-                        else:
-                            logger.error(
-                                f"❌ Failed to save agent event ({type(event).__name__}) for riff: {riff_slug}"
-                            )
-                    else:
-                        logger.debug(
-                            f"🔇 Event {type(event).__name__} was not serialized (likely filtered out)"
-                        )
-
-                except Exception as e:
-                    logger.error(f"❌ Error in message callback: {e}")
-                    logger.error(f"❌ Traceback: {traceback.format_exc()}")
-
-            # Load riff data to get runtime information
-            riff_data = load_user_riff(user_uuid, app_slug, riff_slug)
-            runtime_url = riff_data.get("runtime_url") if riff_data else None
-            session_api_key = riff_data.get("session_api_key") if riff_data else None
-
-            if runtime_url and session_api_key:
-                logger.info(f"🌐 Found runtime info for {riff_slug}: {runtime_url}")
-            else:
-                logger.info(
-                    f"🏠 No runtime info found for {riff_slug}, using local agent"
-                )
-
-            # Create and store the agent loop
-            logger.info(
-                f"🔧 Creating AgentLoop with key: {user_uuid[:8]}:{app_slug}:{riff_slug}"
-            )
-            agent_loop_manager.create_agent_loop(
-                user_uuid,
-                app_slug,
-                riff_slug,
-                llm,
-                workspace_path,
-                message_callback,
-                runtime_url,
-                session_api_key,
-            )
-            logger.info(f"🤖 Created AgentLoop for riff: {riff_slug}")
-
-            # Verify it was stored correctly
-            agent_loop = agent_loop_manager.get_agent_loop(
-                user_uuid, app_slug, riff_slug
-            )
-            if agent_loop:
-                logger.debug(
-                    f"✅ AgentLoop verification successful for {user_uuid[:8]}:{app_slug}:{riff_slug}"
-                )
-
-                # Initial message logic removed - agents will wait for user input
-
-                return True, None
-            else:
-                logger.error(
-                    f"❌ AgentLoop verification failed for {user_uuid[:8]}:{app_slug}:{riff_slug}"
-                )
-                return False, "Failed to verify Agent creation"
-
-        except Exception as e:
-            logger.error(f"❌ Failed to create LLM instance: {e}")
-            return False, f"Failed to initialize LLM: {str(e)}"
-
-    except Exception as e:
-        logger.error(f"❌ Failed to create AgentLoop: {e}")
-        return False, f"Failed to create Agent: {str(e)}"
-
-
-def load_user_riffs(user_uuid, app_slug):
-    """Load riffs for a specific app and user"""
-    storage = get_riffs_storage(user_uuid)
-    return storage.list_riffs(app_slug)
-
-
-def load_user_riff(user_uuid, app_slug, riff_slug):
-    """Load specific riff for a user"""
-    storage = get_riffs_storage(user_uuid)
-    return storage.load_riff(app_slug, riff_slug)
-
-
-def save_user_riff(user_uuid, app_slug, riff_slug, riff_data):
-    """Save riff for a specific user"""
-    storage = get_riffs_storage(user_uuid)
-    return storage.save_riff(app_slug, riff_slug, riff_data)
-
-
-def user_riff_exists(user_uuid, app_slug, riff_slug):
-    """Check if riff exists for user"""
-    storage = get_riffs_storage(user_uuid)
-    return storage.riff_exists(app_slug, riff_slug)
-
-
-def delete_user_riff(user_uuid, app_slug, riff_slug):
-    """Delete riff for a specific user"""
-    storage = get_riffs_storage(user_uuid)
-    return storage.delete_riff(app_slug, riff_slug)
-
-
-def create_slug(name):
-    """Convert riff name to slug format"""
-    # Convert to lowercase and replace spaces/special chars with hyphens
-    slug = re.sub(r"[^a-zA-Z0-9\s-]", "", name.lower())
-    slug = re.sub(r"\s+", "-", slug.strip())
-    slug = re.sub(r"-+", "-", slug)
-    return slug.strip("-")
-
-
-def is_valid_slug(slug):
-    """Validate that a slug contains only lowercase letters, numbers, and hyphens"""
-    if not slug:
-        return False
-    # Check if slug matches the pattern: lowercase letters, numbers, and hyphens only
-    # Must not start or end with hyphen, and no consecutive hyphens
-    pattern = r"^[a-z0-9]+(-[a-z0-9]+)*$"
-    return bool(re.match(pattern, slug))
+    return user_uuid, None, None
 
 
 @riffs_bp.route("/api/apps/<slug>/riffs", methods=["GET"])
@@ -415,32 +29,21 @@ def get_riffs(slug):
 
     try:
         # Get UUID from headers
-        user_uuid = request.headers.get("X-User-UUID")
-        if not user_uuid:
-            logger.warning("❌ X-User-UUID header is required")
-            return jsonify({"error": "X-User-UUID header is required"}), 400
+        user_uuid, error_response, status_code = get_user_uuid_from_request()
+        if error_response:
+            return error_response, status_code
 
-        user_uuid = user_uuid.strip()
-        if not user_uuid:
-            logger.warning("❌ Empty UUID provided in header")
-            return jsonify({"error": "UUID cannot be empty"}), 400
+        logger.debug(f"📋 Loading riffs for app {slug} for user {user_uuid[:8]}...")
 
-        # Verify app exists for this user
-        if not user_app_exists(user_uuid, slug):
-            logger.warning(f"❌ App not found: {slug} for user {user_uuid[:8]}")
-            return jsonify({"error": "App not found"}), 404
+        # Load riffs using service layer
+        riffs = riffs_service.load_user_riffs(user_uuid, slug)
 
-        riffs = load_user_riffs(user_uuid, slug)
-        # Sort riffs by creation date (newest first)
-        riffs.sort(key=lambda x: x.get("created_at", ""), reverse=True)
+        logger.info(f"✅ Loaded {len(riffs)} riffs for app {slug}")
+        return jsonify({"riffs": riffs})
 
-        logger.info(
-            f"📊 Returning {len(riffs)} riffs for app {slug} for user {user_uuid[:8]}"
-        )
-        return jsonify({"riffs": riffs, "count": len(riffs), "app_slug": slug})
     except Exception as e:
-        logger.error(f"💥 Error fetching riffs: {str(e)}")
-        return jsonify({"error": "Failed to fetch riffs"}), 500
+        logger.error(f"💥 Error loading riffs: {str(e)}")
+        return jsonify({"error": "Failed to load riffs"}), 500
 
 
 @riffs_bp.route("/api/apps/<slug>/riffs", methods=["POST"])
@@ -450,256 +53,56 @@ def create_riff(slug):
 
     try:
         # Get UUID from headers
-        user_uuid = request.headers.get("X-User-UUID")
-        if not user_uuid:
-            logger.warning("❌ X-User-UUID header is required")
-            return jsonify({"error": "X-User-UUID header is required"}), 400
+        user_uuid, error_response, status_code = get_user_uuid_from_request()
+        if error_response:
+            return error_response, status_code
 
-        user_uuid = user_uuid.strip()
-        if not user_uuid:
-            logger.warning("❌ Empty UUID provided in header")
-            return jsonify({"error": "UUID cannot be empty"}), 400
-
-        # Verify app exists for this user
-        if not user_app_exists(user_uuid, slug):
-            logger.warning(f"❌ App not found: {slug} for user {user_uuid[:8]}")
-            return jsonify({"error": "App not found"}), 404
-
-        # Get request data
+        # Get riff name from request body
         data = request.get_json()
-        if not data or "slug" not in data:
-            logger.warning("❌ Riff slug is required")
-            return jsonify({"error": "Riff slug is required"}), 400
+        if not data or "name" not in data:
+            logger.warning("❌ Riff name is required in request body")
+            return jsonify({"error": "Riff name is required"}), 400
 
-        riff_slug = data["slug"].strip()
-        if not riff_slug:
-            logger.warning("❌ Riff slug cannot be empty")
-            return jsonify({"error": "Riff slug cannot be empty"}), 400
+        riff_name = data["name"]
+        logger.debug(f"🆕 Creating riff: {riff_name} for app {slug}")
 
-        # Validate slug format
-        if not is_valid_slug(riff_slug):
-            logger.warning(f"❌ Invalid riff slug format: {riff_slug}")
-            return (
-                jsonify(
-                    {
-                        "error": "Riff slug must contain only lowercase letters, numbers, and hyphens (no consecutive hyphens, no leading/trailing hyphens)"
-                    }
-                ),
-                400,
-            )
+        # Create riff using service layer
+        success, result = riffs_service.create_riff(user_uuid, slug, riff_name)
 
-        logger.info(f"🔄 Creating riff: {riff_slug} for user {user_uuid[:8]}")
-
-        # Check if riff with same slug already exists for this user
-        existing_riff = None
-        if user_riff_exists(user_uuid, slug, riff_slug):
-            logger.info(
-                f"🔄 Riff with slug '{riff_slug}' already exists for user {user_uuid[:8]}, adopting existing riff"
-            )
-            existing_riff = load_user_riff(user_uuid, slug, riff_slug)
-            if existing_riff:
-                # Try to reconstruct the agent from existing state
-                success, error_message = reconstruct_agent_from_state(
-                    user_uuid, slug, riff_slug
-                )
-                if success:
-                    logger.info(f"✅ Successfully adopted existing riff: {riff_slug}")
-                    return (
-                        jsonify(
-                            {
-                                "message": "Existing riff adopted successfully",
-                                "riff": existing_riff,
-                            }
-                        ),
-                        200,
-                    )
-                else:
-                    # If reconstruction fails, try creating a new agent
-                    logger.warning(
-                        f"⚠️ Failed to reconstruct agent from existing state: {error_message}"
-                    )
-                    logger.info(
-                        f"🔄 Attempting to create new agent for existing riff: {riff_slug}"
-                    )
-                    success, error_message = create_agent_for_user(
-                        user_uuid, slug, riff_slug
-                    )
-                    if success:
-                        logger.info(
-                            f"✅ Successfully created new agent for existing riff: {riff_slug}"
-                        )
-                        return (
-                            jsonify(
-                                {
-                                    "message": "Existing riff adopted with new agent",
-                                    "riff": existing_riff,
-                                }
-                            ),
-                            200,
-                        )
-                    else:
-                        logger.error(
-                            f"❌ Failed to create agent for existing riff: {error_message}"
-                        )
-                        return (
-                            jsonify(
-                                {
-                                    "error": f"Failed to adopt existing riff: {error_message}"
-                                }
-                            ),
-                            500,
-                        )
-            else:
-                logger.error(f"❌ Could not load existing riff data for {riff_slug}")
-                return jsonify({"error": "Failed to load existing riff data"}), 500
-
-        # Create riff record
-        riff = {
-            "slug": riff_slug,
-            "app_slug": slug,
-            "created_at": datetime.now(timezone.utc).isoformat(),
-            "created_by": user_uuid,
-            "last_message_at": None,
-            "message_count": 0,
-        }
-
-        # Save riff for this user
-        if not save_user_riff(user_uuid, slug, riff_slug, riff):
-            logger.error("❌ Failed to save riff to file")
-            return jsonify({"error": "Failed to save riff"}), 500
-
-        # Start remote runtime for the new Riff
-        logger.info(f"🚀 Starting remote runtime for riff: {riff_slug}")
-        runtime_success, runtime_response = runtime_service.start_runtime(
-            user_uuid, slug, riff_slug
-        )
-
-        if runtime_success:
-            logger.info(
-                f"✅ Remote runtime started successfully: {runtime_response.get('runtime_id')}"
-            )
-            # Store runtime info in riff data
-            riff["runtime_id"] = runtime_response.get("runtime_id")
-            riff["runtime_url"] = runtime_response.get("url")
-            riff["session_api_key"] = runtime_response.get("session_api_key")
-
-            # Update riff with runtime info
-            save_user_riff(user_uuid, slug, riff_slug, riff)
+        if success:
+            logger.info(f"✅ Riff created successfully: {result['riff']['slug']}")
+            return jsonify(result), 201
         else:
-            logger.warning(
-                f"⚠️ Failed to start remote runtime: {runtime_response.get('error')}"
-            )
-            # Continue without runtime - local agent will be used as fallback
-
-        # Create AgentLoop with user's Anthropic token
-        success, error_message = create_agent_for_user(user_uuid, slug, riff_slug)
-        if not success:
-            logger.error(f"❌ Failed to create Agent for riff: {error_message}")
-            # Return 500 for git/workspace setup failures, 400 for other client errors
-            status_code = (
-                500
-                if "git" in error_message.lower()
-                or "workspace" in error_message.lower()
-                else 400
-            )
-            return jsonify({"error": error_message}), status_code
-
-        logger.info(f"✅ Riff created successfully: {riff_slug}")
-        return jsonify({"message": "Riff created successfully", "riff": riff}), 201
+            logger.error(f"❌ Riff creation failed: {result.get('error', 'Unknown error')}")
+            return jsonify(result), 400
 
     except Exception as e:
         logger.error(f"💥 Error creating riff: {str(e)}")
         return jsonify({"error": "Failed to create riff"}), 500
 
 
-# Message utility functions using new storage pattern
-def load_user_messages(user_uuid, app_slug, riff_slug):
-    """Load messages for a specific riff using storage pattern"""
-    storage = get_riffs_storage(user_uuid)
-    return storage.load_messages(app_slug, riff_slug)
-
-
-def save_user_messages(user_uuid, app_slug, riff_slug, messages):
-    """Save messages for a specific riff using storage pattern"""
-    storage = get_riffs_storage(user_uuid)
-    return storage.save_messages(app_slug, riff_slug, messages)
-
-
-def add_user_message(user_uuid, app_slug, riff_slug, message):
-    """Add a single message to a riff using storage pattern"""
-    storage = get_riffs_storage(user_uuid)
-    return storage.add_message(app_slug, riff_slug, message)
-
-
-def update_riff_message_stats(
-    user_uuid, app_slug, riff_slug, message_count, last_message_at
-):
-    """Update riff statistics with message count and last message time"""
-    try:
-        # Load the riff data
-        riff_data = load_user_riff(user_uuid, app_slug, riff_slug)
-        if riff_data:
-            # Update stats
-            riff_data["message_count"] = message_count
-            riff_data["last_message_at"] = last_message_at
-
-            # Save updated riff data
-            success = save_user_riff(user_uuid, app_slug, riff_slug, riff_data)
-            if success:
-                logger.debug(
-                    f"📊 Updated riff stats: {message_count} messages, last at {last_message_at}"
-                )
-            return success
-    except Exception as e:
-        logger.error(f"❌ Failed to update riff stats: {e}")
-    return False
-
-
 @riffs_bp.route("/api/apps/<slug>/riffs/<riff_slug>/messages", methods=["GET"])
 def get_messages(slug, riff_slug):
     """Get all messages for a specific riff"""
-    logger.info(
-        f"📋 GET /api/apps/{slug}/riffs/{riff_slug}/messages - Fetching messages"
-    )
+    logger.info(f"📋 GET /api/apps/{slug}/riffs/{riff_slug}/messages - Fetching messages")
 
     try:
         # Get UUID from headers
-        user_uuid = request.headers.get("X-User-UUID")
-        if not user_uuid:
-            logger.warning("❌ X-User-UUID header is required")
-            return jsonify({"error": "X-User-UUID header is required"}), 400
+        user_uuid, error_response, status_code = get_user_uuid_from_request()
+        if error_response:
+            return error_response, status_code
 
-        user_uuid = user_uuid.strip()
-        if not user_uuid:
-            logger.warning("❌ Empty UUID provided in header")
-            return jsonify({"error": "UUID cannot be empty"}), 400
+        logger.debug(f"📋 Loading messages for riff {riff_slug} for user {user_uuid[:8]}...")
 
-        # Verify app exists
-        if not user_app_exists(user_uuid, slug):
-            logger.warning(f"❌ App not found: {slug}")
-            return jsonify({"error": "App not found"}), 404
+        # Load messages using service layer
+        messages = riffs_service.load_user_messages(user_uuid, slug, riff_slug)
 
-        # Verify riff exists
-        if not user_riff_exists(user_uuid, slug, riff_slug):
-            logger.warning(f"❌ Riff not found: {riff_slug}")
-            return jsonify({"error": "Riff not found"}), 404
+        logger.info(f"✅ Loaded {len(messages)} messages for riff {riff_slug}")
+        return jsonify({"messages": messages})
 
-        messages = load_user_messages(user_uuid, slug, riff_slug)
-        # Sort messages by creation time (oldest first for chat display)
-        messages.sort(key=lambda x: x.get("created_at", ""))
-
-        logger.debug(f"📊 Returning {len(messages)} messages for riff {riff_slug}")
-        return jsonify(
-            {
-                "messages": messages,
-                "count": len(messages),
-                "app_slug": slug,
-                "riff_slug": riff_slug,
-            }
-        )
     except Exception as e:
-        logger.error(f"💥 Error fetching messages: {str(e)}")
-        return jsonify({"error": "Failed to fetch messages"}), 500
+        logger.error(f"💥 Error loading messages: {str(e)}")
+        return jsonify({"error": "Failed to load messages"}), 500
 
 
 @riffs_bp.route("/api/apps/<slug>/riffs/messages", methods=["POST"])
@@ -709,140 +112,38 @@ def create_message(slug):
 
     try:
         # Get UUID from headers
-        user_uuid = request.headers.get("X-User-UUID")
-        if not user_uuid:
-            logger.warning("❌ X-User-UUID header is required")
-            return jsonify({"error": "X-User-UUID header is required"}), 400
+        user_uuid, error_response, status_code = get_user_uuid_from_request()
+        if error_response:
+            return error_response, status_code
 
-        user_uuid = user_uuid.strip()
-        if not user_uuid:
-            logger.warning("❌ Empty UUID provided in header")
-            return jsonify({"error": "UUID cannot be empty"}), 400
-
-        # Verify app exists
-        if not user_app_exists(user_uuid, slug):
-            logger.warning(f"❌ App not found: {slug}")
-            return jsonify({"error": "App not found"}), 404
-
-        # Get request data
+        # Get message data from request body
         data = request.get_json()
         if not data:
             logger.warning("❌ Request body is required")
             return jsonify({"error": "Request body is required"}), 400
 
-        riff_slug = data.get("riff_slug", "").strip()
-        if not riff_slug:
-            logger.warning("❌ Riff slug is required")
-            return jsonify({"error": "Riff slug is required"}), 400
-
-        content = data.get("content", "").strip()
-        if not content:
+        if "content" not in data:
             logger.warning("❌ Message content is required")
             return jsonify({"error": "Message content is required"}), 400
 
-        # Verify riff exists
-        if not user_riff_exists(user_uuid, slug, riff_slug):
-            logger.warning(f"❌ Riff not found: {riff_slug}")
-            return jsonify({"error": "Riff not found"}), 404
+        if "riff_slug" not in data:
+            logger.warning("❌ Riff slug is required")
+            return jsonify({"error": "Riff slug is required"}), 400
 
-        logger.info(f"🔄 Creating message for riff: {riff_slug}")
+        content = data["content"]
+        riff_slug = data["riff_slug"]
 
-        # Create message record
-        message_id = str(uuid.uuid4())
-        created_at = datetime.now(timezone.utc).isoformat()
+        logger.debug(f"🆕 Creating message for riff {riff_slug} in app {slug}")
 
-        message = {
-            "id": message_id,
-            "content": content,
-            "riff_slug": riff_slug,
-            "app_slug": slug,
-            "created_at": created_at,
-            "created_by": user_uuid,
-            "type": data.get("type", "text"),  # text, file, etc.
-            "metadata": data.get("metadata", {}),  # Additional data like file info
-        }
+        # Send message using service layer
+        success, result = riffs_service.send_message(user_uuid, slug, riff_slug, content)
 
-        # Add message using storage pattern
-        if not add_user_message(user_uuid, slug, riff_slug, message):
-            logger.error("❌ Failed to save message to file")
-            return jsonify({"error": "Failed to save message"}), 500
-
-        # Check if this is a user message that should trigger LLM response
-        message_type = data.get("type", "text")
-        logger.info(
-            f"🔍 Message type: {message_type}, created_by: {message.get('created_by')}, user_uuid: {user_uuid[:8]}"
-        )
-
-        if message_type == "user" or (
-            message_type == "text" and message.get("created_by") == user_uuid
-        ):
-            # Try to get agent loop and generate LLM response
-            logger.info(
-                f"🔍 Looking for AgentLoop with key: {user_uuid[:8]}:{slug}:{riff_slug}"
-            )
-
-            # Debug: Show all available agent loops
-            stats = agent_loop_manager.get_stats()
-            logger.debug(f"📊 Current AgentLoop stats: {stats}")
-
-            agent_loop = agent_loop_manager.get_agent_loop(user_uuid, slug, riff_slug)
-            if agent_loop:
-                logger.info(
-                    f"✅ Found AgentLoop for {user_uuid[:8]}:{slug}:{riff_slug}"
-                )
-            else:
-                logger.warning(
-                    f"❌ AgentLoop not found for {user_uuid[:8]}:{slug}:{riff_slug}"
-                )
-                # Debug: Show what keys are actually stored
-                with agent_loop_manager._lock:
-                    stored_keys = list(agent_loop_manager.agent_loops.keys())
-                    logger.info(f"🔑 Available AgentLoop keys: {stored_keys}")
-
-            if agent_loop:
-                try:
-                    logger.info(
-                        f"🤖 Sending message to Agent for {user_uuid[:8]}/{slug}/{riff_slug}"
-                    )
-                    # Send message to agent - response will come through callback
-                    confirmation = agent_loop.send_message(content)
-                    logger.info(f"✅ Message sent to agent: {confirmation}")
-
-                    # Update riff message stats for the user message
-                    messages = load_user_messages(user_uuid, slug, riff_slug)
-                    update_riff_message_stats(
-                        user_uuid,
-                        slug,
-                        riff_slug,
-                        len(messages),
-                        created_at,
-                    )
-
-                    # Return success - agent response will be saved via callback
-                    return (
-                        jsonify(
-                            {
-                                "message": "Message sent to agent successfully. Response will be processed asynchronously.",
-                                "user_message": message,
-                                "agent_status": confirmation,
-                            }
-                        ),
-                        201,
-                    )
-
-                except Exception as e:
-                    logger.error(f"❌ Error sending message to agent: {e}")
-                    # Continue without agent response - user message was still saved
-
-        # Get updated message count for stats (fallback if no LLM response)
-        messages = load_user_messages(user_uuid, slug, riff_slug)
-        update_riff_message_stats(user_uuid, slug, riff_slug, len(messages), created_at)
-
-        logger.info(f"✅ Message created successfully for riff: {riff_slug}")
-        return (
-            jsonify({"message": "Message created successfully", "data": message}),
-            201,
-        )
+        if success:
+            logger.info(f"✅ Message sent successfully to riff {riff_slug}")
+            return jsonify(result), 201
+        else:
+            logger.error(f"❌ Message sending failed: {result.get('error', 'Unknown error')}")
+            return jsonify(result), 400
 
     except Exception as e:
         logger.error(f"💥 Error creating message: {str(e)}")
@@ -851,183 +152,52 @@ def create_message(slug):
 
 @riffs_bp.route("/api/apps/<slug>/riffs/<riff_slug>/ready", methods=["GET"])
 def check_riff_ready(slug, riff_slug):
-    """Check if an LLM object is ready in memory for a specific riff"""
+    """Check if an agent is ready for a specific riff"""
     log_api_request(logger, "GET", f"/api/apps/{slug}/riffs/{riff_slug}/ready")
 
     try:
         # Get UUID from headers
-        user_uuid = request.headers.get("X-User-UUID")
-        if not user_uuid:
-            logger.warning("❌ X-User-UUID header is required")
-            return jsonify({"error": "X-User-UUID header is required"}), 400
+        user_uuid, error_response, status_code = get_user_uuid_from_request()
+        if error_response:
+            return error_response, status_code
 
-        user_uuid = user_uuid.strip()
-        if not user_uuid:
-            logger.warning("❌ Empty UUID provided in header")
-            return jsonify({"error": "UUID cannot be empty"}), 400
+        # Check agent readiness using service layer
+        success, result = riffs_service.check_agent_ready(user_uuid, slug, riff_slug)
 
-        # Verify app exists
-        if not user_app_exists(user_uuid, slug):
-            logger.warning(f"❌ App not found: {slug}")
-            return jsonify({"error": "App not found"}), 404
-
-        # Verify riff exists
-        if not user_riff_exists(user_uuid, slug, riff_slug):
-            logger.warning(f"❌ Riff not found: {riff_slug}")
-            return jsonify({"error": "Riff not found"}), 404
-
-        # Check if AgentLoop exists for this riff
-        agent_loop = agent_loop_manager.get_agent_loop(user_uuid, slug, riff_slug)
-        is_ready = agent_loop is not None
-
-        # Additional debugging for flakiness
-        if not is_ready:
-            stats = agent_loop_manager.get_stats()
-            logger.warning(
-                f"🔍 LLM not ready for {user_uuid[:8]}:{slug}:{riff_slug}. "
-                f"Total loops: {stats.get('total_loops', 0)}"
-            )
+        if success:
+            log_api_response(logger, result)
+            return jsonify(result)
         else:
-            logger.info(f"✅ LLM ready for {user_uuid[:8]}:{slug}:{riff_slug}")
-
-        log_api_response(
-            logger, "GET", f"/api/apps/{slug}/riffs/{riff_slug}/ready", 200, user_uuid
-        )
-        return jsonify({"ready": is_ready}), 200
+            return jsonify(result), 500
 
     except Exception as e:
         logger.error(f"💥 Error checking riff readiness: {str(e)}")
-        log_api_response(
-            logger, "GET", f"/api/apps/{slug}/riffs/{riff_slug}/ready", 500
-        )
         return jsonify({"error": "Failed to check riff readiness"}), 500
 
 
 @riffs_bp.route("/api/apps/<slug>/riffs/<riff_slug>/reset", methods=["POST"])
 def reset_riff_llm(slug, riff_slug):
-    """Reset the LLM object for a specific riff by creating a brand new one"""
+    """Reset the agent for a specific riff by creating a brand new one"""
     log_api_request(logger, "POST", f"/api/apps/{slug}/riffs/{riff_slug}/reset")
 
     try:
         # Get UUID from headers
-        user_uuid = request.headers.get("X-User-UUID")
-        if not user_uuid:
-            logger.warning("❌ X-User-UUID header is required")
-            return jsonify({"error": "X-User-UUID header is required"}), 400
+        user_uuid, error_response, status_code = get_user_uuid_from_request()
+        if error_response:
+            return error_response, status_code
 
-        user_uuid = user_uuid.strip()
-        if not user_uuid:
-            logger.warning("❌ Empty UUID provided in header")
-            return jsonify({"error": "UUID cannot be empty"}), 400
+        # Reset agent using service layer
+        success, result = riffs_service.reset_agent(user_uuid, slug, riff_slug)
 
-        # Verify app exists
-        if not user_app_exists(user_uuid, slug):
-            logger.warning(f"❌ App not found: {slug}")
-            return jsonify({"error": "App not found"}), 404
-
-        # Verify riff exists
-        if not user_riff_exists(user_uuid, slug, riff_slug):
-            logger.warning(f"❌ Riff not found: {riff_slug}")
-            return jsonify({"error": "Riff not found"}), 404
-
-        # Handle runtime reset - check status and unpause/restart as needed
-        logger.info(f"🔄 Handling runtime reset for riff: {riff_slug}")
-        runtime_success, runtime_response = runtime_service.handle_agent_reset(
-            user_uuid, slug, riff_slug
-        )
-
-        if runtime_success:
-            logger.info(
-                f"✅ Runtime reset handled successfully: {runtime_response.get('status')}"
-            )
-            # Update riff with any new runtime info
-            riff_data = load_user_riff(user_uuid, slug, riff_slug)
-            if riff_data and runtime_response.get("runtime_id"):
-                riff_data["runtime_id"] = runtime_response.get("runtime_id")
-                riff_data["runtime_url"] = runtime_response.get("url")
-                save_user_riff(user_uuid, slug, riff_slug, riff_data)
+        if success:
+            log_api_response(logger, result)
+            return jsonify(result)
         else:
-            logger.warning(f"⚠️ Runtime reset failed: {runtime_response.get('error')}")
-            # Continue with local agent reset as fallback
-
-        # Remove existing AgentLoop if it exists
-        existing_removed = agent_loop_manager.remove_agent_loop(
-            user_uuid, slug, riff_slug
-        )
-        if existing_removed:
-            logger.info(
-                f"🗑️ Removed existing AgentLoop for {user_uuid[:8]}:{slug}:{riff_slug}"
-            )
-        else:
-            logger.info(
-                f"ℹ️ No existing AgentLoop found for {user_uuid[:8]}:{slug}:{riff_slug}"
-            )
-
-        # Reconstruct Agent object from existing serialized state (no re-cloning)
-        success, error_message = reconstruct_agent_from_state(
-            user_uuid, slug, riff_slug
-        )
-        if not success:
-            logger.error(f"❌ Failed to reset Agent for riff: {error_message}")
-            return jsonify({"error": error_message}), 500
-
-        # Double-check that the LLM is actually ready before returning success
-        logger.info(
-            f"🔍 Verifying LLM readiness after reset for {user_uuid[:8]}:{slug}:{riff_slug}"
-        )
-        agent_loop = agent_loop_manager.get_agent_loop(user_uuid, slug, riff_slug)
-        if not agent_loop:
-            logger.error(
-                f"❌ LLM reset appeared successful but AgentLoop not found for {user_uuid[:8]}:{slug}:{riff_slug}"
-            )
-            return (
-                jsonify({"error": "LLM reset failed - could not verify readiness"}),
-                500,
-            )
-
-        # Test that the LLM can actually respond to a simple query
-        try:
-            logger.info(
-                f"🧪 Testing LLM functionality for {user_uuid[:8]}:{slug}:{riff_slug}"
-            )
-            test_message = "Hello"
-            logger.info(f"📨 Sending test message: {test_message}")
-            test_response = agent_loop.send_message(test_message)
-            if test_response and len(test_response.strip()) > 0:
-                logger.info(
-                    f"✅ LLM test successful for {user_uuid[:8]}:{slug}:{riff_slug}"
-                )
-            else:
-                logger.error(
-                    f"❌ LLM test failed - empty response for {user_uuid[:8]}:{slug}:{riff_slug}"
-                )
-                return (
-                    jsonify(
-                        {"error": "LLM reset failed - LLM not responding properly"}
-                    ),
-                    500,
-                )
-        except Exception as e:
-            logger.error(
-                f"❌ LLM test failed with exception for {user_uuid[:8]}:{slug}:{riff_slug}: {e}"
-            )
-            return (
-                jsonify({"error": f"LLM reset failed - LLM test error: {str(e)}"}),
-                500,
-            )
-
-        logger.info(f"✅ LLM reset and verification successful for riff: {riff_slug}")
-        log_api_response(
-            logger, "POST", f"/api/apps/{slug}/riffs/{riff_slug}/reset", 200, user_uuid
-        )
-        return jsonify({"message": "LLM reset successfully", "ready": True}), 200
+            return jsonify(result), 500
 
     except Exception as e:
-        logger.error(f"💥 Error resetting riff LLM: {str(e)}")
-        log_api_response(
-            logger, "POST", f"/api/apps/{slug}/riffs/{riff_slug}/reset", 500
-        )
-        return jsonify({"error": "Failed to reset riff LLM"}), 500
+        logger.error(f"💥 Error resetting riff agent: {str(e)}")
+        return jsonify({"error": "Failed to reset riff agent"}), 500
 
 
 @riffs_bp.route("/api/apps/<slug>/riffs/<riff_slug>/status", methods=["GET"])
@@ -1037,58 +207,21 @@ def get_agent_status(slug, riff_slug):
 
     try:
         # Get UUID from headers
-        user_uuid = request.headers.get("X-User-UUID")
-        if not user_uuid:
-            logger.warning("❌ X-User-UUID header is required")
-            return jsonify({"error": "X-User-UUID header is required"}), 400
+        user_uuid, error_response, status_code = get_user_uuid_from_request()
+        if error_response:
+            return error_response, status_code
 
-        user_uuid = user_uuid.strip()
-        if not user_uuid:
-            logger.warning("❌ Empty UUID provided in header")
-            return jsonify({"error": "UUID cannot be empty"}), 400
+        # Get agent status using service layer
+        success, result = riffs_service.get_agent_status(user_uuid, slug, riff_slug)
 
-        # Verify app exists
-        if not user_app_exists(user_uuid, slug):
-            logger.warning(f"❌ App not found: {slug}")
-            return jsonify({"error": "App not found"}), 404
-
-        # Verify riff exists
-        if not user_riff_exists(user_uuid, slug, riff_slug):
-            logger.warning(f"❌ Riff not found: {riff_slug}")
-            return jsonify({"error": "Riff not found"}), 404
-
-        # Get the agent loop
-        agent_loop = agent_loop_manager.get_agent_loop(user_uuid, slug, riff_slug)
-        if not agent_loop:
-            logger.warning(
-                f"❌ Agent loop not found for {user_uuid[:8]}:{slug}:{riff_slug}"
-            )
-            return (
-                jsonify(
-                    {
-                        "status": "not_found",
-                        "message": "Agent loop not found. Create a new riff to initialize the agent.",
-                    }
-                ),
-                404,
-            )
-
-        # Get agent status
-        status = agent_loop.get_agent_status()
-
-        logger.debug(
-            f"📊 Agent status retrieved for {user_uuid[:8]}:{slug}:{riff_slug}"
-        )
-        log_api_response(
-            logger, "GET", f"/api/apps/{slug}/riffs/{riff_slug}/status", 200, user_uuid
-        )
-        return jsonify(status), 200
+        if success:
+            log_api_response(logger, result)
+            return jsonify(result)
+        else:
+            return jsonify(result), 500
 
     except Exception as e:
         logger.error(f"💥 Error getting agent status: {str(e)}")
-        log_api_response(
-            logger, "GET", f"/api/apps/{slug}/riffs/{riff_slug}/status", 500
-        )
         return jsonify({"error": "Failed to get agent status"}), 500
 
 
@@ -1099,68 +232,22 @@ def play_agent(slug, riff_slug):
 
     try:
         # Get UUID from headers
-        user_uuid = request.headers.get("X-User-UUID")
-        if not user_uuid:
-            logger.warning("❌ X-User-UUID header is required")
-            return jsonify({"error": "X-User-UUID header is required"}), 400
+        user_uuid, error_response, status_code = get_user_uuid_from_request()
+        if error_response:
+            return error_response, status_code
 
-        user_uuid = user_uuid.strip()
-        if not user_uuid:
-            logger.warning("❌ Empty UUID provided in header")
-            return jsonify({"error": "UUID cannot be empty"}), 400
+        # Play agent using service layer
+        success, result = riffs_service.play_agent(user_uuid, slug, riff_slug)
 
-        # Verify app exists
-        if not user_app_exists(user_uuid, slug):
-            logger.warning(f"❌ App not found: {slug}")
-            return jsonify({"error": "App not found"}), 404
-
-        # Verify riff exists
-        if not user_riff_exists(user_uuid, slug, riff_slug):
-            logger.warning(f"❌ Riff not found: {riff_slug}")
-            return jsonify({"error": "Riff not found"}), 404
-
-        # Get the agent loop
-        agent_loop = agent_loop_manager.get_agent_loop(user_uuid, slug, riff_slug)
-        if not agent_loop:
-            logger.warning(
-                f"❌ Agent loop not found for {user_uuid[:8]}:{slug}:{riff_slug}"
-            )
-            return (
-                jsonify(
-                    {
-                        "error": "Agent loop not found. Create a new riff to initialize the agent."
-                    }
-                ),
-                404,
-            )
-
-        # Resume the agent
-        success = agent_loop.resume_agent()
         if success:
-            logger.info(f"▶️ Agent resumed for {user_uuid[:8]}:{slug}:{riff_slug}")
-            log_api_response(
-                logger,
-                "POST",
-                f"/api/apps/{slug}/riffs/{riff_slug}/play",
-                200,
-                user_uuid,
-            )
-            return (
-                jsonify({"message": "Agent resumed successfully", "status": "playing"}),
-                200,
-            )
+            log_api_response(logger, result)
+            return jsonify(result)
         else:
-            logger.error(
-                f"❌ Failed to resume agent for {user_uuid[:8]}:{slug}:{riff_slug}"
-            )
-            return jsonify({"error": "Failed to resume agent"}), 500
+            return jsonify(result), 500
 
     except Exception as e:
-        logger.error(f"💥 Error resuming agent: {str(e)}")
-        log_api_response(
-            logger, "POST", f"/api/apps/{slug}/riffs/{riff_slug}/play", 500
-        )
-        return jsonify({"error": "Failed to resume agent"}), 500
+        logger.error(f"💥 Error playing agent: {str(e)}")
+        return jsonify({"error": "Failed to play agent"}), 500
 
 
 @riffs_bp.route("/api/apps/<slug>/riffs/<riff_slug>/pause", methods=["POST"])
@@ -1170,71 +257,24 @@ def pause_agent(slug, riff_slug):
 
     try:
         # Get UUID from headers
-        user_uuid = request.headers.get("X-User-UUID")
-        if not user_uuid:
-            logger.warning("❌ X-User-UUID header is required")
-            return jsonify({"error": "X-User-UUID header is required"}), 400
+        user_uuid, error_response, status_code = get_user_uuid_from_request()
+        if error_response:
+            return error_response, status_code
 
-        user_uuid = user_uuid.strip()
-        if not user_uuid:
-            logger.warning("❌ Empty UUID provided in header")
-            return jsonify({"error": "UUID cannot be empty"}), 400
+        # Pause agent using service layer
+        success, result = riffs_service.pause_agent(user_uuid, slug, riff_slug)
 
-        # Verify app exists
-        if not user_app_exists(user_uuid, slug):
-            logger.warning(f"❌ App not found: {slug}")
-            return jsonify({"error": "App not found"}), 404
-
-        # Verify riff exists
-        if not user_riff_exists(user_uuid, slug, riff_slug):
-            logger.warning(f"❌ Riff not found: {riff_slug}")
-            return jsonify({"error": "Riff not found"}), 404
-
-        # Get the agent loop
-        agent_loop = agent_loop_manager.get_agent_loop(user_uuid, slug, riff_slug)
-        if not agent_loop:
-            logger.warning(
-                f"❌ Agent loop not found for {user_uuid[:8]}:{slug}:{riff_slug}"
-            )
-            return (
-                jsonify(
-                    {
-                        "error": "Agent loop not found. Create a new riff to initialize the agent."
-                    }
-                ),
-                404,
-            )
-
-        # Pause the agent
-        success = agent_loop.pause_agent()
         if success:
-            logger.info(f"⏸️ Agent paused for {user_uuid[:8]}:{slug}:{riff_slug}")
-            log_api_response(
-                logger,
-                "POST",
-                f"/api/apps/{slug}/riffs/{riff_slug}/pause",
-                200,
-                user_uuid,
-            )
-            return (
-                jsonify({"message": "Agent paused successfully", "status": "paused"}),
-                200,
-            )
+            log_api_response(logger, result)
+            return jsonify(result)
         else:
-            logger.error(
-                f"❌ Failed to pause agent for {user_uuid[:8]}:{slug}:{riff_slug}"
-            )
-            return jsonify({"error": "Failed to pause agent"}), 500
+            return jsonify(result), 500
 
     except Exception as e:
         logger.error(f"💥 Error pausing agent: {str(e)}")
-        log_api_response(
-            logger, "POST", f"/api/apps/{slug}/riffs/{riff_slug}/pause", 500
-        )
         return jsonify({"error": "Failed to pause agent"}), 500
 
 
-# PR Status endpoint for CI status display
 @riffs_bp.route("/api/apps/<slug>/riffs/<riff_slug>/pr-status", methods=["GET"])
 def get_riff_pr_status(slug, riff_slug):
     """Get GitHub Pull Request status for a specific riff (using riff name as branch)"""
@@ -1242,240 +282,44 @@ def get_riff_pr_status(slug, riff_slug):
 
     try:
         # Get UUID from headers
-        user_uuid = request.headers.get("X-User-UUID")
-        if not user_uuid:
-            logger.warning("❌ X-User-UUID header is required")
-            log_api_response(
-                logger, "GET", f"/api/apps/{slug}/riffs/{riff_slug}/pr-status", 400
-            )
-            return jsonify({"error": "X-User-UUID header is required"}), 400
+        user_uuid, error_response, status_code = get_user_uuid_from_request()
+        if error_response:
+            return error_response, status_code
 
-        user_uuid = user_uuid.strip()
-        if not user_uuid:
-            logger.warning("❌ Empty UUID provided in header")
-            log_api_response(
-                logger, "GET", f"/api/apps/{slug}/riffs/{riff_slug}/pr-status", 400
-            )
-            return jsonify({"error": "UUID cannot be empty"}), 400
+        # Get PR status using service layer
+        success, result = riffs_service.get_pr_status(user_uuid, slug, riff_slug)
 
-        # Load app to get GitHub URL
-        apps_storage = get_apps_storage(user_uuid)
-        app = apps_storage.load_app(slug)
-        if not app:
-            logger.warning(f"❌ App not found: {slug} for user {user_uuid[:8]}")
-            log_api_response(
-                logger, "GET", f"/api/apps/{slug}/riffs/{riff_slug}/pr-status", 404
-            )
-            return jsonify({"error": "App not found"}), 404
-
-        # Check if app has GitHub URL
-        github_url = app.get("github_url")
-        if not github_url:
-            logger.debug(f"ℹ️ No GitHub URL configured for app {slug}")
-            log_api_response(
-                logger, "GET", f"/api/apps/{slug}/riffs/{riff_slug}/pr-status", 200
-            )
-            return jsonify({"pr_status": None, "message": "No GitHub URL configured"})
-
-        # Get user's GitHub token
-        try:
-            user_keys = load_user_keys(user_uuid)
-            github_token = user_keys.get("github")
-            if not github_token:
-                logger.debug(f"ℹ️ No GitHub token configured for user {user_uuid[:8]}")
-                log_api_response(
-                    logger, "GET", f"/api/apps/{slug}/riffs/{riff_slug}/pr-status", 200
-                )
-                return jsonify(
-                    {"pr_status": None, "message": "No GitHub token configured"}
-                )
-
-            # Use riff slug as branch name (this is the typical pattern)
-            riff_branch = riff_slug
-            logger.debug(f"🔍 Looking for PR from riff branch '{riff_branch}' to main")
-
-            # Search for PRs FROM the riff branch TO main (the typical workflow)
-            # This means: head=riff_branch, base=main
-            pr_status = get_pr_status(
-                github_url, github_token, riff_branch, search_by_base=False
-            )
-
-            if pr_status:
-                logger.info(f"✅ Found PR from riff branch '{riff_branch}' to main")
-            else:
-                logger.debug(f"ℹ️ No PR found from riff branch '{riff_branch}' to main")
-                # Note: We don't try base search here because riffs are source branches, not target branches
-
-            if pr_status:
-                logger.info(
-                    f"✅ Found PR status for riff {riff_slug}: #{pr_status['number']}"
-                )
-            else:
-                logger.info(
-                    f"ℹ️ No PR found for riff {riff_slug} (branch: {riff_branch})"
-                )
-
-            log_api_response(
-                logger, "GET", f"/api/apps/{slug}/riffs/{riff_slug}/pr-status", 200
-            )
-            return jsonify({"pr_status": pr_status})
-
-        except Exception as e:
-            logger.error(f"❌ Error getting PR status: {str(e)}")
-            log_api_response(
-                logger, "GET", f"/api/apps/{slug}/riffs/{riff_slug}/pr-status", 500
-            )
-            return jsonify({"error": f"Failed to get PR status: {str(e)}"}), 500
+        if success:
+            log_api_response(logger, result)
+            return jsonify(result)
+        else:
+            return jsonify(result), 500
 
     except Exception as e:
-        logger.error(f"💥 Error getting riff PR status: {str(e)}")
-        log_api_response(
-            logger, "GET", f"/api/apps/{slug}/riffs/{riff_slug}/pr-status", 500
-        )
+        logger.error(f"💥 Error getting PR status: {str(e)}")
         return jsonify({"error": "Failed to get PR status"}), 500
 
 
 @riffs_bp.route("/api/apps/<slug>/riffs/<riff_slug>", methods=["DELETE"])
 def delete_riff(slug, riff_slug):
-    """Delete a riff and its associated Fly.io app, close PR, and delete branch"""
+    """Delete a riff and its associated resources"""
     logger.info(f"🗑️ DELETE /api/apps/{slug}/riffs/{riff_slug} - Deleting riff")
 
     try:
         # Get UUID from headers
-        user_uuid = request.headers.get("X-User-UUID")
-        if not user_uuid:
-            logger.warning("❌ X-User-UUID header is required")
-            return jsonify({"error": "X-User-UUID header is required"}), 400
+        user_uuid, error_response, status_code = get_user_uuid_from_request()
+        if error_response:
+            return error_response, status_code
 
-        user_uuid = user_uuid.strip()
-        if not user_uuid:
-            logger.warning("❌ Empty UUID provided in header")
-            return jsonify({"error": "UUID cannot be empty"}), 400
+        # Delete riff using service layer
+        success, result = riffs_service.delete_riff(user_uuid, slug, riff_slug)
 
-        # Verify app exists
-        if not user_app_exists(user_uuid, slug):
-            logger.warning(f"❌ App not found: {slug} for user {user_uuid[:8]}")
-            return jsonify({"error": "App not found"}), 404
-
-        # Load riff for this user
-        riff = load_user_riff(user_uuid, slug, riff_slug)
-        if not riff:
-            logger.warning(f"❌ Riff not found: {riff_slug} for user {user_uuid[:8]}")
-            return jsonify({"error": "Riff not found"}), 404
-
-        logger.debug(
-            f"🔍 Found riff to delete: {riff['slug']} for user {user_uuid[:8]}"
-        )
-
-        # Load app data to get GitHub URL
-        app = load_user_app(user_uuid, slug)
-        if not app:
-            logger.warning(f"❌ App data not found: {slug} for user {user_uuid[:8]}")
-            return jsonify({"error": "App data not found"}), 404
-
-        # Get user's API keys
-        user_keys = load_user_keys(user_uuid)
-        github_token = user_keys.get("github")
-        fly_token = user_keys.get("fly")
-
-        deletion_results = {
-            "github_pr_success": False,
-            "github_pr_error": None,
-            "github_branch_success": False,
-            "github_branch_error": None,
-            "fly_success": False,
-            "fly_error": None,
-        }
-
-        # Close GitHub PR if URL exists and token is available
-        if app.get("github_url") and github_token:
-            logger.info(f"🔀 Closing PR for branch: {riff_slug}")
-            pr_success, pr_message = close_github_pr(
-                app["github_url"], github_token, riff_slug
-            )
-            deletion_results["github_pr_success"] = pr_success
-            if not pr_success:
-                deletion_results["github_pr_error"] = pr_message
-                logger.warning(f"⚠️ PR closure failed: {pr_message}")
-            else:
-                logger.info(f"✅ PR closed: {pr_message}")
+        if success:
+            logger.info(f"✅ Riff deletion completed: {riff_slug}")
+            return jsonify(result)
         else:
-            logger.info("⚠️ Skipping PR closure (no GitHub URL or token)")
-
-        # Delete GitHub branch if URL exists and token is available
-        if app.get("github_url") and github_token:
-            logger.info(f"🌿 Deleting branch: {riff_slug}")
-            branch_success, branch_message = delete_github_branch(
-                app["github_url"], github_token, riff_slug
-            )
-            deletion_results["github_branch_success"] = branch_success
-            if not branch_success:
-                deletion_results["github_branch_error"] = branch_message
-                logger.warning(f"⚠️ Branch deletion failed: {branch_message}")
-            else:
-                logger.info(f"✅ Branch deleted: {branch_message}")
-        else:
-            logger.info("⚠️ Skipping branch deletion (no GitHub URL or token)")
-
-        # Delete Fly.io app if name exists and token is available
-        fly_app_name = f"{slug}-{riff_slug}"
-        if fly_token:
-            logger.info(f"🛩️ Deleting Fly.io app: {fly_app_name}")
-            fly_success, fly_message = delete_fly_app(fly_app_name, fly_token)
-            deletion_results["fly_success"] = fly_success
-            if not fly_success:
-                deletion_results["fly_error"] = fly_message
-                logger.warning(f"⚠️ Fly.io deletion failed: {fly_message}")
-            else:
-                logger.info(f"✅ Fly.io app deleted: {fly_message}")
-        else:
-            logger.info("⚠️ Skipping Fly.io deletion (no token)")
-
-        # Stop and remove agent loop if it exists
-        try:
-            agent_loop = agent_loop_manager.get_agent_loop(user_uuid, slug, riff_slug)
-            if agent_loop:
-                logger.info(f"🤖 Stopping agent loop for riff: {riff_slug}")
-                agent_loop_manager.remove_agent_loop(user_uuid, slug, riff_slug)
-                logger.info(f"✅ Agent loop stopped and removed")
-        except Exception as e:
-            logger.warning(f"⚠️ Error stopping agent loop: {e}")
-
-        # Delete riff data
-        if delete_user_riff(user_uuid, slug, riff_slug):
-            logger.info(
-                f"✅ Riff {riff_slug} and all associated data deleted for user {user_uuid[:8]}"
-            )
-        else:
-            logger.error(f"❌ Failed to delete riff data")
-            return jsonify({"error": "Failed to delete riff data"}), 500
-
-        # Prepare response
-        response_data = {
-            "message": f'Riff "{riff.get("slug")}" deleted successfully',
-            "riff_slug": riff_slug,
-            "app_slug": slug,
-            "deletion_results": deletion_results,
-        }
-
-        # Add warnings if some deletions failed
-        warnings = []
-        if deletion_results["github_pr_error"]:
-            warnings.append(f"PR closure failed: {deletion_results['github_pr_error']}")
-        if deletion_results["github_branch_error"]:
-            warnings.append(
-                f"Branch deletion failed: {deletion_results['github_branch_error']}"
-            )
-        if deletion_results["fly_error"]:
-            warnings.append(
-                f"Fly.io app deletion failed: {deletion_results['fly_error']}"
-            )
-
-        if warnings:
-            response_data["warnings"] = warnings
-
-        logger.info(f"✅ Riff deletion completed: {riff_slug}")
-        return jsonify(response_data)
+            status_code = 404 if "not found" in result.get("error", "").lower() else 500
+            return jsonify(result), status_code
 
     except Exception as e:
         logger.error(f"💥 Error deleting riff: {str(e)}")
@@ -1485,151 +329,48 @@ def delete_riff(slug, riff_slug):
 @riffs_bp.route("/api/apps/<slug>/riffs/<riff_slug>/deployment", methods=["GET"])
 def get_riff_deployment_status(slug, riff_slug):
     """Get deployment status for a riff (checks riff branch)"""
-    logger.info(
-        f"🚀 GET /api/apps/{slug}/riffs/{riff_slug}/deployment - Getting riff deployment status"
-    )
+    logger.info(f"🚀 GET /api/apps/{slug}/riffs/{riff_slug}/deployment - Getting riff deployment status")
 
     try:
         # Get UUID from headers
-        user_uuid = request.headers.get("X-User-UUID")
-        if not user_uuid:
-            logger.warning("❌ X-User-UUID header is required")
-            return jsonify({"error": "X-User-UUID header is required"}), 400
+        user_uuid, error_response, status_code = get_user_uuid_from_request()
+        if error_response:
+            return error_response, status_code
 
-        user_uuid = user_uuid.strip()
-        if not user_uuid:
-            logger.warning("❌ Empty UUID provided in header")
-            return jsonify({"error": "UUID cannot be empty"}), 400
+        # Get deployment status using service layer
+        success, result = riffs_service.get_deployment_status(user_uuid, slug, riff_slug)
 
-        # Load app to get GitHub URL
-        apps_storage = get_apps_storage(user_uuid)
-        app = apps_storage.load_app(slug)
-        if not app:
-            logger.warning(f"❌ App not found: {slug} for user {user_uuid[:8]}")
-            return jsonify({"error": "App not found"}), 404
-
-        # Verify riff exists
-        riffs_storage = get_riffs_storage(user_uuid)
-        riff = riffs_storage.load_riff(slug, riff_slug)
-        if not riff:
-            logger.warning(f"❌ Riff not found: {riff_slug} for user {user_uuid[:8]}")
-            return jsonify({"error": "Riff not found"}), 404
-
-        # Check if app has GitHub URL
-        github_url = app.get("github_url")
-        if not github_url:
-            logger.debug(f"ℹ️ No GitHub URL configured for app {slug}")
-            return jsonify(
-                {
-                    "status": "error",
-                    "message": "No GitHub URL configured for this app",
-                    "details": {"error": "no_github_url"},
-                }
-            )
-
-        # Get user's GitHub token
-        user_keys = load_user_keys(user_uuid)
-        github_token = user_keys.get("github")
-
-        if not github_token:
-            logger.debug(f"ℹ️ No GitHub token found for user {user_uuid[:8]}")
-            return jsonify(
-                {
-                    "status": "error",
-                    "message": "No GitHub token configured",
-                    "details": {"error": "no_github_token"},
-                }
-            )
-
-        # Check deployment status for riff branch (use riff slug as branch name)
-        branch_name = riff_slug
-        logger.info(
-            f"🔍 Checking deployment status for riff '{riff_slug}' on branch '{branch_name}'"
-        )
-
-        deployment_status = get_deployment_status(github_url, github_token, branch_name)
-
-        logger.info(
-            f"✅ Deployment status retrieved for riff {riff_slug}: {deployment_status['status']}"
-        )
-        return jsonify(deployment_status)
+        if success:
+            return jsonify(result)
+        else:
+            status_code = 404 if "not found" in result.get("error", "").lower() else 500
+            return jsonify(result), status_code
 
     except Exception as e:
         logger.error(f"💥 Error getting riff deployment status: {str(e)}")
         return jsonify({"error": "Failed to get deployment status"}), 500
 
 
-# Runtime API Status endpoint
 @riffs_bp.route("/api/runtime/status", methods=["GET"])
 def get_runtime_api_status():
     """Get the status of the runtime API service"""
     log_api_request(logger, "GET", "/api/runtime/status")
 
     try:
-        # Get UUID from headers for logging purposes
-        user_uuid = request.headers.get("X-User-UUID")
-        if user_uuid:
-            user_uuid = user_uuid.strip()
-            logger.info(
-                f"🏥 Runtime API status check requested by user {user_uuid[:8]}"
-            )
-        else:
-            logger.info("🏥 Runtime API status check requested (no user UUID)")
-
-        # Check runtime API health
-        success, health_response = runtime_service.get_api_health()
+        # Get global runtime status using service layer
+        success, result = riffs_service.get_global_runtime_status()
 
         if success:
-            logger.info("✅ Runtime API is healthy")
-            log_api_response(logger, "GET", "/api/runtime/status", 200, user_uuid)
-            return (
-                jsonify(
-                    {
-                        "status": "healthy",
-                        "runtime_api_url": runtime_service.runtime_api_url,
-                        "details": health_response,
-                    }
-                ),
-                200,
-            )
+            log_api_response(logger, result)
+            return jsonify(result)
         else:
-            logger.warning(
-                f"⚠️ Runtime API health check failed: {health_response.get('error')}"
-            )
-            log_api_response(logger, "GET", "/api/runtime/status", 503, user_uuid)
-            return (
-                jsonify(
-                    {
-                        "status": "unhealthy",
-                        "runtime_api_url": runtime_service.runtime_api_url,
-                        "error": health_response.get("error"),
-                        "details": health_response,
-                    }
-                ),
-                503,
-            )
+            return jsonify(result), 500
 
     except Exception as e:
-        logger.error(f"💥 Error checking runtime API status: {str(e)}")
-        log_api_response(
-            logger,
-            "GET",
-            "/api/runtime/status",
-            500,
-            user_uuid if "user_uuid" in locals() else None,
-        )
-        return (
-            jsonify(
-                {
-                    "status": "error",
-                    "error": f"Failed to check runtime API status: {str(e)}",
-                }
-            ),
-            500,
-        )
+        logger.error(f"💥 Error getting runtime API status: {str(e)}")
+        return jsonify({"error": "Failed to get runtime API status"}), 500
 
 
-# Runtime Status endpoint for specific riff
 @riffs_bp.route("/api/apps/<slug>/riffs/<riff_slug>/runtime/status", methods=["GET"])
 def get_riff_runtime_status(slug, riff_slug):
     """Get the runtime status for a specific riff"""
@@ -1637,72 +378,86 @@ def get_riff_runtime_status(slug, riff_slug):
 
     try:
         # Get UUID from headers
-        user_uuid = request.headers.get("X-User-UUID")
-        if not user_uuid:
-            logger.warning("❌ X-User-UUID header is required")
-            return jsonify({"error": "X-User-UUID header is required"}), 400
+        user_uuid, error_response, status_code = get_user_uuid_from_request()
+        if error_response:
+            return error_response, status_code
 
-        user_uuid = user_uuid.strip()
-        if not user_uuid:
-            logger.warning("❌ Empty UUID provided in header")
-            return jsonify({"error": "UUID cannot be empty"}), 400
-
-        # Verify app exists
-        if not user_app_exists(user_uuid, slug):
-            logger.warning(f"❌ App not found: {slug}")
-            return jsonify({"error": "App not found"}), 404
-
-        # Verify riff exists
-        if not user_riff_exists(user_uuid, slug, riff_slug):
-            logger.warning(f"❌ Riff not found: {riff_slug}")
-            return jsonify({"error": "Riff not found"}), 404
-
-        logger.info(
-            f"📊 Getting runtime status for riff: {user_uuid[:8]}:{slug}:{riff_slug}"
-        )
-
-        # Get runtime status
-        success, status_response = runtime_service.get_runtime_status(
-            user_uuid, slug, riff_slug
-        )
+        # Get runtime status using service layer
+        success, result = riffs_service.get_runtime_status(user_uuid, slug, riff_slug)
 
         if success:
-            logger.info(f"✅ Runtime status retrieved: {status_response.get('status')}")
-            log_api_response(
-                logger,
-                "GET",
-                f"/api/apps/{slug}/riffs/{riff_slug}/runtime/status",
-                200,
-                user_uuid,
-            )
-            return jsonify({"status": "found", "runtime": status_response}), 200
+            log_api_response(logger, result)
+            return jsonify(result)
         else:
-            logger.info(f"ℹ️ Runtime not found or error: {status_response.get('error')}")
-            log_api_response(
-                logger,
-                "GET",
-                f"/api/apps/{slug}/riffs/{riff_slug}/runtime/status",
-                404,
-                user_uuid,
-            )
-            return (
-                jsonify(
-                    {
-                        "status": "not_found",
-                        "error": status_response.get("error"),
-                        "details": status_response,
-                    }
-                ),
-                404,
-            )
+            return jsonify(result), 500
 
     except Exception as e:
         logger.error(f"💥 Error getting riff runtime status: {str(e)}")
-        log_api_response(
-            logger,
-            "GET",
-            f"/api/apps/{slug}/riffs/{riff_slug}/runtime/status",
-            500,
-            user_uuid if "user_uuid" in locals() else None,
-        )
-        return jsonify({"error": "Failed to get runtime status"}), 500
+        return jsonify({"error": "Failed to get riff runtime status"}), 500
+
+
+# Legacy functions for backward compatibility - these are now handled by the service layer
+def load_user_riffs(user_uuid, app_slug):
+    """Load riffs for a specific user and app - DEPRECATED"""
+    logger.warning("⚠️ Using deprecated load_user_riffs() function")
+    return riffs_service.load_user_riffs(user_uuid, app_slug)
+
+
+def load_user_riff(user_uuid, app_slug, riff_slug):
+    """Load specific riff for a user - DEPRECATED"""
+    logger.warning("⚠️ Using deprecated load_user_riff() function")
+    return riffs_service.load_user_riff(user_uuid, app_slug, riff_slug)
+
+
+def save_user_riff(user_uuid, app_slug, riff_slug, riff_data):
+    """Save riff for a specific user - DEPRECATED"""
+    logger.warning("⚠️ Using deprecated save_user_riff() function")
+    return riffs_service.save_user_riff(user_uuid, app_slug, riff_slug, riff_data)
+
+
+def user_riff_exists(user_uuid, app_slug, riff_slug):
+    """Check if riff exists for user - DEPRECATED"""
+    logger.warning("⚠️ Using deprecated user_riff_exists() function")
+    return riffs_service.user_riff_exists(user_uuid, app_slug, riff_slug)
+
+
+def delete_user_riff(user_uuid, app_slug, riff_slug):
+    """Delete riff for a specific user - DEPRECATED"""
+    logger.warning("⚠️ Using deprecated delete_user_riff() function")
+    return riffs_service.delete_user_riff(user_uuid, app_slug, riff_slug)
+
+
+def create_slug(name):
+    """Convert riff name to slug format - DEPRECATED"""
+    logger.warning("⚠️ Using deprecated create_slug() function")
+    return riffs_service.create_slug(name)
+
+
+def is_valid_slug(slug):
+    """Validate that a slug contains only lowercase letters, numbers, and hyphens - DEPRECATED"""
+    logger.warning("⚠️ Using deprecated is_valid_slug() function")
+    return riffs_service.is_valid_slug(slug)
+
+
+def load_user_messages(user_uuid, app_slug, riff_slug):
+    """Load messages for a specific riff - DEPRECATED"""
+    logger.warning("⚠️ Using deprecated load_user_messages() function")
+    return riffs_service.load_user_messages(user_uuid, app_slug, riff_slug)
+
+
+def create_agent_for_user(user_uuid, app_slug, riff_slug):
+    """Create a new agent for a user's riff - DEPRECATED"""
+    logger.warning("⚠️ Using deprecated create_agent_for_user() function")
+    return riffs_service.create_agent_for_user(user_uuid, app_slug, riff_slug)
+
+
+def reconstruct_agent_from_state(user_uuid, app_slug, riff_slug):
+    """Reconstruct an Agent object from existing serialized state - DEPRECATED"""
+    logger.warning("⚠️ Using deprecated reconstruct_agent_from_state() function")
+    return riffs_service.reconstruct_agent_from_state(user_uuid, app_slug, riff_slug)
+
+
+def get_llm_instance(api_key, model="claude-sonnet-4-20250514"):
+    """Get the appropriate LLM instance - DEPRECATED"""
+    logger.warning("⚠️ Using deprecated get_llm_instance() function")
+    return riffs_service.get_llm_instance(api_key, model)
