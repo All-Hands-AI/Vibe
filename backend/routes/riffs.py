@@ -592,9 +592,7 @@ def create_riff(slug):
             # Continue without runtime - local agent will be used as fallback
 
         # Create AgentLoop with user's Anthropic token
-        success, error_message = create_agent_for_user(
-            user_uuid, slug, riff_slug
-        )
+        success, error_message = create_agent_for_user(user_uuid, slug, riff_slug)
         if not success:
             logger.error(f"❌ Failed to create Agent for riff: {error_message}")
             # Return 500 for git/workspace setup failures, 400 for other client errors
