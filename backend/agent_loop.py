@@ -34,34 +34,18 @@ from openhands.sdk import (
     EventBase,
     ToolSpec,
 )
-from openhands.sdk.context import render_template
-from openhands.sdk.conversation.state import AgentExecutionStatus
-from openhands.sdk.tool.registry import register_tool, list_registered_tools
 
-# Import tools for registration
-from openhands.tools.str_replace_editor import FileEditorTool
-from openhands.tools.task_tracker import TaskTrackerTool
-from openhands.tools.execute_bash import BashTool
+from openhands.sdk.conversation.state import AgentExecutionStatus
+
+# Import tools to register them automatically
+from openhands.tools.str_replace_editor import FileEditorTool  # noqa: F401
+from openhands.tools.task_tracker import TaskTrackerTool  # noqa: F401
+from openhands.tools.execute_bash import BashTool  # noqa: F401
 
 logger = get_logger(__name__)
 
-
-def register_openhands_tools():
-    """Register OpenHands tools in the SDK registry."""
-    registered_tools = list_registered_tools()
-
-    # Only register if not already registered
-    if "str_replace_editor" not in registered_tools:
-        register_tool("str_replace_editor", FileEditorTool.create)
-        logger.info("✅ Registered str_replace_editor tool")
-
-    if "task_tracker" not in registered_tools:
-        register_tool("task_tracker", TaskTrackerTool.create)
-        logger.info("✅ Registered task_tracker tool")
-
-    if "execute_bash" not in registered_tools:
-        register_tool("execute_bash", BashTool.create)
-        logger.info("✅ Registered execute_bash tool")
+# Import runtime service for checking runtime alive status
+from services.runtime_service import runtime_service
 
 
 def ensure_directory_exists(path: str) -> bool:
@@ -74,43 +58,59 @@ def ensure_directory_exists(path: str) -> bool:
         return False
 
 
-def create_tools_with_validation(workspace_path: str) -> list:
+def create_tools_with_validation(
+    workspace_path: str, use_remote_runtime: bool = False
+) -> list:
     """Create tools with proper path validation and setup."""
-    # Register tools in the SDK registry first
-    register_openhands_tools()
+    # Register default tools first
+    from openhands.sdk.preset.default import register_default_tools
+
+    register_default_tools(enable_browser=False)
+    logger.info("✅ Registered default tools")
 
     tools = []
 
-    # Ensure workspace exists
-    if not ensure_directory_exists(workspace_path):
-        raise ValueError(f"Cannot create workspace directory: {workspace_path}")
+    if use_remote_runtime:
+        # For remote runtimes, use fixed paths that match the remote environment
+        project_dir = "/workspace/project"
+        tasks_dir = "/workspace/tasks"
+        logger.info(
+            f"🌐 Using remote runtime paths - project_dir: {project_dir}, tasks_dir: {tasks_dir}"
+        )
+    else:
+        # For local runtimes, use workspace_path-based directories
+        # Ensure workspace exists
+        if not ensure_directory_exists(workspace_path):
+            raise ValueError(f"Cannot create workspace directory: {workspace_path}")
 
-    # Create project directory if it doesn't exist
-    project_dir = os.path.join(workspace_path, "project")
-    if not ensure_directory_exists(project_dir):
-        logger.warning(f"⚠️ Could not create project directory: {project_dir}")
-        # Fall back to workspace root for bash operations
-        project_dir = workspace_path
+        # Create project directory if it doesn't exist
+        project_dir = os.path.join(workspace_path, "project")
+        if not ensure_directory_exists(project_dir):
+            logger.warning(f"⚠️ Could not create project directory: {project_dir}")
+            # Fall back to workspace root for bash operations
+            project_dir = workspace_path
 
-    # Create tasks directory for TaskTracker
-    tasks_dir = os.path.join(workspace_path, "tasks")
-    if not ensure_directory_exists(tasks_dir):
-        logger.warning(f"⚠️ Could not create tasks directory: {tasks_dir}")
-        # Fall back to workspace root
-        tasks_dir = workspace_path
+        # Create tasks directory for TaskTracker
+        tasks_dir = os.path.join(workspace_path, "tasks")
+        if not ensure_directory_exists(tasks_dir):
+            logger.warning(f"⚠️ Could not create tasks directory: {tasks_dir}")
+            # Fall back to workspace root
+            tasks_dir = workspace_path
 
     try:
-        # FileEditorTool - no specific directory needed
-        tools.append(ToolSpec(name="str_replace_editor", params={}))
-        logger.info(f"✅ Created str_replace_editor")
+        # BashTool - work in project directory
+        tools.append(ToolSpec(name="BashTool", params={"working_dir": project_dir}))
+        logger.info(f"✅ Created BashTool with working_dir: {project_dir}")
+
+        # FileEditorTool - workspace root directory
+        tools.append(
+            ToolSpec(name="FileEditorTool", params={"workspace_root": project_dir})
+        )
+        logger.info(f"✅ Created FileEditorTool with workspace_root: {project_dir}")
 
         # TaskTrackerTool - save to tasks directory
-        tools.append(ToolSpec(name="task_tracker", params={"save_dir": tasks_dir}))
-        logger.info(f"✅ Created task_tracker with save_dir: {tasks_dir}")
-
-        # BashTool - work in project directory
-        tools.append(ToolSpec(name="execute_bash", params={"working_dir": project_dir}))
-        logger.info(f"✅ Created execute_bash with working_dir: {project_dir}")
+        tools.append(ToolSpec(name="TaskTrackerTool", params={"save_dir": tasks_dir}))
+        logger.info(f"✅ Created TaskTrackerTool with save_dir: {tasks_dir}")
 
     except Exception as e:
         logger.error(f"❌ Failed to create tools: {e}")
@@ -119,53 +119,76 @@ def create_tools_with_validation(workspace_path: str) -> list:
     return tools
 
 
-class CustomAgentContext(AgentContext):
-    """Custom AgentContext that can store workspace_path."""
+def load_system_prompt(workspace_path: str, use_remote_runtime: bool = False) -> str:
+    """Load system prompt from file and combine with workspace-specific information."""
+    # Get the directory where this script is located
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    prompt_file = os.path.join(script_dir, "prompts", "system_prompt.txt")
 
-    workspace_path: str = "/tmp"  # default value
+    # Load the base system prompt from file
+    try:
+        with open(prompt_file, "r", encoding="utf-8") as f:
+            base_prompt = f.read()
+    except FileNotFoundError:
+        logger.error(f"❌ System prompt file not found: {prompt_file}")
+        # Fallback to a minimal prompt if file is missing
+        base_prompt = "You are OpenHands agent, a helpful AI assistant that can interact with a computer to solve tasks."
+    except Exception as e:
+        logger.error(f"❌ Error loading system prompt file: {e}")
+        base_prompt = "You are OpenHands agent, a helpful AI assistant that can interact with a computer to solve tasks."
+
+    # For remote runtimes, tell the agent about the remote workspace path
+    if use_remote_runtime:
+        agent_workspace_path = "/workspace"
+    else:
+        agent_workspace_path = workspace_path
+
+    # Add workspace-specific information
+    workspace_info = f"""
+
+WORKSPACE INFORMATION:
+You are working in a workspace located at: {agent_workspace_path}/project/
+
+<IMPORTANT>
+Do all your work in the directory {agent_workspace_path}/project/
+</IMPORTANT>
+
+This workspace has a git repository in it.
+
+When using the FileEditor tool, always use absolute paths.
+
+<WORKFLOW>
+Only work on the current branch. Push to its analog on the remote branch.
+
+<IMPORTANT>
+COMMIT AND PUSH your work whenever you've made an improvement. DO NOT wait for the user to tell you to push.
+</IMPORTANT>
+
+Whenever you push, ALWAYS update the PR title and description, unless you're sure they don't need updating.
+PR title should ALWAYS begin with [Riff $riffname] where $riffname is the name of the current riff.
+For subsequent pushes, update the PR title and description as necessary, especially if they're currently blank.
+
+For PR descriptions: keep it short!
+</WORKFLOW>"""
+
+    return base_prompt + workspace_info
 
 
-class CustomAgent(Agent):
-    """Custom Agent that uses our local system prompt template."""
-
-    @property
-    def prompt_dir(self) -> str:
-        """Override to use our backend/prompts directory."""
-        return os.path.join(os.path.dirname(__file__), "prompts")
-
-    @property
-    def system_message(self) -> str:
-        """Compute system message with workspace_path template variable."""
-        # Get the workspace_path from agent_context if available
-        workspace_path = "/tmp"  # default
-        if self.agent_context and isinstance(self.agent_context, CustomAgentContext):
-            workspace_path = self.agent_context.workspace_path
-
-        # Prepare template kwargs, including cli_mode if available (like base class)
-        template_kwargs = dict(self.system_prompt_kwargs)
-        if hasattr(self, "cli_mode"):
-            template_kwargs["cli_mode"] = getattr(self, "cli_mode")
-
-        # Add workspace_path to template kwargs
-        template_kwargs["workspace_path"] = workspace_path
-
-        system_message = render_template(
-            prompt_dir=self.prompt_dir,
-            template_name=self.system_prompt_filename,
-            **template_kwargs,
-        )
-
-        # Note: We don't append system_message_suffix since we've integrated
-        # everything into the main template
-        return system_message
-
-
-def create_agent(llm, tools, workspace_path):
+def create_agent(llm, tools, workspace_path, use_remote_runtime: bool = False):
     """Create an agent with development tools and workspace configuration"""
-    # Create a custom agent context to store workspace_path for template rendering
-    agent_context = CustomAgentContext(workspace_path=workspace_path)
+    # Load the complete system prompt from file
+    system_prompt = load_system_prompt(workspace_path, use_remote_runtime)
 
-    return CustomAgent(llm=llm, tools=tools, agent_context=agent_context)
+    # Create agent context with the complete system prompt as suffix
+    # This will be appended to the default OpenHands system prompt
+    agent_context = AgentContext(system_message_suffix=system_prompt)
+
+    # Use built-in Agent with built-in system prompt template
+    return Agent(
+        llm=llm,
+        tools=tools,
+        agent_context=agent_context,
+    )
 
 
 class AgentLoop:
@@ -182,6 +205,8 @@ class AgentLoop:
         llm: LLM,
         workspace_path: str,
         message_callback: Optional[Callable] = None,
+        runtime_url: Optional[str] = None,
+        session_api_key: Optional[str] = None,
     ):
         """Initialize an AgentLoop instance with improved error handling."""
         self.user_uuid = user_uuid
@@ -189,6 +214,8 @@ class AgentLoop:
         self.riff_slug = riff_slug
         self.llm = llm
         self.message_callback = message_callback
+        self.runtime_url = runtime_url
+        self.session_api_key = session_api_key
 
         # Validate workspace_path
         if not workspace_path:
@@ -206,16 +233,23 @@ class AgentLoop:
         if not ensure_directory_exists(self.state_path):
             raise ValueError(f"Cannot create state directory: {self.state_path}")
 
+        # Determine if we're using remote runtime
+        use_remote_runtime = bool(self.runtime_url and self.session_api_key)
+
         # Create tools with validation
         try:
-            tools = create_tools_with_validation(self.workspace_path)
+            tools = create_tools_with_validation(
+                self.workspace_path, use_remote_runtime
+            )
         except Exception as e:
             logger.error(f"❌ Failed to create tools for {self.get_key()}: {e}")
             raise
 
         # Create agent
         try:
-            self.agent = create_agent(llm, tools, self.workspace_path)
+            self.agent = create_agent(
+                llm, tools, self.workspace_path, use_remote_runtime
+            )
         except Exception as e:
             logger.error(f"❌ Failed to create agent for {self.get_key()}: {e}")
             raise
@@ -238,13 +272,50 @@ class AgentLoop:
             callbacks.append(self._safe_event_callback)
 
         try:
-            self.conversation = Conversation(
-                agent=self.agent,
-                callbacks=callbacks,
-                persist_filestore=self.file_store,
-                conversation_id=conversation_id,
-                visualize=False,
-            )
+            if self.runtime_url and self.session_api_key:
+                logger.info(
+                    f"🌐 Creating RemoteConversation for {self.get_key()} using runtime: {self.runtime_url}"
+                )
+
+                # Wait for the runtime to be ready and alive before creating the conversation
+                logger.info(
+                    f"⏳ Waiting for runtime to be ready and alive before creating conversation: {self.runtime_url}"
+                )
+                ready_success, ready_response = (
+                    runtime_service.wait_for_runtime_ready_and_alive(
+                        self.user_uuid,
+                        self.app_slug,
+                        self.riff_slug,
+                        self.runtime_url,
+                        timeout=300,
+                        check_interval=5,
+                    )
+                )
+
+                if not ready_success:
+                    error_msg = f"Runtime is not ready and alive: {ready_response.get('error', 'Unknown error')}"
+                    logger.error(f"❌ {error_msg}")
+                    raise RuntimeError(error_msg)
+
+                logger.info(
+                    f"✅ Runtime is ready and alive, creating conversation: {self.runtime_url}"
+                )
+                self.conversation = Conversation(
+                    agent=self.agent,
+                    host=self.runtime_url,
+                    api_key=self.session_api_key,
+                    callbacks=callbacks,
+                    visualize=False,
+                )
+            else:
+                logger.info(f"🏠 Creating local Conversation for {self.get_key()}")
+                self.conversation = Conversation(
+                    agent=self.agent,
+                    callbacks=callbacks,
+                    persist_filestore=self.file_store,
+                    conversation_id=conversation_id,
+                    visualize=False,
+                )
         except ValueError as e:
             error_msg = str(e)
             # Handle tool name migration - clear persisted state if tool names have changed
@@ -273,13 +344,52 @@ class AgentLoop:
                 self.file_store = LocalFileStore(self.state_path)
 
                 # Retry conversation creation
-                self.conversation = Conversation(
-                    agent=self.agent,
-                    callbacks=callbacks,
-                    persist_filestore=self.file_store,
-                    conversation_id=conversation_id,
-                    visualize=False,
-                )
+                if self.runtime_url and self.session_api_key:
+                    logger.info(
+                        f"🌐 Retrying RemoteConversation creation for {self.get_key()}"
+                    )
+
+                    # Wait for the runtime to be ready and alive before retrying conversation creation
+                    logger.info(
+                        f"⏳ Waiting for runtime to be ready and alive before retrying conversation: {self.runtime_url}"
+                    )
+                    ready_success, ready_response = (
+                        runtime_service.wait_for_runtime_ready_and_alive(
+                            self.user_uuid,
+                            self.app_slug,
+                            self.riff_slug,
+                            self.runtime_url,
+                            timeout=300,
+                            check_interval=5,
+                        )
+                    )
+
+                    if not ready_success:
+                        error_msg = f"Runtime is not ready and alive during retry: {ready_response.get('error', 'Unknown error')}"
+                        logger.error(f"❌ {error_msg}")
+                        raise RuntimeError(error_msg)
+
+                    logger.info(
+                        f"✅ Runtime is ready and alive, retrying conversation creation: {self.runtime_url}"
+                    )
+                    self.conversation = Conversation(
+                        agent=self.agent,
+                        host=self.runtime_url,
+                        api_key=self.session_api_key,
+                        callbacks=callbacks,
+                        visualize=False,
+                    )
+                else:
+                    logger.info(
+                        f"🏠 Retrying local Conversation creation for {self.get_key()}"
+                    )
+                    self.conversation = Conversation(
+                        agent=self.agent,
+                        callbacks=callbacks,
+                        persist_filestore=self.file_store,
+                        conversation_id=conversation_id,
+                        visualize=False,
+                    )
                 logger.info(
                     f"✅ Successfully recreated conversation after state migration"
                 )
@@ -308,6 +418,8 @@ class AgentLoop:
         llm: LLM,
         workspace_path: str,
         message_callback: Optional[Callable] = None,
+        runtime_url: Optional[str] = None,
+        session_api_key: Optional[str] = None,
     ):
         """Create an AgentLoop from existing persisted state with improved error handling."""
         # Check if state exists
@@ -319,13 +431,27 @@ class AgentLoop:
                 f"⚠️ No existing state found at {state_path}, creating new AgentLoop"
             )
             return cls(
-                user_uuid, app_slug, riff_slug, llm, workspace_path, message_callback
+                user_uuid,
+                app_slug,
+                riff_slug,
+                llm,
+                workspace_path,
+                message_callback,
+                runtime_url,
+                session_api_key,
             )
 
         try:
             # Create new instance - the Conversation constructor will automatically load existing state
             instance = cls(
-                user_uuid, app_slug, riff_slug, llm, workspace_path, message_callback
+                user_uuid,
+                app_slug,
+                riff_slug,
+                llm,
+                workspace_path,
+                message_callback,
+                runtime_url,
+                session_api_key,
             )
             logger.info(
                 f"🔄 Reconstructed AgentLoop from existing state for {instance.get_key()}"
@@ -336,7 +462,14 @@ class AgentLoop:
             # Fall back to creating a new instance
             logger.info("🔄 Falling back to creating new AgentLoop")
             return cls(
-                user_uuid, app_slug, riff_slug, llm, workspace_path, message_callback
+                user_uuid,
+                app_slug,
+                riff_slug,
+                llm,
+                workspace_path,
+                message_callback,
+                runtime_url,
+                session_api_key,
             )
 
     def _safe_event_callback(self, event: EventBase):
@@ -611,6 +744,8 @@ class AgentLoopManager:
         llm: LLM,
         workspace_path: str,
         message_callback: Optional[Callable] = None,
+        runtime_url: Optional[str] = None,
+        session_api_key: Optional[str] = None,
     ) -> AgentLoop:
         """
         Create a new AgentLoop and store it in the dictionary.
@@ -622,6 +757,8 @@ class AgentLoopManager:
             llm: LLM instance from openhands-sdk
             workspace_path: Required path to the workspace directory (cloned repository)
             message_callback: Optional callback function to handle events/messages
+            runtime_url: Optional URL for remote runtime server
+            session_api_key: Optional API key for remote runtime session
 
         Returns:
             The created AgentLoop instance
@@ -648,6 +785,8 @@ class AgentLoopManager:
                     llm,
                     workspace_path,
                     message_callback,
+                    runtime_url,
+                    session_api_key,
                 )
                 self.agent_loops[key] = agent_loop
 
@@ -668,6 +807,8 @@ class AgentLoopManager:
         llm: LLM,
         workspace_path: str,
         message_callback: Optional[Callable] = None,
+        runtime_url: Optional[str] = None,
+        session_api_key: Optional[str] = None,
     ) -> AgentLoop:
         """
         Create an AgentLoop from existing persisted state and store it in the dictionary.
@@ -706,6 +847,8 @@ class AgentLoopManager:
                     llm,
                     workspace_path,
                     message_callback,
+                    runtime_url,
+                    session_api_key,
                 )
                 self.agent_loops[key] = agent_loop
 

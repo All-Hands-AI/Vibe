@@ -17,11 +17,21 @@ except ImportError:
     pass
 
 # Configure logging for Fly.io - stdout only with simplified formatting
+# Support LOG_LEVEL environment variable (default: INFO)
+log_level = os.environ.get("LOG_LEVEL", "INFO").upper()
 logging.basicConfig(
-    level=logging.INFO,
+    level=getattr(logging, log_level, logging.INFO),
     format="%(levelname).1s %(message)s",
     stream=sys.stdout,
 )
+
+# Set debug level for agent-sdk (openhands) modules if OPENHANDS_LOG_LEVEL is set
+openhands_log_level = os.environ.get("OPENHANDS_LOG_LEVEL", "").upper()
+if openhands_log_level:
+    openhands_level = getattr(logging, openhands_log_level, logging.INFO)
+    logging.getLogger("openhands").setLevel(openhands_level)
+    logging.getLogger("openhands.sdk").setLevel(openhands_level)
+    logging.getLogger("openhands.tools").setLevel(openhands_level)
 
 logger = get_logger(__name__)
 

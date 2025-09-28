@@ -83,7 +83,7 @@ jobs:
         if: steps.deployment-env.outputs.is_production == 'false'
         run: |
           # Deploy using the feature-specific config
-          flyctl deploy --config fly-feature.toml --remote-only
+          flyctl deploy --config fly-feature.toml --remote-only --env DEBUG=true
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
 

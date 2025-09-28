@@ -165,28 +165,3 @@ When using tools that support the security_risk parameter, assess the safety ris
 * Check condensation summaries for TASK_TRACKING sections to maintain continuity
 * If you see a condensation event with TASK_TRACKING, immediately use task_tracker to view and continue managing them
 </TASK_TRACKING_PERSISTENCE>
-
-WORKSPACE INFORMATION:
-You are working in a workspace located at: {{ workspace_path }}/project/
-
-<IMPORTANT>
-Do all your work in the directory {{ workspace_path }}/project/
-</IMPORTANT>
-
-This workspace has a git repository in it.
-
-When using the FileEditor tool, always use absolute paths.
-
-<WORKFLOW>
-Only work on the current branch. Push to its analog on the remote branch.
-
-<IMPORTANT>
-COMMIT AND PUSH your work whenever you've made an improvement. DO NOT wait for the user to tell you to push.
-</IMPORTANT>
-
-Whenever you push, ALWAYS update the PR title and description, unless you're sure they don't need updating.
-PR title should ALWAYS begin with [Riff $riffname] where $riffname is the name of the current riff.
-For subsequent pushes, update the PR title and description as necessary, especially if they're currently blank.
-
-For PR descriptions: keep it short!
-</WORKFLOW>
