@@ -34,7 +34,7 @@ from openhands.sdk import (
     EventBase,
     ToolSpec,
 )
-from openhands.sdk.context import render_template
+
 from openhands.sdk.conversation.state import AgentExecutionStatus
 
 # Import tools to register them automatically
@@ -62,6 +62,11 @@ def create_tools_with_validation(
     workspace_path: str, use_remote_runtime: bool = False
 ) -> list:
     """Create tools with proper path validation and setup."""
+    # Register default tools first
+    from openhands.sdk.preset.default import register_default_tools
+    register_default_tools(enable_browser=False)
+    logger.info("✅ Registered default tools")
+    
     tools = []
 
     if use_remote_runtime:
@@ -113,47 +118,6 @@ def create_tools_with_validation(
     return tools
 
 
-class CustomAgentContext(AgentContext):
-    """Custom AgentContext that can store workspace_path."""
-
-    workspace_path: str = "/tmp"  # default value
-
-
-class CustomAgent(Agent):
-    """Custom Agent that uses our local system prompt template."""
-
-    @property
-    def prompt_dir(self) -> str:
-        """Override to use our backend/prompts directory."""
-        return os.path.join(os.path.dirname(__file__), "prompts")
-
-    @property
-    def system_message(self) -> str:
-        """Compute system message with workspace_path template variable."""
-        # Get the workspace_path from agent_context if available
-        workspace_path = "/tmp"  # default
-        if self.agent_context and isinstance(self.agent_context, CustomAgentContext):
-            workspace_path = self.agent_context.workspace_path
-
-        # Prepare template kwargs, including cli_mode if available (like base class)
-        template_kwargs = dict(self.system_prompt_kwargs)
-        if hasattr(self, "cli_mode"):
-            template_kwargs["cli_mode"] = getattr(self, "cli_mode")
-
-        # Add workspace_path to template kwargs
-        template_kwargs["workspace_path"] = workspace_path
-
-        system_message = render_template(
-            prompt_dir=self.prompt_dir,
-            template_name=self.system_prompt_filename,
-            **template_kwargs,
-        )
-
-        # Note: We don't append system_message_suffix since we've integrated
-        # everything into the main template
-        return system_message
-
-
 def create_agent(llm, tools, workspace_path, use_remote_runtime: bool = False):
     """Create an agent with development tools and workspace configuration"""
     # For remote runtimes, tell the agent about the remote workspace path
@@ -162,11 +126,88 @@ def create_agent(llm, tools, workspace_path, use_remote_runtime: bool = False):
     else:
         agent_workspace_path = workspace_path
 
-    # Create custom agent context with workspace path
-    agent_context = CustomAgentContext(workspace_path=agent_workspace_path)
+    # Create workspace-specific system message suffix
+    workspace_suffix = f"""
+<TASK_MANAGEMENT>
+* You have access to the `task_tracker` tool to help you organize and monitor development work. Use this tool REGULARLY to maintain task visibility and provide users with clear progress updates. This tool is ESSENTIAL for systematic planning and decomposing complex development work into manageable components. Failing to use this tool for planning may result in overlooked requirements - which is unacceptable.
+* It is crucial that you update task status to "done" immediately upon completion of each work item. Do not accumulate multiple finished tasks before updating their status.
+* For complex, multi-phase development work, use `task_tracker` to establish a comprehensive plan with well-defined steps:
+  1. Begin by decomposing the overall objective into primary phases using `task_tracker`
+  2. Include detailed work items as necessary to break complex activities into actionable units
+  3. Update tasks to "in_progress" status when commencing work on them
+  4. Update tasks to "done" status immediately after completing each item
+  5. For each primary phase, incorporate additional work items as you identify new requirements
+  6. If you determine the plan requires substantial modifications, suggest revisions and obtain user confirmation before proceeding
+* Example workflow for debugging and resolution:
+  ```
+  User: "Execute the test suite and resolve any validation failures"
+  Assistant: I'm going to use the task_tracker tool to organize the following work items:
+  - Execute the test suite
+  - Resolve any validation failures
+  I'm now going to run the test suite using the terminal.
+  [After running tests and discovering 8 validation failures]
+  I found 8 validation failures that need attention. I'm going to use the task_tracker tool to add 8 specific items to the task list.
+  [Updating first task to in_progress]
+  Let me begin addressing the first validation issue...
+  [After resolving first failure]
+  The first validation issue has been resolved, let me mark that task as done and proceed to the second item...
+  ```
+* Example workflow for component development:
+  ```
+  User: "Build a dashboard component that displays analytics data with interactive charts and filtering options"
+  Assistant: I'll help you create an analytics dashboard with interactive charts and filtering. Let me first use the task_tracker tool to organize this development work.
+  Adding the following tasks to the tracker:
+  1. Analyze existing analytics data structure and requirements
+  2. Design dashboard layout and component architecture
+  3. Implement data visualization charts with interactivity
+  4. Create filtering and search functionality
+  5. Integrate components and perform testing
+  Let me start by examining the current analytics data structure to understand what we're working with...
+  [Assistant proceeds with implementation step by step, updating tasks to in_progress and done as work progresses]
+  ```
+</TASK_MANAGEMENT>
 
-    # Use CustomAgent to get proper system message with workspace_path template
-    return CustomAgent(llm=llm, tools=tools, agent_context=agent_context)
+<TASK_TRACKING_PERSISTENCE>
+* IMPORTANT: If you were using the task_tracker tool before a condensation event, continue using it after condensation
+* Check condensation summaries for TASK_TRACKING sections to maintain continuity
+* If you see a condensation event with TASK_TRACKING, immediately use task_tracker to view and continue managing them
+</TASK_TRACKING_PERSISTENCE>
+
+WORKSPACE INFORMATION:
+You are working in a workspace located at: {agent_workspace_path}/project/
+
+<IMPORTANT>
+Do all your work in the directory {agent_workspace_path}/project/
+</IMPORTANT>
+
+This workspace has a git repository in it.
+
+When using the FileEditor tool, always use absolute paths.
+
+<WORKFLOW>
+Only work on the current branch. Push to its analog on the remote branch.
+
+<IMPORTANT>
+COMMIT AND PUSH your work whenever you've made an improvement. DO NOT wait for the user to tell you to push.
+</IMPORTANT>
+
+Whenever you push, ALWAYS update the PR title and description, unless you're sure they don't need updating.
+PR title should ALWAYS begin with [Riff $riffname] where $riffname is the name of the current riff.
+For subsequent pushes, update the PR title and description as necessary, especially if they're currently blank.
+
+For PR descriptions: keep it short!
+</WORKFLOW>
+"""
+
+    # Create agent context with workspace-specific system message suffix
+    agent_context = AgentContext(system_message_suffix=workspace_suffix)
+
+    # Use built-in Agent with built-in system prompt template
+    return Agent(
+        llm=llm,
+        tools=tools,
+        agent_context=agent_context,
+    )
 
 
 class AgentLoop:
