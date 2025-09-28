@@ -3,6 +3,7 @@ import re
 import uuid
 import sys
 import traceback
+import requests
 from datetime import datetime, timezone
 from storage import get_riffs_storage, get_apps_storage
 from storage.base_storage import DATA_DIR
@@ -1812,12 +1813,57 @@ def execute_riff_action(slug, riff_slug, action):
         }
 
         command = command_map[action]
-        logger.info(f"📨 Sending {action} command to agent: {command}")
+        logger.info(f"📨 Executing {action} command via AgentServer: {command}")
 
-        # Send command to agent
+        # Execute command via AgentServer execute_bash endpoint
         try:
-            result = agent_loop.send_message(command)
-            logger.info(f"✅ {action} command sent successfully: {result}")
+            # Get runtime info from agent loop
+            agent_status = agent_loop.get_agent_status()
+            runtime_type = agent_status.get("runtime_type", "local")
+
+            if runtime_type == "remote":
+                runtime_url = agent_status.get("runtime_url")
+                if not runtime_url:
+                    logger.error(f"❌ No runtime URL found for remote agent")
+                    return jsonify({"error": "Runtime URL not available"}), 500
+
+                # Make request to AgentServer execute_bash endpoint
+                execute_url = f"{runtime_url}/execute_bash_command"
+                payload = {
+                    "command": command,
+                    "cwd": "/workspace/project",
+                    "timeout": 300,
+                }
+
+                logger.info(
+                    f"🌐 Making request to {execute_url} with command: {command}"
+                )
+                response = requests.post(execute_url, json=payload, timeout=30)
+
+                if response.status_code == 200:
+                    bash_command = response.json()
+                    command_id_from_server = bash_command.get("id")
+                    logger.info(
+                        f"✅ {action} command executed successfully via AgentServer: {command_id_from_server}"
+                    )
+                    result = f"Command executed via AgentServer with ID: {command_id_from_server}"
+                else:
+                    logger.error(
+                        f"❌ AgentServer request failed: {response.status_code} - {response.text}"
+                    )
+                    return (
+                        jsonify(
+                            {
+                                "error": f"Failed to execute command via AgentServer: {response.text}"
+                            }
+                        ),
+                        500,
+                    )
+            else:
+                # For local agents, fall back to sending message
+                logger.info(f"🏠 Using local agent, sending message: {command}")
+                result = agent_loop.send_message(command)
+                logger.info(f"✅ {action} command sent to local agent: {result}")
 
             # Track the command with command tracker
             command_id = command_tracker.track_command_sent(
