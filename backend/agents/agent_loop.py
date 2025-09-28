@@ -214,7 +214,7 @@ class AgentLoop:
             List of events from the conversation
         """
         try:
-            return self.conversation.get_events()
+            return list(self.conversation.state.events)
         except Exception as e:
             logger.error(f"❌ Failed to get events for {self.get_key()}: {e}")
             return []
@@ -228,7 +228,7 @@ class AgentLoop:
         """
         try:
             # Get conversation state
-            state = self.conversation.get_state()
+            state = self.conversation.state
 
             # Get runtime info
             runtime_info = self.runtime_handler.get_runtime_info()
