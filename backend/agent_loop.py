@@ -81,17 +81,17 @@ def create_tools_with_validation(workspace_path: str) -> list:
         tasks_dir = workspace_path
 
     try:
-        # FileEditorTool - no specific directory needed
-        tools.append(ToolSpec(name="str_replace_editor", params={}))
-        logger.info(f"✅ Created str_replace_editor")
+        # BashTool - work in project directory
+        tools.append(ToolSpec(name="BashTool", params={"working_dir": project_dir}))
+        logger.info(f"✅ Created BashTool with working_dir: {project_dir}")
+
+        # FileEditorTool - workspace root directory
+        tools.append(ToolSpec(name="FileEditorTool", params={"workspace_root": project_dir}))
+        logger.info(f"✅ Created FileEditorTool with workspace_root: {project_dir}")
 
         # TaskTrackerTool - save to tasks directory
-        tools.append(ToolSpec(name="task_tracker", params={"save_dir": tasks_dir}))
-        logger.info(f"✅ Created task_tracker with save_dir: {tasks_dir}")
-
-        # BashTool - work in project directory
-        tools.append(ToolSpec(name="execute_bash", params={"working_dir": project_dir}))
-        logger.info(f"✅ Created execute_bash with working_dir: {project_dir}")
+        tools.append(ToolSpec(name="TaskTrackerTool", params={"save_dir": tasks_dir}))
+        logger.info(f"✅ Created TaskTrackerTool with save_dir: {tasks_dir}")
 
     except Exception as e:
         logger.error(f"❌ Failed to create tools: {e}")
