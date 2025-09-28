@@ -42,7 +42,9 @@ class RiffsService:
         pass
 
     # LLM management
-    def get_llm_instance(self, api_key: str, model: str = "claude-sonnet-4-20250514") -> LLM:
+    def get_llm_instance(
+        self, api_key: str, model: str = "claude-sonnet-4-20250514"
+    ) -> LLM:
         """Get the appropriate LLM instance based on MOCK_MODE environment variable."""
         if os.environ.get("MOCK_MODE", "false").lower() == "true":
             # In mock mode, create a real LLM instance but with a fake key
@@ -58,12 +60,16 @@ class RiffsService:
         storage = get_riffs_storage(user_uuid)
         return storage.list_riffs(app_slug)
 
-    def load_user_riff(self, user_uuid: str, app_slug: str, riff_slug: str) -> Optional[Dict[str, Any]]:
+    def load_user_riff(
+        self, user_uuid: str, app_slug: str, riff_slug: str
+    ) -> Optional[Dict[str, Any]]:
         """Load specific riff for a user."""
         storage = get_riffs_storage(user_uuid)
         return storage.load_riff(app_slug, riff_slug)
 
-    def save_user_riff(self, user_uuid: str, app_slug: str, riff_slug: str, riff_data: Dict[str, Any]) -> bool:
+    def save_user_riff(
+        self, user_uuid: str, app_slug: str, riff_slug: str, riff_data: Dict[str, Any]
+    ) -> bool:
         """Save riff for a specific user."""
         storage = get_riffs_storage(user_uuid)
         return storage.save_riff(app_slug, riff_slug, riff_data)
@@ -97,18 +103,24 @@ class RiffsService:
         return bool(re.match(pattern, slug))
 
     # Message operations
-    def load_user_messages(self, user_uuid: str, app_slug: str, riff_slug: str) -> List[Dict[str, Any]]:
+    def load_user_messages(
+        self, user_uuid: str, app_slug: str, riff_slug: str
+    ) -> List[Dict[str, Any]]:
         """Load messages for a specific riff."""
         storage = get_riffs_storage(user_uuid)
-        return storage.list_messages(app_slug, riff_slug)
+        return storage.load_messages(app_slug, riff_slug)
 
-    def add_user_message(self, user_uuid: str, app_slug: str, riff_slug: str, message: Dict[str, Any]) -> bool:
+    def add_user_message(
+        self, user_uuid: str, app_slug: str, riff_slug: str, message: Dict[str, Any]
+    ) -> bool:
         """Add a message to a riff for a specific user."""
         storage = get_riffs_storage(user_uuid)
         return storage.add_message(app_slug, riff_slug, message)
 
     # Agent operations
-    def reconstruct_agent_from_state(self, user_uuid: str, app_slug: str, riff_slug: str) -> Tuple[bool, Optional[str]]:
+    def reconstruct_agent_from_state(
+        self, user_uuid: str, app_slug: str, riff_slug: str
+    ) -> Tuple[bool, Optional[str]]:
         """
         Reconstruct an Agent object from existing serialized state for a specific user, app, and riff.
         This function creates an AgentLoop from existing state without re-cloning the repository.
@@ -122,14 +134,22 @@ class RiffsService:
 
             # Get workspace path (should already exist from previous setup)
             workspace_path = str(
-                DATA_DIR / user_uuid / "apps" / app_slug / "riffs" / riff_slug / "workspace"
+                DATA_DIR
+                / user_uuid
+                / "apps"
+                / app_slug
+                / "riffs"
+                / riff_slug
+                / "workspace"
             )
 
             if not os.path.exists(workspace_path):
                 logger.warning(f"⚠️ Workspace path does not exist: {workspace_path}")
                 return False, f"Workspace not found at {workspace_path}"
 
-            logger.info(f"🔄 Reconstructing agent from state for {user_uuid[:8]}:{app_slug}:{riff_slug}")
+            logger.info(
+                f"🔄 Reconstructing agent from state for {user_uuid[:8]}:{app_slug}:{riff_slug}"
+            )
             logger.debug(f"📁 Using workspace: {workspace_path}")
 
             # Get LLM instance
@@ -139,20 +159,28 @@ class RiffsService:
             def message_callback(event):
                 try:
                     logger.debug(f"📨 Agent event received: {event.event_type}")
-                    
+
                     # Serialize the event to a message format
-                    message = serialize_agent_event_to_message(event, user_uuid, app_slug, riff_slug)
-                    
+                    message = serialize_agent_event_to_message(
+                        event, user_uuid, app_slug, riff_slug
+                    )
+
                     if message:
                         # Add the message to storage
-                        success = self.add_user_message(user_uuid, app_slug, riff_slug, message)
+                        success = self.add_user_message(
+                            user_uuid, app_slug, riff_slug, message
+                        )
                         if success:
-                            logger.debug(f"✅ Agent event saved as message: {message['id']}")
+                            logger.debug(
+                                f"✅ Agent event saved as message: {message['id']}"
+                            )
                         else:
                             logger.warning(f"⚠️ Failed to save agent event as message")
                     else:
-                        logger.debug(f"🔄 Event {event.event_type} not serialized to message")
-                        
+                        logger.debug(
+                            f"🔄 Event {event.event_type} not serialized to message"
+                        )
+
                 except Exception as e:
                     logger.error(f"💥 Error in message callback: {str(e)}")
 
@@ -163,21 +191,27 @@ class RiffsService:
                 riff_slug=riff_slug,
                 workspace_path=workspace_path,
                 llm=llm,
-                message_callback=message_callback
+                message_callback=message_callback,
             )
 
             if agent_loop:
-                logger.info(f"✅ Agent reconstructed successfully for {user_uuid[:8]}:{app_slug}:{riff_slug}")
+                logger.info(
+                    f"✅ Agent reconstructed successfully for {user_uuid[:8]}:{app_slug}:{riff_slug}"
+                )
                 return True, None
             else:
-                logger.error(f"❌ Failed to reconstruct agent for {user_uuid[:8]}:{app_slug}:{riff_slug}")
+                logger.error(
+                    f"❌ Failed to reconstruct agent for {user_uuid[:8]}:{app_slug}:{riff_slug}"
+                )
                 return False, "Failed to create agent loop from state"
 
         except Exception as e:
             logger.error(f"💥 Error reconstructing agent: {str(e)}")
             return False, f"Error reconstructing agent: {str(e)}"
 
-    def create_agent_for_user(self, user_uuid: str, app_slug: str, riff_slug: str) -> Tuple[bool, Optional[str]]:
+    def create_agent_for_user(
+        self, user_uuid: str, app_slug: str, riff_slug: str
+    ) -> Tuple[bool, Optional[str]]:
         """Create a new agent for a user's riff."""
         try:
             # Get user's Anthropic token
@@ -208,12 +242,14 @@ class RiffsService:
             logger.debug(f"🐙 GitHub URL: {github_url}")
 
             # Setup workspace for the riff
-            workspace_path = setup_riff_workspace(
-                user_uuid, app_slug, riff_slug, github_url, github_token, riff_slug
+            workspace_success, workspace_path, branch_name = setup_riff_workspace(
+                user_uuid, app_slug, riff_slug, github_url
             )
 
-            if not workspace_path:
-                logger.error(f"❌ Failed to setup workspace for {user_uuid[:8]}:{app_slug}:{riff_slug}")
+            if not workspace_success or not workspace_path:
+                logger.error(
+                    f"❌ Failed to setup workspace for {user_uuid[:8]}:{app_slug}:{riff_slug}"
+                )
                 return False, "Failed to setup workspace"
 
             logger.info(f"📁 Workspace setup complete: {workspace_path}")
@@ -225,20 +261,28 @@ class RiffsService:
             def message_callback(event):
                 try:
                     logger.debug(f"📨 Agent event received: {event.event_type}")
-                    
+
                     # Serialize the event to a message format
-                    message = serialize_agent_event_to_message(event, user_uuid, app_slug, riff_slug)
-                    
+                    message = serialize_agent_event_to_message(
+                        event, user_uuid, app_slug, riff_slug
+                    )
+
                     if message:
                         # Add the message to storage
-                        success = self.add_user_message(user_uuid, app_slug, riff_slug, message)
+                        success = self.add_user_message(
+                            user_uuid, app_slug, riff_slug, message
+                        )
                         if success:
-                            logger.debug(f"✅ Agent event saved as message: {message['id']}")
+                            logger.debug(
+                                f"✅ Agent event saved as message: {message['id']}"
+                            )
                         else:
                             logger.warning(f"⚠️ Failed to save agent event as message")
                     else:
-                        logger.debug(f"🔄 Event {event.event_type} not serialized to message")
-                        
+                        logger.debug(
+                            f"🔄 Event {event.event_type} not serialized to message"
+                        )
+
                 except Exception as e:
                     logger.error(f"💥 Error in message callback: {str(e)}")
 
@@ -249,14 +293,18 @@ class RiffsService:
                 riff_slug=riff_slug,
                 workspace_path=workspace_path,
                 llm=llm,
-                message_callback=message_callback
+                message_callback=message_callback,
             )
 
             if agent_loop:
-                logger.info(f"✅ Agent created successfully for {user_uuid[:8]}:{app_slug}:{riff_slug}")
+                logger.info(
+                    f"✅ Agent created successfully for {user_uuid[:8]}:{app_slug}:{riff_slug}"
+                )
                 return True, None
             else:
-                logger.error(f"❌ Failed to create agent for {user_uuid[:8]}:{app_slug}:{riff_slug}")
+                logger.error(
+                    f"❌ Failed to create agent for {user_uuid[:8]}:{app_slug}:{riff_slug}"
+                )
                 return False, "Failed to create agent loop"
 
         except Exception as e:
@@ -264,7 +312,9 @@ class RiffsService:
             return False, f"Error creating agent: {str(e)}"
 
     # Riff operations
-    def create_riff(self, user_uuid: str, app_slug: str, riff_name: str) -> Tuple[bool, Dict[str, Any]]:
+    def create_riff(
+        self, user_uuid: str, app_slug: str, riff_name: str
+    ) -> Tuple[bool, Dict[str, Any]]:
         """Create a new riff for an app."""
         try:
             # Validate inputs
@@ -274,7 +324,9 @@ class RiffsService:
             riff_slug = self.create_slug(riff_name.strip())
 
             if not self.is_valid_slug(riff_slug):
-                return False, {"error": f"Invalid riff name. Generated slug '{riff_slug}' is not valid."}
+                return False, {
+                    "error": f"Invalid riff name. Generated slug '{riff_slug}' is not valid."
+                }
 
             # Check if app exists
             apps_storage = get_apps_storage(user_uuid)
@@ -283,7 +335,9 @@ class RiffsService:
 
             # Check if riff already exists
             if self.user_riff_exists(user_uuid, app_slug, riff_slug):
-                return False, {"error": f"Riff '{riff_slug}' already exists for this app"}
+                return False, {
+                    "error": f"Riff '{riff_slug}' already exists for this app"
+                }
 
             # Create riff record
             riff = {
@@ -302,7 +356,9 @@ class RiffsService:
 
             # Create agent for the riff
             logger.info(f"🤖 Creating agent for new riff: {riff_slug}")
-            agent_success, agent_error = self.create_agent_for_user(user_uuid, app_slug, riff_slug)
+            agent_success, agent_error = self.create_agent_for_user(
+                user_uuid, app_slug, riff_slug
+            )
 
             if not agent_success:
                 logger.warning(f"⚠️ Failed to create agent for riff: {agent_error}")
@@ -323,7 +379,9 @@ class RiffsService:
             logger.error(f"💥 Error creating riff: {str(e)}")
             return False, {"error": "Failed to create riff"}
 
-    def send_message(self, user_uuid: str, app_slug: str, riff_slug: str, content: str) -> Tuple[bool, Dict[str, Any]]:
+    def send_message(
+        self, user_uuid: str, app_slug: str, riff_slug: str, content: str
+    ) -> Tuple[bool, Dict[str, Any]]:
         """Send a message to a riff's agent."""
         try:
             # Validate inputs
@@ -356,14 +414,18 @@ class RiffsService:
                 return False, {"error": "Failed to save message"}
 
             # Get agent loop
-            agent_loop = agent_loop_manager.get_agent_loop(user_uuid, app_slug, riff_slug)
+            agent_loop = agent_loop_manager.get_agent_loop(
+                user_uuid, app_slug, riff_slug
+            )
 
             if not agent_loop:
-                logger.warning(f"⚠️ No agent loop found for {user_uuid[:8]}:{app_slug}:{riff_slug}")
+                logger.warning(
+                    f"⚠️ No agent loop found for {user_uuid[:8]}:{app_slug}:{riff_slug}"
+                )
                 # Try to reconstruct agent from state
                 logger.info(f"🔄 Attempting to reconstruct agent from state...")
-                reconstruct_success, reconstruct_error = self.reconstruct_agent_from_state(
-                    user_uuid, app_slug, riff_slug
+                reconstruct_success, reconstruct_error = (
+                    self.reconstruct_agent_from_state(user_uuid, app_slug, riff_slug)
                 )
 
                 if not reconstruct_success:
@@ -371,7 +433,9 @@ class RiffsService:
                     return False, {"error": f"Agent not available: {reconstruct_error}"}
 
                 # Try to get agent loop again
-                agent_loop = agent_loop_manager.get_agent_loop(user_uuid, app_slug, riff_slug)
+                agent_loop = agent_loop_manager.get_agent_loop(
+                    user_uuid, app_slug, riff_slug
+                )
 
                 if not agent_loop:
                     logger.error(f"❌ Still no agent loop after reconstruction")
@@ -379,7 +443,9 @@ class RiffsService:
 
             # Send message to agent
             try:
-                logger.info(f"📤 Sending message to agent for {user_uuid[:8]}:{app_slug}:{riff_slug}")
+                logger.info(
+                    f"📤 Sending message to agent for {user_uuid[:8]}:{app_slug}:{riff_slug}"
+                )
                 confirmation = agent_loop.send_message(content)
                 logger.info(f"✅ Message sent to agent: {confirmation}")
 
@@ -397,7 +463,9 @@ class RiffsService:
             logger.error(f"💥 Error processing message: {str(e)}")
             return False, {"error": "Failed to process message"}
 
-    def delete_riff(self, user_uuid: str, app_slug: str, riff_slug: str) -> Tuple[bool, Dict[str, Any]]:
+    def delete_riff(
+        self, user_uuid: str, app_slug: str, riff_slug: str
+    ) -> Tuple[bool, Dict[str, Any]]:
         """Delete a riff and clean up associated resources."""
         try:
             # Check if riff exists
@@ -408,18 +476,24 @@ class RiffsService:
             logger.info(f"🗑️ Deleting riff: {riff_slug} for user {user_uuid[:8]}")
 
             # Stop and clean up agent loop if it exists
-            agent_loop = agent_loop_manager.get_agent_loop(user_uuid, app_slug, riff_slug)
+            agent_loop = agent_loop_manager.get_agent_loop(
+                user_uuid, app_slug, riff_slug
+            )
             if agent_loop:
-                logger.info(f"🛑 Stopping agent loop for {user_uuid[:8]}:{app_slug}:{riff_slug}")
+                logger.info(
+                    f"🛑 Stopping agent loop for {user_uuid[:8]}:{app_slug}:{riff_slug}"
+                )
                 try:
-                    agent_loop_manager.stop_agent_loop(user_uuid, app_slug, riff_slug)
+                    agent_loop_manager.remove_agent_loop(user_uuid, app_slug, riff_slug)
                     logger.info(f"✅ Agent loop stopped successfully")
                 except Exception as e:
                     logger.warning(f"⚠️ Error stopping agent loop: {str(e)}")
 
             # Delete riff and all associated data
             if self.delete_user_riff(user_uuid, app_slug, riff_slug):
-                logger.info(f"✅ Riff {riff_slug} deleted successfully for user {user_uuid[:8]}")
+                logger.info(
+                    f"✅ Riff {riff_slug} deleted successfully for user {user_uuid[:8]}"
+                )
                 return True, {
                     "message": f"Riff '{riff_slug}' deleted successfully",
                     "riff_slug": riff_slug,
@@ -433,10 +507,14 @@ class RiffsService:
             return False, {"error": "Failed to delete riff"}
 
     # Agent control operations
-    def get_agent_status(self, user_uuid: str, app_slug: str, riff_slug: str) -> Tuple[bool, Dict[str, Any]]:
+    def get_agent_status(
+        self, user_uuid: str, app_slug: str, riff_slug: str
+    ) -> Tuple[bool, Dict[str, Any]]:
         """Get the status of an agent."""
         try:
-            agent_loop = agent_loop_manager.get_agent_loop(user_uuid, app_slug, riff_slug)
+            agent_loop = agent_loop_manager.get_agent_loop(
+                user_uuid, app_slug, riff_slug
+            )
 
             if not agent_loop:
                 return True, {
@@ -445,8 +523,8 @@ class RiffsService:
                 }
 
             # Get agent status
-            status = agent_loop.get_status()
-            
+            status = agent_loop.get_agent_status()
+
             return True, {
                 "status": status.get("state", "unknown"),
                 "details": status,
@@ -456,31 +534,41 @@ class RiffsService:
             logger.error(f"💥 Error getting agent status: {str(e)}")
             return False, {"error": "Failed to get agent status"}
 
-    def play_agent(self, user_uuid: str, app_slug: str, riff_slug: str) -> Tuple[bool, Dict[str, Any]]:
+    def play_agent(
+        self, user_uuid: str, app_slug: str, riff_slug: str
+    ) -> Tuple[bool, Dict[str, Any]]:
         """Start/resume an agent."""
         try:
-            agent_loop = agent_loop_manager.get_agent_loop(user_uuid, app_slug, riff_slug)
+            agent_loop = agent_loop_manager.get_agent_loop(
+                user_uuid, app_slug, riff_slug
+            )
 
             if not agent_loop:
                 # Try to reconstruct agent from state
-                logger.info(f"🔄 Agent not found, attempting to reconstruct from state...")
-                reconstruct_success, reconstruct_error = self.reconstruct_agent_from_state(
-                    user_uuid, app_slug, riff_slug
+                logger.info(
+                    f"🔄 Agent not found, attempting to reconstruct from state..."
+                )
+                reconstruct_success, reconstruct_error = (
+                    self.reconstruct_agent_from_state(user_uuid, app_slug, riff_slug)
                 )
 
                 if not reconstruct_success:
                     return False, {"error": f"Agent not available: {reconstruct_error}"}
 
-                agent_loop = agent_loop_manager.get_agent_loop(user_uuid, app_slug, riff_slug)
+                agent_loop = agent_loop_manager.get_agent_loop(
+                    user_uuid, app_slug, riff_slug
+                )
 
                 if not agent_loop:
                     return False, {"error": "Agent not available after reconstruction"}
 
             # Start/resume the agent
             try:
-                result = agent_loop.start()
-                logger.info(f"▶️ Agent started/resumed for {user_uuid[:8]}:{app_slug}:{riff_slug}")
-                
+                result = agent_loop.send_message("")
+                logger.info(
+                    f"▶️ Agent started/resumed for {user_uuid[:8]}:{app_slug}:{riff_slug}"
+                )
+
                 return True, {
                     "message": "Agent started successfully",
                     "result": result,
@@ -494,19 +582,25 @@ class RiffsService:
             logger.error(f"💥 Error playing agent: {str(e)}")
             return False, {"error": "Failed to play agent"}
 
-    def pause_agent(self, user_uuid: str, app_slug: str, riff_slug: str) -> Tuple[bool, Dict[str, Any]]:
+    def pause_agent(
+        self, user_uuid: str, app_slug: str, riff_slug: str
+    ) -> Tuple[bool, Dict[str, Any]]:
         """Pause an agent."""
         try:
-            agent_loop = agent_loop_manager.get_agent_loop(user_uuid, app_slug, riff_slug)
+            agent_loop = agent_loop_manager.get_agent_loop(
+                user_uuid, app_slug, riff_slug
+            )
 
             if not agent_loop:
                 return False, {"error": "Agent not found or not running"}
 
             # Pause the agent
             try:
-                result = agent_loop.pause()
-                logger.info(f"⏸️ Agent paused for {user_uuid[:8]}:{app_slug}:{riff_slug}")
-                
+                result = agent_loop.pause_agent()
+                logger.info(
+                    f"⏸️ Agent paused for {user_uuid[:8]}:{app_slug}:{riff_slug}"
+                )
+
                 return True, {
                     "message": "Agent paused successfully",
                     "result": result,
@@ -520,27 +614,35 @@ class RiffsService:
             logger.error(f"💥 Error pausing agent: {str(e)}")
             return False, {"error": "Failed to pause agent"}
 
-    def reset_agent(self, user_uuid: str, app_slug: str, riff_slug: str) -> Tuple[bool, Dict[str, Any]]:
+    def reset_agent(
+        self, user_uuid: str, app_slug: str, riff_slug: str
+    ) -> Tuple[bool, Dict[str, Any]]:
         """Reset an agent to its initial state."""
         try:
             # Stop existing agent loop if it exists
-            agent_loop = agent_loop_manager.get_agent_loop(user_uuid, app_slug, riff_slug)
+            agent_loop = agent_loop_manager.get_agent_loop(
+                user_uuid, app_slug, riff_slug
+            )
             if agent_loop:
                 logger.info(f"🛑 Stopping existing agent loop for reset...")
                 try:
-                    agent_loop_manager.stop_agent_loop(user_uuid, app_slug, riff_slug)
+                    agent_loop_manager.remove_agent_loop(user_uuid, app_slug, riff_slug)
                 except Exception as e:
                     logger.warning(f"⚠️ Error stopping agent loop: {str(e)}")
 
             # Create new agent
             logger.info(f"🔄 Creating new agent for reset...")
-            agent_success, agent_error = self.create_agent_for_user(user_uuid, app_slug, riff_slug)
+            agent_success, agent_error = self.create_agent_for_user(
+                user_uuid, app_slug, riff_slug
+            )
 
             if not agent_success:
                 logger.error(f"❌ Failed to create new agent: {agent_error}")
                 return False, {"error": f"Failed to reset agent: {agent_error}"}
 
-            logger.info(f"✅ Agent reset successfully for {user_uuid[:8]}:{app_slug}:{riff_slug}")
+            logger.info(
+                f"✅ Agent reset successfully for {user_uuid[:8]}:{app_slug}:{riff_slug}"
+            )
             return True, {
                 "message": "Agent reset successfully",
             }
@@ -549,10 +651,14 @@ class RiffsService:
             logger.error(f"💥 Error resetting agent: {str(e)}")
             return False, {"error": "Failed to reset agent"}
 
-    def check_agent_ready(self, user_uuid: str, app_slug: str, riff_slug: str) -> Tuple[bool, Dict[str, Any]]:
+    def check_agent_ready(
+        self, user_uuid: str, app_slug: str, riff_slug: str
+    ) -> Tuple[bool, Dict[str, Any]]:
         """Check if an agent is ready to receive messages."""
         try:
-            agent_loop = agent_loop_manager.get_agent_loop(user_uuid, app_slug, riff_slug)
+            agent_loop = agent_loop_manager.get_agent_loop(
+                user_uuid, app_slug, riff_slug
+            )
 
             if not agent_loop:
                 return True, {
@@ -562,9 +668,9 @@ class RiffsService:
 
             # Check if agent is ready
             try:
-                status = agent_loop.get_status()
+                status = agent_loop.get_agent_status()
                 is_ready = status.get("state") in ["idle", "waiting"]
-                
+
                 return True, {
                     "ready": is_ready,
                     "status": status.get("state", "unknown"),
@@ -583,7 +689,9 @@ class RiffsService:
             return False, {"error": "Failed to check agent readiness"}
 
     # Deployment and PR operations
-    def get_pr_status(self, user_uuid: str, app_slug: str, riff_slug: str) -> Tuple[bool, Dict[str, Any]]:
+    def get_pr_status(
+        self, user_uuid: str, app_slug: str, riff_slug: str
+    ) -> Tuple[bool, Dict[str, Any]]:
         """Get PR status for a riff."""
         try:
             # Load app to get GitHub URL
@@ -613,9 +721,11 @@ class RiffsService:
 
             # Import PR status function from apps service
             from services.apps_service import apps_service
-            
+
             # Get PR status for the riff branch
-            pr_status = apps_service.get_pr_status(github_url, github_token, riff_slug, search_by_base=False)
+            pr_status = apps_service.get_pr_status(
+                github_url, github_token, riff_slug, search_by_base=False
+            )
 
             if pr_status:
                 logger.info(f"✅ PR status retrieved for riff {riff_slug}")
@@ -631,7 +741,9 @@ class RiffsService:
             logger.error(f"💥 Error getting PR status: {str(e)}")
             return False, {"error": "Failed to get PR status"}
 
-    def get_deployment_status(self, user_uuid: str, app_slug: str, riff_slug: str) -> Tuple[bool, Dict[str, Any]]:
+    def get_deployment_status(
+        self, user_uuid: str, app_slug: str, riff_slug: str
+    ) -> Tuple[bool, Dict[str, Any]]:
         """Get deployment status for a riff."""
         try:
             # Load app to get GitHub URL
@@ -660,11 +772,17 @@ class RiffsService:
                 }
 
             # Check deployment status for the riff branch
-            logger.info(f"🔍 Checking deployment status for riff '{riff_slug}' on branch '{riff_slug}'")
+            logger.info(
+                f"🔍 Checking deployment status for riff '{riff_slug}' on branch '{riff_slug}'"
+            )
 
-            deployment_status = get_deployment_status(github_url, github_token, riff_slug)
+            deployment_status = get_deployment_status(
+                github_url, github_token, riff_slug
+            )
 
-            logger.info(f"✅ Deployment status retrieved for riff {riff_slug}: {deployment_status['status']}")
+            logger.info(
+                f"✅ Deployment status retrieved for riff {riff_slug}: {deployment_status['status']}"
+            )
             return True, deployment_status
 
         except Exception as e:
@@ -672,19 +790,29 @@ class RiffsService:
             return False, {"error": "Failed to get deployment status"}
 
     # Runtime operations
-    def get_runtime_status(self, user_uuid: str, app_slug: str, riff_slug: str) -> Tuple[bool, Dict[str, Any]]:
+    def get_runtime_status(
+        self, user_uuid: str, app_slug: str, riff_slug: str
+    ) -> Tuple[bool, Dict[str, Any]]:
         """Get runtime status for a riff."""
         try:
-            logger.info(f"📊 Getting runtime status for {user_uuid[:8]}:{app_slug}:{riff_slug}")
+            logger.info(
+                f"📊 Getting runtime status for {user_uuid[:8]}:{app_slug}:{riff_slug}"
+            )
 
             # Get runtime status from runtime service
-            success, response = runtime_service.get_runtime_status(user_uuid, app_slug, riff_slug)
+            success, response = runtime_service.get_runtime_status(
+                user_uuid, app_slug, riff_slug
+            )
 
             if success:
-                logger.info(f"✅ Runtime status retrieved: {response.get('status', 'unknown')}")
+                logger.info(
+                    f"✅ Runtime status retrieved: {response.get('status', 'unknown')}"
+                )
                 return True, response
             else:
-                logger.warning(f"⚠️ Failed to get runtime status: {response.get('error', 'unknown')}")
+                logger.warning(
+                    f"⚠️ Failed to get runtime status: {response.get('error', 'unknown')}"
+                )
                 return False, response
 
         except Exception as e:
@@ -707,7 +835,9 @@ class RiffsService:
                     "details": response,
                 }
             else:
-                logger.warning(f"⚠️ Runtime API health check failed: {response.get('error', 'unknown')}")
+                logger.warning(
+                    f"⚠️ Runtime API health check failed: {response.get('error', 'unknown')}"
+                )
                 return True, {
                     "status": "unhealthy",
                     "message": "Runtime API is not operational",

@@ -73,7 +73,9 @@ def create_riff(slug):
             logger.info(f"✅ Riff created successfully: {result['riff']['slug']}")
             return jsonify(result), 201
         else:
-            logger.error(f"❌ Riff creation failed: {result.get('error', 'Unknown error')}")
+            logger.error(
+                f"❌ Riff creation failed: {result.get('error', 'Unknown error')}"
+            )
             return jsonify(result), 400
 
     except Exception as e:
@@ -84,7 +86,9 @@ def create_riff(slug):
 @riffs_bp.route("/api/apps/<slug>/riffs/<riff_slug>/messages", methods=["GET"])
 def get_messages(slug, riff_slug):
     """Get all messages for a specific riff"""
-    logger.info(f"📋 GET /api/apps/{slug}/riffs/{riff_slug}/messages - Fetching messages")
+    logger.info(
+        f"📋 GET /api/apps/{slug}/riffs/{riff_slug}/messages - Fetching messages"
+    )
 
     try:
         # Get UUID from headers
@@ -92,7 +96,9 @@ def get_messages(slug, riff_slug):
         if error_response:
             return error_response, status_code
 
-        logger.debug(f"📋 Loading messages for riff {riff_slug} for user {user_uuid[:8]}...")
+        logger.debug(
+            f"📋 Loading messages for riff {riff_slug} for user {user_uuid[:8]}..."
+        )
 
         # Load messages using service layer
         messages = riffs_service.load_user_messages(user_uuid, slug, riff_slug)
@@ -136,13 +142,17 @@ def create_message(slug):
         logger.debug(f"🆕 Creating message for riff {riff_slug} in app {slug}")
 
         # Send message using service layer
-        success, result = riffs_service.send_message(user_uuid, slug, riff_slug, content)
+        success, result = riffs_service.send_message(
+            user_uuid, slug, riff_slug, content
+        )
 
         if success:
             logger.info(f"✅ Message sent successfully to riff {riff_slug}")
             return jsonify(result), 201
         else:
-            logger.error(f"❌ Message sending failed: {result.get('error', 'Unknown error')}")
+            logger.error(
+                f"❌ Message sending failed: {result.get('error', 'Unknown error')}"
+            )
             return jsonify(result), 400
 
     except Exception as e:
@@ -329,7 +339,9 @@ def delete_riff(slug, riff_slug):
 @riffs_bp.route("/api/apps/<slug>/riffs/<riff_slug>/deployment", methods=["GET"])
 def get_riff_deployment_status(slug, riff_slug):
     """Get deployment status for a riff (checks riff branch)"""
-    logger.info(f"🚀 GET /api/apps/{slug}/riffs/{riff_slug}/deployment - Getting riff deployment status")
+    logger.info(
+        f"🚀 GET /api/apps/{slug}/riffs/{riff_slug}/deployment - Getting riff deployment status"
+    )
 
     try:
         # Get UUID from headers
@@ -338,7 +350,9 @@ def get_riff_deployment_status(slug, riff_slug):
             return error_response, status_code
 
         # Get deployment status using service layer
-        success, result = riffs_service.get_deployment_status(user_uuid, slug, riff_slug)
+        success, result = riffs_service.get_deployment_status(
+            user_uuid, slug, riff_slug
+        )
 
         if success:
             return jsonify(result)

@@ -53,15 +53,17 @@ class IntegrationsService:
         """Save user's API keys."""
         return save_user_keys(user_uuid, keys)
 
-    def set_api_key(self, user_uuid: str, provider: str, api_key: str) -> Tuple[bool, Dict[str, Any]]:
+    def set_api_key(
+        self, user_uuid: str, provider: str, api_key: str
+    ) -> Tuple[bool, Dict[str, Any]]:
         """
         Set and validate API key for a provider.
-        
+
         Args:
             user_uuid: User's UUID
             provider: Provider name (e.g., 'anthropic', 'github', 'fly')
             api_key: API key to set
-            
+
         Returns:
             Tuple of (success: bool, response_data: Dict)
         """
@@ -74,7 +76,7 @@ class IntegrationsService:
             logger.debug(f"📋 Valid providers: {self.get_supported_providers()}")
             return False, {
                 "error": "Invalid provider",
-                "valid_providers": self.get_supported_providers()
+                "valid_providers": self.get_supported_providers(),
             }
 
         # Validate inputs
@@ -99,32 +101,37 @@ class IntegrationsService:
 
             # Save to file
             if self.save_user_keys(user_uuid, user_keys):
-                logger.info(f"✅ {provider} API key validated and stored for user {user_uuid[:8]}")
+                logger.info(
+                    f"✅ {provider} API key validated and stored for user {user_uuid[:8]}"
+                )
                 return True, {
                     "valid": True,
-                    "message": f"{provider.title()} API key is valid"
+                    "message": f"{provider.title()} API key is valid",
                 }
             else:
-                logger.error(f"❌ Failed to save {provider} API key for user {user_uuid[:8]}")
-                return False, {
-                    "valid": False,
-                    "message": "Failed to save API key"
-                }
+                logger.error(
+                    f"❌ Failed to save {provider} API key for user {user_uuid[:8]}"
+                )
+                return False, {"valid": False, "message": "Failed to save API key"}
         else:
-            logger.warning(f"❌ {provider} API key validation failed for user {user_uuid[:8]}")
+            logger.warning(
+                f"❌ {provider} API key validation failed for user {user_uuid[:8]}"
+            )
             return False, {
                 "valid": False,
-                "message": f"{provider.title()} API key is invalid"
+                "message": f"{provider.title()} API key is invalid",
             }
 
-    def check_api_key(self, user_uuid: str, provider: str) -> Tuple[bool, Dict[str, Any]]:
+    def check_api_key(
+        self, user_uuid: str, provider: str
+    ) -> Tuple[bool, Dict[str, Any]]:
         """
         Check if API key is set and valid for a provider.
-        
+
         Args:
             user_uuid: User's UUID
             provider: Provider name (e.g., 'anthropic', 'github', 'fly')
-            
+
         Returns:
             Tuple of (success: bool, response_data: Dict)
         """
@@ -140,14 +147,16 @@ class IntegrationsService:
             logger.warning("❌ Empty UUID provided")
             return False, {"error": "UUID cannot be empty"}
 
-        logger.debug(f"🔍 Checking {provider} API key status for user {user_uuid[:8]}...")
+        logger.debug(
+            f"🔍 Checking {provider} API key status for user {user_uuid[:8]}..."
+        )
 
         # Check if user has keys file
         if not self.user_has_keys(user_uuid):
             logger.debug(f"⚠️ No keys file found for user {user_uuid[:8]}")
             return True, {
                 "valid": False,
-                "message": f"{provider.title()} API key not set"
+                "message": f"{provider.title()} API key not set",
             }
 
         # Load user's keys
@@ -158,10 +167,12 @@ class IntegrationsService:
             logger.debug(f"⚠️ {provider} API key not set for user {user_uuid[:8]}")
             return True, {
                 "valid": False,
-                "message": f"{provider.title()} API key not set"
+                "message": f"{provider.title()} API key not set",
             }
 
-        logger.debug(f"🔍 Re-validating stored {provider} API key for user {user_uuid[:8]}...")
+        logger.debug(
+            f"🔍 Re-validating stored {provider} API key for user {user_uuid[:8]}..."
+        )
 
         # Re-validate the stored key using the keys module
         is_valid = self.validate_api_key(provider, api_key)
@@ -171,34 +182,38 @@ class IntegrationsService:
             "message": f'{provider.title()} API key is {"valid" if is_valid else "invalid"}',
         }
 
-        logger.info(f"📊 {provider} API key check result for user {user_uuid[:8]}: {result}")
+        logger.info(
+            f"📊 {provider} API key check result for user {user_uuid[:8]}: {result}"
+        )
         return True, result
 
     def get_user_key(self, user_uuid: str, provider: str) -> str:
         """
         Get a specific API key for a user.
-        
+
         Args:
             user_uuid: User's UUID
             provider: Provider name
-            
+
         Returns:
             API key string or empty string if not found
         """
         if not self.user_has_keys(user_uuid):
             return ""
-        
+
         user_keys = self.load_user_keys(user_uuid)
         return user_keys.get(provider, "")
 
-    def remove_api_key(self, user_uuid: str, provider: str) -> Tuple[bool, Dict[str, Any]]:
+    def remove_api_key(
+        self, user_uuid: str, provider: str
+    ) -> Tuple[bool, Dict[str, Any]]:
         """
         Remove API key for a provider.
-        
+
         Args:
             user_uuid: User's UUID
             provider: Provider name
-            
+
         Returns:
             Tuple of (success: bool, response_data: Dict)
         """
@@ -217,18 +232,14 @@ class IntegrationsService:
         # Check if user has keys
         if not self.user_has_keys(user_uuid):
             logger.debug(f"⚠️ No keys file found for user {user_uuid[:8]}")
-            return True, {
-                "message": f"{provider.title()} API key was not set"
-            }
+            return True, {"message": f"{provider.title()} API key was not set"}
 
         # Load user's keys
         user_keys = self.load_user_keys(user_uuid)
-        
+
         if provider not in user_keys:
             logger.debug(f"⚠️ {provider} API key not set for user {user_uuid[:8]}")
-            return True, {
-                "message": f"{provider.title()} API key was not set"
-            }
+            return True, {"message": f"{provider.title()} API key was not set"}
 
         # Remove the key
         del user_keys[provider]
@@ -236,22 +247,18 @@ class IntegrationsService:
         # Save updated keys
         if self.save_user_keys(user_uuid, user_keys):
             logger.info(f"✅ {provider} API key removed for user {user_uuid[:8]}")
-            return True, {
-                "message": f"{provider.title()} API key removed successfully"
-            }
+            return True, {"message": f"{provider.title()} API key removed successfully"}
         else:
             logger.error(f"❌ Failed to save updated keys for user {user_uuid[:8]}")
-            return False, {
-                "error": "Failed to remove API key"
-            }
+            return False, {"error": "Failed to remove API key"}
 
     def list_user_integrations(self, user_uuid: str) -> Tuple[bool, Dict[str, Any]]:
         """
         List all integrations for a user with their status.
-        
+
         Args:
             user_uuid: User's UUID
-            
+
         Returns:
             Tuple of (success: bool, response_data: Dict)
         """
@@ -271,32 +278,34 @@ class IntegrationsService:
             for provider in supported_providers:
                 integrations[provider] = {
                     "valid": False,
-                    "message": f"{provider.title()} API key not set"
+                    "message": f"{provider.title()} API key not set",
                 }
         else:
             # Load user's keys and check each provider
             user_keys = self.load_user_keys(user_uuid)
-            
+
             for provider in supported_providers:
                 api_key = user_keys.get(provider)
-                
+
                 if not api_key:
                     integrations[provider] = {
                         "valid": False,
-                        "message": f"{provider.title()} API key not set"
+                        "message": f"{provider.title()} API key not set",
                     }
                 else:
                     # Validate the stored key
                     is_valid = self.validate_api_key(provider, api_key)
                     integrations[provider] = {
                         "valid": is_valid,
-                        "message": f'{provider.title()} API key is {"valid" if is_valid else "invalid"}'
+                        "message": f'{provider.title()} API key is {"valid" if is_valid else "invalid"}',
                     }
 
-        logger.info(f"📊 Listed {len(integrations)} integrations for user {user_uuid[:8]}")
+        logger.info(
+            f"📊 Listed {len(integrations)} integrations for user {user_uuid[:8]}"
+        )
         return True, {
             "integrations": integrations,
-            "supported_providers": supported_providers
+            "supported_providers": supported_providers,
         }
 
 

@@ -14,7 +14,7 @@ import time
 import uuid
 import requests
 import logging
-from base64 import b64encode
+import base64
 from datetime import datetime, timezone
 from typing import Dict, List, Optional, Tuple, Any
 from nacl import encoding, public
@@ -44,7 +44,9 @@ class AppsService:
         storage = get_apps_storage(user_uuid)
         return storage.load_app(app_slug)
 
-    def save_user_app(self, user_uuid: str, app_slug: str, app_data: Dict[str, Any]) -> bool:
+    def save_user_app(
+        self, user_uuid: str, app_slug: str, app_data: Dict[str, Any]
+    ) -> bool:
         """Save app for a specific user."""
         storage = get_apps_storage(user_uuid)
         return storage.save_app(app_slug, app_data)
@@ -78,12 +80,16 @@ class AppsService:
         return slug.strip("-")
 
     # Riff operations
-    def save_user_riff(self, user_uuid: str, app_slug: str, riff_slug: str, riff_data: Dict[str, Any]) -> bool:
+    def save_user_riff(
+        self, user_uuid: str, app_slug: str, riff_slug: str, riff_data: Dict[str, Any]
+    ) -> bool:
         """Save riff for a specific user."""
         storage = get_riffs_storage(user_uuid)
         return storage.save_riff(app_slug, riff_slug, riff_data)
 
-    def add_user_message(self, user_uuid: str, app_slug: str, riff_slug: str, message: Dict[str, Any]) -> bool:
+    def add_user_message(
+        self, user_uuid: str, app_slug: str, riff_slug: str, message: Dict[str, Any]
+    ) -> bool:
         """Add a message to a riff for a specific user."""
         storage = get_riffs_storage(user_uuid)
         return storage.add_message(app_slug, riff_slug, message)
@@ -92,10 +98,10 @@ class AppsService:
     def get_user_default_org(self, fly_token: str) -> Tuple[bool, str]:
         """
         Get the user's default organization slug by checking their existing apps.
-        
+
         Args:
             fly_token: The user's Fly.io API token
-            
+
         Returns:
             tuple: (success, org_slug_or_error_message)
         """
@@ -123,7 +129,9 @@ class AppsService:
                     first_app = apps[0]
                     org_slug = first_app.get("organization", {}).get("slug")
                     if org_slug:
-                        logger.debug(f"🛩️ Detected user organization from existing apps: {org_slug}")
+                        logger.debug(
+                            f"🛩️ Detected user organization from existing apps: {org_slug}"
+                        )
                         return True, org_slug
                     else:
                         logger.debug("🛩️ No organization info found in existing apps")
@@ -142,11 +150,11 @@ class AppsService:
     def create_fly_app(self, app_name: str, fly_token: str) -> Tuple[bool, Any]:
         """
         Create a new Fly.io app.
-        
+
         Args:
             app_name: The app name to create
             fly_token: The user's Fly.io API token
-            
+
         Returns:
             tuple: (success, app_data_or_error_message)
         """
@@ -171,7 +179,9 @@ class AppsService:
         # Check if app already exists first
         try:
             check_response = requests.get(
-                f"https://api.machines.dev/v1/apps/{app_name}", headers=headers, timeout=10
+                f"https://api.machines.dev/v1/apps/{app_name}",
+                headers=headers,
+                timeout=10,
             )
 
             if check_response.status_code == 200:
@@ -179,17 +189,25 @@ class AppsService:
                 app_data = check_response.json()
                 app_org_slug = app_data.get("organization", {}).get("slug")
 
-                logger.info(f"✅ App '{app_name}' already exists and user has access to it")
-                logger.debug(f"🛩️ App organization: {app_org_slug}, Expected: {org_slug}")
+                logger.info(
+                    f"✅ App '{app_name}' already exists and user has access to it"
+                )
+                logger.debug(
+                    f"🛩️ App organization: {app_org_slug}, Expected: {org_slug}"
+                )
 
                 # Update our understanding of the user's organization if it differs
                 if app_org_slug and app_org_slug != org_slug:
-                    logger.debug(f"🛩️ Updating user organization from {org_slug} to {app_org_slug}")
+                    logger.debug(
+                        f"🛩️ Updating user organization from {org_slug} to {app_org_slug}"
+                    )
 
                 return True, app_data
 
             elif check_response.status_code == 403:
-                logger.error(f"❌ App '{app_name}' exists but user doesn't have access to it")
+                logger.error(
+                    f"❌ App '{app_name}' exists but user doesn't have access to it"
+                )
                 return False, f"App '{app_name}' already exists and is not owned by you"
 
             elif check_response.status_code == 401:
@@ -197,8 +215,13 @@ class AppsService:
                 return False, "Invalid Fly.io API token"
 
             elif check_response.status_code != 404:
-                logger.error(f"❌ Error checking app existence: {check_response.status_code} - {check_response.text}")
-                return False, f"Error checking app existence: {check_response.status_code}"
+                logger.error(
+                    f"❌ Error checking app existence: {check_response.status_code} - {check_response.text}"
+                )
+                return (
+                    False,
+                    f"Error checking app existence: {check_response.status_code}",
+                )
 
         except Exception as e:
             logger.error(f"💥 Error checking app existence: {str(e)}")
@@ -217,7 +240,9 @@ class AppsService:
                 timeout=30,
             )
 
-            logger.debug(f"🛩️ App creation response status: {create_response.status_code}")
+            logger.debug(
+                f"🛩️ App creation response status: {create_response.status_code}"
+            )
 
             if create_response.status_code == 201:
                 app_data = create_response.json()
@@ -227,7 +252,9 @@ class AppsService:
 
             elif create_response.status_code == 422:
                 error_text = create_response.text
-                logger.error(f"❌ App creation failed - name taken or invalid: {error_text}")
+                logger.error(
+                    f"❌ App creation failed - name taken or invalid: {error_text}"
+                )
                 if "already taken" in error_text.lower():
                     return False, f"App name '{app_name}' is already taken"
                 else:
@@ -242,7 +269,9 @@ class AppsService:
                 return False, "Insufficient permissions for Fly.io API"
 
             else:
-                logger.error(f"❌ Unexpected response from Fly.io API: {create_response.status_code} - {create_response.text}")
+                logger.error(
+                    f"❌ Unexpected response from Fly.io API: {create_response.status_code} - {create_response.text}"
+                )
                 return False, f"Fly.io API error: {create_response.status_code}"
 
         except requests.exceptions.Timeout:
@@ -273,19 +302,25 @@ class AppsService:
 
             # First check if app exists
             check_response = requests.get(
-                f"https://api.machines.dev/v1/apps/{app_name}", headers=headers, timeout=10
+                f"https://api.machines.dev/v1/apps/{app_name}",
+                headers=headers,
+                timeout=10,
             )
 
             if check_response.status_code == 404:
                 logger.warning(f"⚠️ Fly.io app not found: {app_name}")
                 return True, "App not found (may have been already deleted)"
             elif check_response.status_code != 200:
-                logger.error(f"❌ Error checking Fly.io app: {check_response.status_code}")
+                logger.error(
+                    f"❌ Error checking Fly.io app: {check_response.status_code}"
+                )
                 return False, f"Error checking app status: {check_response.status_code}"
 
             # Delete the app
             delete_response = requests.delete(
-                f"https://api.machines.dev/v1/apps/{app_name}", headers=headers, timeout=30
+                f"https://api.machines.dev/v1/apps/{app_name}",
+                headers=headers,
+                timeout=30,
             )
 
             if delete_response.status_code in [200, 202, 204]:
@@ -295,17 +330,23 @@ class AppsService:
                 logger.warning(f"⚠️ Fly.io app not found during deletion: {app_name}")
                 return True, "App not found (may have been already deleted)"
             elif delete_response.status_code == 403:
-                logger.error(f"❌ Insufficient permissions to delete Fly.io app: {app_name}")
+                logger.error(
+                    f"❌ Insufficient permissions to delete Fly.io app: {app_name}"
+                )
                 return False, "Insufficient permissions to delete app"
             else:
-                logger.error(f"❌ Failed to delete Fly.io app: {delete_response.status_code} - {delete_response.text}")
+                logger.error(
+                    f"❌ Failed to delete Fly.io app: {delete_response.status_code} - {delete_response.text}"
+                )
                 return False, f"Fly.io API error: {delete_response.status_code}"
 
         except Exception as e:
             logger.error(f"💥 Error deleting Fly.io app: {str(e)}")
             return False, f"Error deleting app: {str(e)}"
 
-    def get_fly_status(self, project_slug: str, fly_token: str) -> Optional[Dict[str, Any]]:
+    def get_fly_status(
+        self, project_slug: str, fly_token: str
+    ) -> Optional[Dict[str, Any]]:
         """Get Fly.io deployment status."""
         logger.info(f"🚁 Checking Fly.io status for: {project_slug}")
 
@@ -330,7 +371,9 @@ class AppsService:
                 logger.info(f"⚠️ Fly.io app not found: {project_slug}")
                 return {"deployed": False, "app_url": None, "status": "not_found"}
             elif app_response.status_code != 200:
-                logger.warning(f"❌ Failed to get Fly.io app status: {app_response.status_code}")
+                logger.warning(
+                    f"❌ Failed to get Fly.io app status: {app_response.status_code}"
+                )
                 return None
 
             app_data = app_response.json()
@@ -353,7 +396,9 @@ class AppsService:
             return None
 
     # GitHub operations
-    def create_github_repo(self, repo_name: str, github_token: str, fly_token: str) -> Tuple[bool, str]:
+    def create_github_repo(
+        self, repo_name: str, github_token: str, fly_token: str
+    ) -> Tuple[bool, str]:
         """Create a GitHub repository from template and set FLY_API_TOKEN secret."""
         logger.info(f"🐙 Creating GitHub repo: {repo_name}")
         logger.debug(f"🐙 GitHub token length: {len(github_token)}")
@@ -379,13 +424,15 @@ class AppsService:
 
             if user_response.status_code != 200:
                 logger.error(f"❌ Failed to get GitHub user: {user_response.text}")
-                logger.debug(f"🐙 Response content: {user_response.content}")
+                logger.debug(f"🐙 Response content: {user_response.content!r}")
                 return False, "Failed to authenticate with GitHub"
 
             user_data = user_response.json()
             owner = user_data["login"]
             logger.debug(f"🔍 GitHub owner: {owner}")
-            logger.debug(f"🔍 GitHub user authenticated: {user_data.get('login', 'unknown')}")
+            logger.debug(
+                f"🔍 GitHub user authenticated: {user_data.get('login', 'unknown')}"
+            )
 
             # Check if repo already exists
             check_response = requests.get(
@@ -396,7 +443,9 @@ class AppsService:
             if check_response.status_code == 200:
                 # Repository already exists, but that's okay - we'll use the existing one
                 repo_data = check_response.json()
-                logger.info(f"✅ Repository {owner}/{repo_name} already exists, using existing repository")
+                logger.info(
+                    f"✅ Repository {owner}/{repo_name} already exists, using existing repository"
+                )
 
                 # Still try to set the FLY_API_TOKEN secret if provided
                 if fly_token:
@@ -423,7 +472,9 @@ class AppsService:
             )
 
             if create_response.status_code != 201:
-                logger.error(f"Failed to create repo from template: {create_response.text}")
+                logger.error(
+                    f"Failed to create repo from template: {create_response.text}"
+                )
                 return False, f"Failed to create repository: {create_response.text}"
 
             repo_data = create_response.json()
@@ -439,7 +490,9 @@ class AppsService:
             logger.error(f"💥 Error creating GitHub repo: {str(e)}")
             return False, f"Error creating repository: {str(e)}"
 
-    def _set_github_secret(self, owner: str, repo_name: str, fly_token: str, headers: Dict[str, str]) -> None:
+    def _set_github_secret(
+        self, owner: str, repo_name: str, fly_token: str, headers: Dict[str, str]
+    ) -> None:
         """Set FLY_API_TOKEN secret for a GitHub repository."""
         logger.info(f"🔐 Setting FLY_API_TOKEN secret for {repo_name}")
 
@@ -454,13 +507,13 @@ class AppsService:
             if key_response.status_code == 200:
                 public_key_data = key_response.json()
                 public_key = public.PublicKey(
-                    public_key_data["key"].encode("utf-8"), encoding.Base64Encoder()
+                    public_key_data["key"].encode("utf-8"), encoding.Base64Encoder
                 )
 
                 # Encrypt the secret
                 sealed_box = public.SealedBox(public_key)
                 encrypted = sealed_box.encrypt(fly_token.encode("utf-8"))
-                encrypted_value = b64encode(encrypted).decode("utf-8")
+                encrypted_value = base64.b64encode(encrypted).decode("utf-8")
 
                 # Set the secret
                 secret_data = {
@@ -478,9 +531,13 @@ class AppsService:
                 if secret_response.status_code in [201, 204]:
                     logger.info("✅ FLY_API_TOKEN secret set successfully")
                 else:
-                    logger.warning(f"⚠️ Failed to set FLY_API_TOKEN secret: {secret_response.text}")
+                    logger.warning(
+                        f"⚠️ Failed to set FLY_API_TOKEN secret: {secret_response.text}"
+                    )
             else:
-                logger.warning(f"⚠️ Failed to get public key for secrets: {key_response.text}")
+                logger.warning(
+                    f"⚠️ Failed to get public key for secrets: {key_response.text}"
+                )
 
         except Exception as e:
             logger.warning(f"⚠️ Error setting GitHub secret: {str(e)}")
@@ -511,7 +568,9 @@ class AppsService:
 
             # Delete the repository
             delete_response = requests.delete(
-                f"https://api.github.com/repos/{owner}/{repo}", headers=headers, timeout=30
+                f"https://api.github.com/repos/{owner}/{repo}",
+                headers=headers,
+                timeout=30,
             )
 
             if delete_response.status_code == 204:
@@ -521,17 +580,23 @@ class AppsService:
                 logger.warning(f"⚠️ GitHub repo not found: {owner}/{repo}")
                 return True, "Repository not found (may have been already deleted)"
             elif delete_response.status_code == 403:
-                logger.error(f"❌ Insufficient permissions to delete repo: {owner}/{repo}")
+                logger.error(
+                    f"❌ Insufficient permissions to delete repo: {owner}/{repo}"
+                )
                 return False, "Insufficient permissions to delete repository"
             else:
-                logger.error(f"❌ Failed to delete GitHub repo: {delete_response.status_code} - {delete_response.text}")
+                logger.error(
+                    f"❌ Failed to delete GitHub repo: {delete_response.status_code} - {delete_response.text}"
+                )
                 return False, f"GitHub API error: {delete_response.status_code}"
 
         except Exception as e:
             logger.error(f"💥 Error deleting GitHub repo: {str(e)}")
             return False, f"Error deleting repository: {str(e)}"
 
-    def get_github_status(self, repo_url: str, github_token: str) -> Optional[Dict[str, Any]]:
+    def get_github_status(
+        self, repo_url: str, github_token: str
+    ) -> Optional[Dict[str, Any]]:
         """Get GitHub repository status including CI/CD tests."""
         logger.info(f"🐙 Checking GitHub status for: {repo_url}")
 
@@ -563,7 +628,9 @@ class AppsService:
             )
 
             if commits_response.status_code != 200:
-                logger.warning(f"❌ Failed to get commits: {commits_response.status_code}")
+                logger.warning(
+                    f"❌ Failed to get commits: {commits_response.status_code}"
+                )
                 return None
 
             commit_data = commits_response.json()
@@ -578,7 +645,9 @@ class AppsService:
             )
 
             if status_response.status_code != 200:
-                logger.warning(f"❌ Failed to get status checks: {status_response.status_code}")
+                logger.warning(
+                    f"❌ Failed to get status checks: {status_response.status_code}"
+                )
                 return {
                     "tests_passing": None,
                     "last_commit": latest_commit_sha,
@@ -591,7 +660,10 @@ class AppsService:
 
             # If status API returns pending with no checks, try GitHub Actions API as fallback
             if state == "pending" and total_count == 0:
-                state = self._check_github_actions(owner, repo, latest_commit_sha, headers) or state
+                state = (
+                    self._check_github_actions(owner, repo, latest_commit_sha, headers)
+                    or state
+                )
 
             # Handle different CI/CD states properly
             if state == "success":
@@ -614,7 +686,9 @@ class AppsService:
             logger.error(f"💥 GitHub status check error: {str(e)}")
             return None
 
-    def _check_github_actions(self, owner: str, repo: str, commit_sha: str, headers: Dict[str, str]) -> Optional[str]:
+    def _check_github_actions(
+        self, owner: str, repo: str, commit_sha: str, headers: Dict[str, str]
+    ) -> Optional[str]:
         """Check GitHub Actions as fallback for status checks."""
         try:
             actions_response = requests.get(
@@ -650,10 +724,18 @@ class AppsService:
         return None
 
     # PR operations
-    def get_pr_status(self, repo_url: str, github_token: str, branch: str = "main", search_by_base: bool = False) -> Optional[Dict[str, Any]]:
+    def get_pr_status(
+        self,
+        repo_url: str,
+        github_token: str,
+        branch: str = "main",
+        search_by_base: bool = False,
+    ) -> Optional[Dict[str, Any]]:
         """Get GitHub Pull Request status for a specific branch."""
         search_type = "base" if search_by_base else "head"
-        logger.info(f"🔀 Checking PR status for: {repo_url} (branch: {branch}, search_by: {search_type})")
+        logger.info(
+            f"🔀 Checking PR status for: {repo_url} (branch: {branch}, search_by: {search_type})"
+        )
 
         if not github_token:
             logger.warning("❌ No GitHub token provided")
@@ -686,7 +768,9 @@ class AppsService:
             pr_response = requests.get(api_url, headers=headers, timeout=10)
 
             if pr_response.status_code != 200:
-                logger.warning(f"❌ GitHub API request failed: {pr_response.status_code}")
+                logger.warning(
+                    f"❌ GitHub API request failed: {pr_response.status_code}"
+                )
                 return None
 
             prs = pr_response.json()
@@ -716,7 +800,9 @@ class AppsService:
             )
 
             if pr_detail_response.status_code != 200:
-                logger.warning(f"❌ Failed to get PR details: {pr_detail_response.status_code}")
+                logger.warning(
+                    f"❌ Failed to get PR details: {pr_detail_response.status_code}"
+                )
                 return None
 
             pr_details = pr_detail_response.json()
@@ -760,12 +846,14 @@ class AppsService:
             if checks_response.status_code == 200:
                 checks_data = checks_response.json()
                 for check in checks_data.get("check_runs", []):
-                    checks.append({
-                        "name": check["name"],
-                        "status": check["status"],
-                        "conclusion": check.get("conclusion"),
-                        "details_url": check.get("details_url"),
-                    })
+                    checks.append(
+                        {
+                            "name": check["name"],
+                            "status": check["status"],
+                            "conclusion": check.get("conclusion"),
+                            "details_url": check.get("details_url"),
+                        }
+                    )
 
             # Determine deploy status based on checks
             deploy_status = "unknown"
@@ -799,7 +887,9 @@ class AppsService:
             logger.error(f"❌ Unexpected error while fetching PR status: {str(e)}")
             return None
 
-    def close_github_pr(self, repo_url: str, github_token: str, branch_name: str) -> Tuple[bool, str]:
+    def close_github_pr(
+        self, repo_url: str, github_token: str, branch_name: str
+    ) -> Tuple[bool, str]:
         """Close GitHub Pull Request for a specific branch."""
         logger.info(f"🔀 Closing PR for branch: {branch_name} in {repo_url}")
 
@@ -857,7 +947,9 @@ class AppsService:
                     logger.info(f"✅ Successfully closed PR #{pr_number}")
                     closed_prs.append(pr_number)
                 else:
-                    logger.error(f"❌ Failed to close PR #{pr_number}: {close_response.status_code}")
+                    logger.error(
+                        f"❌ Failed to close PR #{pr_number}: {close_response.status_code}"
+                    )
                     return False, f"Failed to close PR #{pr_number}"
 
             if closed_prs:
@@ -869,7 +961,9 @@ class AppsService:
             logger.error(f"💥 Error closing GitHub PR: {str(e)}")
             return False, f"Error closing PR: {str(e)}"
 
-    def delete_github_branch(self, repo_url: str, github_token: str, branch_name: str) -> Tuple[bool, str]:
+    def delete_github_branch(
+        self, repo_url: str, github_token: str, branch_name: str
+    ) -> Tuple[bool, str]:
         """Delete a GitHub branch."""
         logger.info(f"🌿 Deleting branch: {branch_name} from {repo_url}")
 
@@ -909,12 +1003,19 @@ class AppsService:
                 return True, f"Branch '{branch_name}' deleted successfully"
             elif delete_response.status_code == 404:
                 logger.warning(f"⚠️ Branch not found: {branch_name}")
-                return True, f"Branch '{branch_name}' not found (may have been already deleted)"
+                return (
+                    True,
+                    f"Branch '{branch_name}' not found (may have been already deleted)",
+                )
             elif delete_response.status_code == 422:
-                logger.warning(f"⚠️ Cannot delete branch: {branch_name} (may be protected)")
+                logger.warning(
+                    f"⚠️ Cannot delete branch: {branch_name} (may be protected)"
+                )
                 return False, f"Cannot delete branch '{branch_name}' (may be protected)"
             else:
-                logger.error(f"❌ Failed to delete branch: {delete_response.status_code} - {delete_response.text}")
+                logger.error(
+                    f"❌ Failed to delete branch: {delete_response.status_code} - {delete_response.text}"
+                )
                 return False, f"GitHub API error: {delete_response.status_code}"
 
         except Exception as e:
@@ -922,7 +1023,9 @@ class AppsService:
             return False, f"Error deleting branch: {str(e)}"
 
     # App creation workflow
-    def create_initial_riff_and_message(self, user_uuid: str, app_slug: str, app_slug_for_message: str, github_url: str) -> Tuple[bool, Any]:
+    def create_initial_riff_and_message(
+        self, user_uuid: str, app_slug: str, app_slug_for_message: str, github_url: str
+    ) -> Tuple[bool, Any]:
         """Create initial riff and message for a new app."""
         try:
             # Import here to avoid circular imports
@@ -932,7 +1035,9 @@ class AppsService:
             riff_name = f"rename-to-{app_slug}"
             riff_slug = riff_name  # Already in slug format since app_slug is validated
 
-            logger.info(f"🔄 Creating initial riff: {riff_name} -> {riff_slug} for app {app_slug}")
+            logger.info(
+                f"🔄 Creating initial riff: {riff_name} -> {riff_slug} for app {app_slug}"
+            )
 
             # Create riff record
             riff = {
@@ -977,10 +1082,14 @@ Update the corresponding PR title and description but be brief.
 
             # Create agent for the riff using the working function from riffs.py
             logger.info(f"🤖 Creating agent for initial riff: {riff_slug}")
-            agent_success, agent_error = create_agent_for_user(user_uuid, app_slug, riff_slug)
+            agent_success, agent_error = create_agent_for_user(
+                user_uuid, app_slug, riff_slug
+            )
 
             if not agent_success:
-                logger.warning(f"⚠️ Failed to create agent for initial riff: {agent_error}")
+                logger.warning(
+                    f"⚠️ Failed to create agent for initial riff: {agent_error}"
+                )
                 # Don't fail the entire process if agent creation fails
                 return True, {
                     "riff": riff,
@@ -991,17 +1100,26 @@ Update the corresponding PR title and description but be brief.
             # Send initial message to agent
             try:
                 from agents import agent_loop_manager
-                agent_loop = agent_loop_manager.get_agent_loop(user_uuid, app_slug, riff_slug)
+
+                agent_loop = agent_loop_manager.get_agent_loop(
+                    user_uuid, app_slug, riff_slug
+                )
                 if agent_loop:
-                    logger.info(f"🤖 Sending initial message to agent for {user_uuid[:8]}/{app_slug}/{riff_slug}")
+                    logger.info(
+                        f"🤖 Sending initial message to agent for {user_uuid[:8]}/{app_slug}/{riff_slug}"
+                    )
                     confirmation = agent_loop.send_message(initial_message_content)
                     logger.info(f"✅ Initial message sent to agent: {confirmation}")
                 else:
-                    logger.warning(f"❌ AgentLoop not found after creation for {user_uuid[:8]}:{app_slug}:{riff_slug}")
+                    logger.warning(
+                        f"❌ AgentLoop not found after creation for {user_uuid[:8]}:{app_slug}:{riff_slug}"
+                    )
             except Exception as e:
                 logger.warning(f"⚠️ Failed to send initial message to agent: {str(e)}")
 
-            logger.info(f"✅ Created initial riff and message for app: {app_slug_for_message}")
+            logger.info(
+                f"✅ Created initial riff and message for app: {app_slug_for_message}"
+            )
             return True, {"riff": riff, "message": message}
 
         except Exception as e:
@@ -1018,7 +1136,9 @@ Update the corresponding PR title and description but be brief.
             app_slug = self.create_slug(app_name.strip())
 
             if not self.is_valid_slug(app_slug):
-                return False, {"error": f"Invalid app name. Generated slug '{app_slug}' is not valid."}
+                return False, {
+                    "error": f"Invalid app name. Generated slug '{app_slug}' is not valid."
+                }
 
             # Check if app already exists for this user
             if self.user_app_exists(user_uuid, app_slug):
@@ -1030,18 +1150,26 @@ Update the corresponding PR title and description but be brief.
             fly_token = user_keys.get("fly")
 
             if not github_token:
-                return False, {"error": "GitHub API key is required. Please set it in integrations first."}
+                return False, {
+                    "error": "GitHub API key is required. Please set it in integrations first."
+                }
 
             if not fly_token:
-                return False, {"error": "Fly.io API key is required. Please set it in integrations first."}
+                return False, {
+                    "error": "Fly.io API key is required. Please set it in integrations first."
+                }
 
             # Create GitHub repository
             logger.info(f"🐙 Creating GitHub repository: {app_slug}")
-            github_success, github_result = self.create_github_repo(app_slug, github_token, fly_token)
+            github_success, github_result = self.create_github_repo(
+                app_slug, github_token, fly_token
+            )
 
             if not github_success:
                 logger.error(f"❌ GitHub repo creation failed: {github_result}")
-                return False, {"error": f"Failed to create GitHub repository: {github_result}"}
+                return False, {
+                    "error": f"Failed to create GitHub repository: {github_result}"
+                }
 
             github_url = github_result
             logger.info(f"✅ GitHub repository created: {github_url}")
@@ -1076,7 +1204,9 @@ Update the corresponding PR title and description but be brief.
                 return False, {"error": "Failed to save app"}
 
             # Wait 5 seconds before creating the first riff to allow for proper setup
-            logger.info(f"⏳ Waiting 5 seconds before creating initial riff for app: {app_slug}")
+            logger.info(
+                f"⏳ Waiting 5 seconds before creating initial riff for app: {app_slug}"
+            )
             time.sleep(5)
 
             # Create initial riff and message for the new app
@@ -1111,14 +1241,16 @@ Update the corresponding PR title and description but be brief.
             if not app:
                 return False, {"error": "App not found"}
 
-            logger.debug(f"🔍 Found app to delete: {app['slug']} for user {user_uuid[:8]}")
+            logger.debug(
+                f"🔍 Found app to delete: {app['slug']} for user {user_uuid[:8]}"
+            )
 
             # Get user's API keys
             user_keys = load_user_keys(user_uuid)
             github_token = user_keys.get("github")
             fly_token = user_keys.get("fly")
 
-            deletion_results = {
+            deletion_results: Dict[str, Any] = {
                 "github_success": False,
                 "github_error": None,
                 "fly_success": False,
@@ -1128,7 +1260,9 @@ Update the corresponding PR title and description but be brief.
             # Delete GitHub repository if URL exists and token is available
             if app.get("github_url") and github_token:
                 logger.info(f"🐙 Deleting GitHub repository: {app['github_url']}")
-                github_success, github_message = self.delete_github_repo(app["github_url"], github_token)
+                github_success, github_message = self.delete_github_repo(
+                    app["github_url"], github_token
+                )
                 deletion_results["github_success"] = github_success
                 if not github_success:
                     deletion_results["github_error"] = github_message
@@ -1141,7 +1275,9 @@ Update the corresponding PR title and description but be brief.
             # Delete Fly.io app if name exists and token is available
             if app.get("fly_app_name") and fly_token:
                 logger.info(f"🛩️ Deleting Fly.io app: {app['fly_app_name']}")
-                fly_success, fly_message = self.delete_fly_app(app["fly_app_name"], fly_token)
+                fly_success, fly_message = self.delete_fly_app(
+                    app["fly_app_name"], fly_token
+                )
                 deletion_results["fly_success"] = fly_success
                 if not fly_success:
                     deletion_results["fly_error"] = fly_message
@@ -1153,7 +1289,9 @@ Update the corresponding PR title and description but be brief.
 
             # Delete app and all its data (including riffs)
             if self.delete_user_app(user_uuid, app_slug):
-                logger.info(f"✅ App {app_slug} and all associated data deleted for user {user_uuid[:8]}")
+                logger.info(
+                    f"✅ App {app_slug} and all associated data deleted for user {user_uuid[:8]}"
+                )
             else:
                 logger.error("❌ Failed to delete app data")
                 return False, {"error": "Failed to delete app data"}
@@ -1169,9 +1307,13 @@ Update the corresponding PR title and description but be brief.
             # Add warnings if some deletions failed
             warnings = []
             if deletion_results["github_error"]:
-                warnings.append(f"GitHub repository deletion failed: {deletion_results['github_error']}")
+                warnings.append(
+                    f"GitHub repository deletion failed: {deletion_results['github_error']}"
+                )
             if deletion_results["fly_error"]:
-                warnings.append(f"Fly.io app deletion failed: {deletion_results['fly_error']}")
+                warnings.append(
+                    f"Fly.io app deletion failed: {deletion_results['fly_error']}"
+                )
 
             if warnings:
                 response_data["warnings"] = warnings
@@ -1183,7 +1325,9 @@ Update the corresponding PR title and description but be brief.
             logger.error(f"💥 Error deleting app: {str(e)}")
             return False, {"error": "Failed to delete app"}
 
-    def get_app_deployment_status(self, user_uuid: str, app_slug: str) -> Tuple[bool, Dict[str, Any]]:
+    def get_app_deployment_status(
+        self, user_uuid: str, app_slug: str
+    ) -> Tuple[bool, Dict[str, Any]]:
         """Get deployment status for an app (checks main branch)."""
         try:
             # Load app for this user
@@ -1213,11 +1357,17 @@ Update the corresponding PR title and description but be brief.
 
             # Check deployment status for main branch
             branch_name = "main"
-            logger.info(f"🔍 Checking deployment status for app '{app_slug}' on branch '{branch_name}'")
+            logger.info(
+                f"🔍 Checking deployment status for app '{app_slug}' on branch '{branch_name}'"
+            )
 
-            deployment_status = get_deployment_status(github_url, github_token, branch_name)
+            deployment_status = get_deployment_status(
+                github_url, github_token, branch_name
+            )
 
-            logger.info(f"✅ Deployment status retrieved for app {app_slug}: {deployment_status['status']}")
+            logger.info(
+                f"✅ Deployment status retrieved for app {app_slug}: {deployment_status['status']}"
+            )
             return True, deployment_status
 
         except Exception as e:

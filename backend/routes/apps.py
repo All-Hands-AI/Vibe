@@ -105,7 +105,9 @@ def create_app():
             logger.info(f"✅ App created successfully: {result['app']['slug']}")
             return jsonify(result), 201
         else:
-            logger.error(f"❌ App creation failed: {result.get('error', 'Unknown error')}")
+            logger.error(
+                f"❌ App creation failed: {result.get('error', 'Unknown error')}"
+            )
             return jsonify(result), 400
 
     except Exception as e:
@@ -164,7 +166,9 @@ def get_app_deployment_status(slug):
             logger.warning("❌ Empty UUID provided in header")
             return jsonify({"error": "UUID cannot be empty"}), 400
 
-        logger.debug(f"🚀 Getting deployment status for app {slug} for user {user_uuid[:8]}...")
+        logger.debug(
+            f"🚀 Getting deployment status for app {slug} for user {user_uuid[:8]}..."
+        )
 
         # Get deployment status using service layer
         success, result = apps_service.get_app_deployment_status(user_uuid, slug)
@@ -271,7 +275,11 @@ def get_fly_status(project_slug, fly_token):
     return apps_service.get_fly_status(project_slug, fly_token)
 
 
-def create_initial_riff_and_message(user_uuid, app_slug, app_slug_for_message, github_url):
+def create_initial_riff_and_message(
+    user_uuid, app_slug, app_slug_for_message, github_url
+):
     """Create initial riff and message for a new app - DEPRECATED"""
     logger.warning("⚠️ Using deprecated create_initial_riff_and_message() function")
-    return apps_service.create_initial_riff_and_message(user_uuid, app_slug, app_slug_for_message, github_url)
+    return apps_service.create_initial_riff_and_message(
+        user_uuid, app_slug, app_slug_for_message, github_url
+    )
